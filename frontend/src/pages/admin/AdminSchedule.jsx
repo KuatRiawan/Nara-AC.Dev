@@ -22,7 +22,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [copiedCode, setCopiedCode] = useState(null);
 
-  // Modal Reschedule State
   const [rescheduleBooking, setRescheduleBooking] = useState(null);
   const [newRescheduleDate, setNewRescheduleDate] = useState('');
   const [newRescheduleTime, setNewRescheduleTime] = useState('09:00');
@@ -31,7 +30,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
   const [altSlots, setAltSlots] = useState([]);
   const [isReplacing, setIsReplacing] = useState(false);
 
-  // Copy helper
   const handleCopyCode = (code, e) => {
     if (e) e.stopPropagation();
     navigator.clipboard?.writeText(code);
@@ -39,7 +37,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  // WhatsApp helper
   const getWhatsAppLink = (rawPhone, bookingCode, customerName) => {
     if (!rawPhone) return null;
     let clean = String(rawPhone).replace(/\D/g, '');
@@ -49,7 +46,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
     return `https://wa.me/${clean}?text=${text}`;
   };
 
-  // Helper fleksibel teknisi
   const getAssignedTechnician = useCallback((b) => {
     if (!b) return null;
     if (b.teknisi && typeof b.teknisi === 'object' && b.teknisi.nama) {
@@ -64,7 +60,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
     return null;
   }, [technicians]);
 
-  // Fetch Technicians list for lookup
   useEffect(() => {
     const fetchTechnicians = async () => {
       try {
@@ -73,19 +68,16 @@ export default function AdminSchedule({ onBookingAssigned }) {
         const list = Array.isArray(raw) ? raw : (raw?.data && Array.isArray(raw.data) ? raw.data : []);
         setTechnicians(list);
       } catch (err) {
-        // Fallback silently if non-admin or failed
       }
     };
     fetchTechnicians();
   }, []);
 
-  // Fetch Bookings for Current Month
   const fetchMonthSchedule = useCallback(async () => {
     setLoading(true);
     try {
       const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
-      // Ambil seluruh jadwal bulan berjalan (hingga 500 tiket)
       const res = await api.get(`/bookings?dari=${startDate}&sampai=${endDate}&limit=500`);
       const raw = res?.data?.data || res?.data || res;
       const list = Array.isArray(raw) ? raw : (raw?.data && Array.isArray(raw.data) ? raw.data : []);
@@ -119,7 +111,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
     };
   }, [fetchMonthSchedule]);
 
-  // Smart Assign Recommendation
   const openAssign = useCallback(async (booking) => {
     setAssigningBooking(booking);
     setAltSlots([]);
@@ -157,7 +148,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
     }
   };
 
-  // BR-11 & BR-12: Penggantian Teknisi Berhalangan & Rekomendasi Slot Alternatif
   const handleReplaceTechnician = async (teknisi_baru_id = null) => {
     if (!assigningBooking) return;
     setIsReplacing(true);
@@ -209,7 +199,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
     }
   };
 
-  // Open Reschedule Modal
   const openRescheduleModal = (booking) => {
     setRescheduleBooking(booking);
     if (booking.jadwal_mulai) {
@@ -228,7 +217,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
     setRescheduleReason('Penyesuaian jadwal servis oleh admin');
   };
 
-  // Submit Reschedule (Ubah Tanggal)
   const handleConfirmReschedule = async (e) => {
     e.preventDefault();
     if (!rescheduleBooking) return;
@@ -238,7 +226,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
       return;
     }
 
-    // Validasi hari Minggu
     const targetDateObj = new Date(newRescheduleDate + 'T00:00:00');
     if (targetDateObj.getDay() === 0) {
       showError('Hari Minggu adalah libur operasional CV. Nara Teknindotama. Silakan pilih hari Senin s/d Sabtu.');
@@ -268,7 +255,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
     }
   };
 
-  // Ringkasan Bulan Berjalan
   const monthStats = useMemo(() => {
     let total = monthBookings.length;
     let unassigned = 0;
@@ -289,7 +275,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
     return { total, unassigned, onProcess, done };
   }, [monthBookings, getAssignedTechnician]);
 
-  // Selected Day Bookings
   const selectedDayBookings = useMemo(() => {
     const dayStr = format(selectedDate, 'yyyy-MM-dd');
     return monthBookings
@@ -297,7 +282,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
       .sort((a, b) => new Date(a.jadwal_mulai || 0) - new Date(b.jadwal_mulai || 0));
   }, [monthBookings, selectedDate]);
 
-  // JIKA SEDANG BUKA TAMPILAN SMART ASSIGN
   if (assigningBooking) {
     return (
       <div className="p-4 sm:p-8 space-y-6 max-w-5xl mx-auto animate-in fade-in duration-200">
@@ -309,7 +293,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
           <span>Kembali ke Jadwal Bulanan</span>
         </button>
 
-        {/* INFO TIKET BOOKING YANG SEDANG DITUGASKAN */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-5 sm:p-6 space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-4">
             <div>
@@ -362,7 +345,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
             </div>
           </div>
 
-          {/* BR-11: Teknisi Ditugaskan & Opsi Penggantian jika Berhalangan */}
           {getAssignedTechnician(assigningBooking) && (
             <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div>
@@ -386,7 +368,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
             </div>
           )}
 
-          {/* BR-12: Rekomendasi Slot Alternatif Jika Teknisi Pengganti Tidak Tersedia */}
           {altSlots.length > 0 && (
             <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 space-y-3">
               <div className="flex items-start gap-2 text-rose-800">
@@ -422,7 +403,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
           )}
         </div>
 
-        {/* DAFTAR REKOMENDASI TEKNISI */}
         <div>
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -460,7 +440,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
                     tech.status === 'conflict' ? "border-rose-200 bg-rose-50/20" : "border-slate-200 opacity-60 bg-slate-50"
                   )}
                 >
-                  {/* Badge Pilihan Terbaik */}
                   {tech.direkomendasikan && (
                     <div className="absolute top-0 right-0 bg-emerald-600 text-white text-xs font-black px-2.5 py-1 rounded-bl-xl uppercase tracking-wider flex items-center gap-1">
                       <Sparkles className="w-3 h-3" />
@@ -469,7 +448,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
                   )}
 
                   <div>
-                    {/* Header Card Teknisi */}
                     <div className="flex justify-between items-start mb-3 pt-1">
                       <div>
                         <h4 className="font-bold text-slate-900 text-base">{tech.nama}</h4>
@@ -486,7 +464,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
                       </Badge>
                     </div>
 
-                    {/* Status Info */}
                     <div className="space-y-2 text-xs text-slate-600 my-4 bg-slate-50/80 p-3 rounded-xl border border-slate-100">
                       <div className="flex items-center justify-between">
                         <span className="text-slate-500">Status Hari Ini:</span>
@@ -506,7 +483,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
                   <div className="pt-2">
                     {tech.assignable ? (
                       <Button
@@ -550,7 +526,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
     );
   }
 
-  // HEADER HARI-HARI KALENDER (Senin s/d Minggu)
   const renderDaysHeader = () => {
     const days = [
       { name: 'Sen', full: 'Senin', isSunday: false },
@@ -580,11 +555,9 @@ export default function AdminSchedule({ onBookingAssigned }) {
     );
   };
 
-  // GRID KALENDER BULANAN DENGAN weekStartsOn: 1 (SENIN)
   const renderCalendarGrid = () => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(monthStart);
-    // KRITIS: Opsi date-fns adalah weekStartsOn: 1 (Senin sebagai awal minggu)
     const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
     const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
 
@@ -622,7 +595,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
                 : "hover:bg-blue-50/20"
             )}
           >
-            {/* Top row of date cell */}
             <div className="flex justify-between items-start mb-1">
               <span className={cn(
                 "w-7 h-7 flex items-center justify-center rounded-xl text-xs sm:text-sm font-black transition-all",
@@ -635,7 +607,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
                 {formattedDate}
               </span>
 
-              {/* Counter badges */}
               <div className="flex items-center gap-1">
                 {hasUnassigned && (
                   <span 
@@ -651,7 +622,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
               </div>
             </div>
 
-            {/* List mini tiket di sel tanggal */}
             <div className="flex-1 space-y-1 mt-0.5 overflow-hidden">
               {dayBookings.slice(0, 3).map(b => {
                 const assigned = getAssignedTechnician(b);
@@ -711,7 +681,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
 
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 bg-slate-50/50 relative min-w-0">
-      {/* HEADER SECTION */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
@@ -722,7 +691,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
           </p>
         </div>
 
-        {/* CONTROLS BULAN */}
         <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200/80 shadow-2xs w-full sm:w-auto justify-between sm:justify-start">
           <button 
             onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
@@ -764,62 +732,60 @@ export default function AdminSchedule({ onBookingAssigned }) {
         </div>
       </div>
 
-      {/* 4 CLEAN KPI STATUS CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Servis Bulan Ini</span>
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
-              <CalendarIcon className="w-4 h-4" />
+            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Total Servis</span>
+            <div className="p-1.5 sm:p-2 bg-blue-50 text-blue-600 rounded-xl">
+              <CalendarIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
           <div>
-            <p className="text-2xl sm:text-3xl font-black text-slate-900">{monthStats.total}</p>
-            <p className="text-xs font-medium text-slate-500 mt-1">Seluruh agenda servis terdaftar</p>
+            <p className="text-xl sm:text-3xl font-black text-slate-900">{monthStats.total}</p>
+            <p className="text-[11px] sm:text-xs font-medium text-slate-500 mt-0.5 sm:mt-1 truncate">Seluruh agenda servis</p>
           </div>
         </div>
 
-        <div className="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
+        <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-600">Perlu Teknisi</span>
-            <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
-              <UserPlus className="w-4 h-4" />
+            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-amber-600">Perlu Teknisi</span>
+            <div className="p-1.5 sm:p-2 bg-amber-50 text-amber-600 rounded-xl">
+              <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
           <div>
-            <p className="text-2xl sm:text-3xl font-black text-amber-700">{monthStats.unassigned}</p>
-            <p className="text-xs font-medium text-amber-600/80 mt-1">Belum dialokasikan ke teknisi</p>
+            <p className="text-xl sm:text-3xl font-black text-amber-700">{monthStats.unassigned}</p>
+            <p className="text-[11px] sm:text-xs font-medium text-amber-600/80 mt-0.5 sm:mt-1 truncate">Belum ada teknisi</p>
           </div>
         </div>
 
-        <div className="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
+        <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-sky-600">Sedang Dikerjakan</span>
-            <div className="p-2 bg-sky-50 text-sky-600 rounded-xl">
-              <Wrench className="w-4 h-4" />
+            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-sky-600">Dikerjakan</span>
+            <div className="p-1.5 sm:p-2 bg-sky-50 text-sky-600 rounded-xl">
+              <Wrench className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
           <div>
-            <p className="text-2xl sm:text-3xl font-black text-sky-700">{monthStats.onProcess}</p>
-            <p className="text-xs font-medium text-sky-600/80 mt-1">Teknisi aktif di lokasi konsumen</p>
+            <p className="text-xl sm:text-3xl font-black text-sky-700">{monthStats.onProcess}</p>
+            <p className="text-[11px] sm:text-xs font-medium text-sky-600/80 mt-0.5 sm:mt-1 truncate">Teknisi aktif di lokasi</p>
           </div>
         </div>
 
-        <div className="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
+        <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Selesai Bergaransi</span>
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
-              <CheckCircle2 className="w-4 h-4" />
+            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-emerald-600">Bergaransi</span>
+            <div className="p-1.5 sm:p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+              <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
           <div>
-            <p className="text-2xl sm:text-3xl font-black text-emerald-700">{monthStats.done}</p>
-            <p className="text-xs font-medium text-emerald-600/80 mt-1">Pekerjaan tuntas & bergaransi</p>
+            <p className="text-xl sm:text-3xl font-black text-emerald-700">{monthStats.done}</p>
+            <p className="text-[11px] sm:text-xs font-medium text-emerald-600/80 mt-0.5 sm:mt-1 truncate">Tuntas & bergaransi</p>
           </div>
         </div>
       </div>
 
-      {/* KALENDER BULANAN */}
       <div className="relative">
         {loading && (
           <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-20 flex items-center justify-center rounded-2xl">
@@ -829,15 +795,21 @@ export default function AdminSchedule({ onBookingAssigned }) {
             </div>
           </div>
         )}
-        {renderDaysHeader()}
-        {renderCalendarGrid()}
+        <div className="sm:hidden flex items-center justify-between text-[11px] text-slate-500 mb-2 px-1">
+          <span>Geser horizontal untuk tanggal kalender</span>
+          <span className="font-bold text-blue-600">← Geser →</span>
+        </div>
+        <div className="overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="min-w-[700px]">
+            {renderDaysHeader()}
+            {renderCalendarGrid()}
+          </div>
+        </div>
       </div>
 
-      {/* MODAL AGENDA HARIAN (SAAT TANGGAL DIKLIK) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col w-full max-w-4xl max-h-[90vh]">
-            {/* Header Modal */}
             <div className="p-5 sm:p-6 border-b border-slate-100 flex justify-between items-start bg-slate-50/60">
               <div>
                 <div className="flex items-center gap-2">
@@ -863,7 +835,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
               </div>
             </div>
 
-            {/* Content Table Agenda Harian */}
             <div className="overflow-y-auto flex-1 p-0">
               {selectedDayBookings.length === 0 ? (
                 <div className="p-16 text-center text-slate-500 flex flex-col items-center justify-center">
@@ -901,7 +872,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
                               !assignedTech && b.status === 'scheduled' && "bg-amber-50/20"
                             )}
                           >
-                            {/* Waktu */}
                             <td className="py-3.5 px-6 font-bold text-slate-900">
                               <div className="flex items-center gap-1.5">
                                 <Clock className="w-4 h-4 text-blue-600" />
@@ -911,7 +881,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
                               </div>
                             </td>
 
-                            {/* Kode & Layanan */}
                             <td className="py-3.5 px-6">
                               <div className="flex items-center gap-1.5">
                                 <span className="font-mono text-xs font-bold bg-slate-100 text-slate-800 px-2 py-0.5 rounded border border-slate-200">
@@ -935,7 +904,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
                               </div>
                             </td>
 
-                            {/* Pelanggan */}
                             <td className="py-3.5 px-6">
                               <div className="font-bold text-slate-900">{b.customer?.nama || b.nama || '-'}</div>
                               <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
@@ -955,7 +923,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
                               </div>
                             </td>
 
-                            {/* Teknisi */}
                             <td className="py-3.5 px-6">
                               {assignedTech ? (
                                 <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200/50 inline-flex">
@@ -970,7 +937,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
                               )}
                             </td>
 
-                            {/* Status */}
                             <td className="py-3.5 px-6">
                               <Badge className={cn(
                                 "text-xs font-black uppercase px-2.5 py-0.5",
@@ -983,7 +949,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
                               </Badge>
                             </td>
 
-                            {/* Aksi Ubah Tanggal & Smart Assign */}
                             <td className="py-3.5 px-6 text-right">
                               <div className="flex items-center justify-end gap-1.5">
                                 {b.status !== 'done' && b.status !== 'cancelled' && (
@@ -1021,11 +986,10 @@ export default function AdminSchedule({ onBookingAssigned }) {
               )}
             </div>
 
-            {/* Footer Modal */}
             <div className="p-4 bg-slate-50/70 border-t border-slate-100 flex justify-end">
               <Button
                 onClick={() => setIsModalOpen(false)}
-                className="bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl px-5 h-9 cursor-pointer"
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl px-5 h-9 cursor-pointer"
               >
                 Tutup
               </Button>
@@ -1034,7 +998,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
         </div>
       )}
 
-      {/* MODAL UBAH TANGGAL (RESCHEDULE JADWAL) */}
       {rescheduleBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden">
@@ -1062,7 +1025,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
                 <span className="text-blue-700">Layanan: {rescheduleBooking.layanan?.nama_layanan || rescheduleBooking.layanan?.nama || 'Service AC'}</span>
               </div>
 
-              {/* Tanggal Baru */}
               <div>
                 <label htmlFor="admin-schedule-f1" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                   Tanggal Baru:
@@ -1080,7 +1042,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
                 </span>
               </div>
 
-              {/* Jam Baru */}
               <div>
                 <label htmlFor="admin-schedule-f2" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                   Jam Kunjungan:
@@ -1099,10 +1060,11 @@ export default function AdminSchedule({ onBookingAssigned }) {
                   <option value="14:00">14:00 WIB</option>
                   <option value="15:00">15:00 WIB</option>
                   <option value="16:00">16:00 WIB</option>
+                  <option value="17:00">17:00 WIB</option>
+                  <option value="18:00">18:00 WIB (Layanan ≤ 60 Menit)</option>
                 </select>
               </div>
 
-              {/* Alasan Perubahan */}
               <div>
                 <label htmlFor="admin-schedule-f3" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                   Alasan Perubahan Jadwal:

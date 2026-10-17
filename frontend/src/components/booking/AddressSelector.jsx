@@ -3,16 +3,6 @@ import { motion } from 'framer-motion';
 import { MapPin, Navigation, Compass, CheckCircle2, Sparkles, ChevronDown, Loader2, AlertCircle } from 'lucide-react';
 import { JABODETABEK_REGIONS, GROUPED_CITIES, findCityData } from '../../data/regionsData';
 
-/**
- * Komponen Input Alamat Terstruktur Berjenjang (Cascading Address Selector)
- * Mengelompokkan alamat menjadi:
- * 1. Kota / Kabupaten (Jabodetabek / Lainnya)
- * 2. Kecamatan (Tersaring otomatis berdasarkan Kota yang dipilih)
- * 3. Kelurahan / Desa (Tersaring otomatis berdasarkan Kecamatan yang dipilih)
- * 4. Detail Jalan, No. Rumah, RT/RW, Blok
- * 5. Patokan Lokasi / Catatan Akses Rumah
- * 6. Kode Pos (Estimasi otomatis)
- */
 export default function AddressSelector({ 
   value = '', 
   onChange, 
@@ -22,7 +12,6 @@ export default function AddressSelector({
 }) {
   const [mode, setMode] = useState('structured'); // 'structured' | 'manual'
 
-  // Structured fields
   const [kota, setKota] = useState('');
   const [kecamatan, setKecamatan] = useState('');
   const [kelurahan, setKelurahan] = useState('');
@@ -32,22 +21,17 @@ export default function AddressSelector({
   const [kodePos, setKodePos] = useState('');
   const [manualText, setManualText] = useState(value || '');
   
-  // Geolocation state
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
   const [geoLocationError, setGeoLocationError] = useState('');
 
-  // Flag to avoid feedback loop between assembleAddress and incoming value
   const isInternalUpdate = useRef(false);
 
-  // Cari data kota aktif
   const cityData = useMemo(() => findCityData(kota), [kota]);
 
-  // Daftar kecamatan untuk kota yang dipilih
   const availableDistricts = useMemo(() => {
     return cityData?.districts || [];
   }, [cityData]);
   
-  // Function untuk mendapatkan lokasi menggunakan Geolocation API
   const fetchCurrentLocation = () => {
     if (!navigator.geolocation) {
       setGeoLocationError('Geolocation tidak didukung oleh browser Anda');
@@ -62,21 +46,17 @@ export default function AddressSelector({
         try {
           const { latitude, longitude } = position.coords;
           
-          // Gunakan Nominatim OpenStreetMap untuk reverse geocoding (gratis, no API key)
-          // Atau gunakan Google Maps Geocoding API jika tersedia
           const response = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=16&addressdetails=1`
           );
           
           const data = await response.json();
           
-          // Extract address components
           const address = data.address || {};
           const city = address.city || address.town || address.village || address.hamlet || '';
           const district = address.suburb || address.neighbourhood || '';
           const road = address.road || address.street || '';
           
-          // Temukan kota yang paling dekat di Jabodetabek
           const matchedCity = JABODETABEK_REGIONS.find(c => {
             const cName = (c.city || c.name || '').toLowerCase();
             return cName && (city.toLowerCase().includes(cName) || cName.includes(city.toLowerCase()));
@@ -86,7 +66,6 @@ export default function AddressSelector({
             setKota(matchedCity.city || matchedCity.name);
             setManualText(`${road || ''}${district ? ', ' + district : ''}, ${city}`);
           } else {
-            // Jika tidak ditemukan di Jabodetabek, gunakan mode manual
             setMode('manual');
             setManualText(`${road || ''}${district ? ', ' + district : ''}, ${city}`);
           }
@@ -118,17 +97,14 @@ export default function AddressSelector({
     );
   };
 
-  // Data kecamatan yang dipilih
   const districtData = useMemo(() => {
     return availableDistricts.find(d => d.name === kecamatan) || null;
   }, [availableDistricts, kecamatan]);
 
-  // Daftar kelurahan untuk kecamatan yang dipilih
   const availableSubdistricts = useMemo(() => {
     return districtData?.subdistricts || [];
   }, [districtData]);
 
-  // Reset kecamatan & kelurahan jika kota berubah
   const handleKotaChange = (e) => {
     const newKota = e.target.value;
     setKota(newKota);
@@ -138,7 +114,6 @@ export default function AddressSelector({
     setKodePos('');
   };
 
-  // Reset kelurahan jika kecamatan berubah & set estimasi kode pos
   const handleKecamatanChange = (e) => {
     const newKec = e.target.value;
     setKecamatan(newKec);
@@ -150,7 +125,6 @@ export default function AddressSelector({
     }
   };
 
-  // Assemble full address string
   const assembleAddress = () => {
     if (mode === 'manual') {
       return manualText.trim();
@@ -158,38 +132,31 @@ export default function AddressSelector({
 
     const parts = [];
 
-    // 1. Detail jalan & nomor rumah
     if (detailJalan.trim()) {
       parts.push(detailJalan.trim());
     }
 
-    // 2. Patokan lokasi (dalam kurung jika ada)
     if (patokan.trim()) {
       parts.push(`(Patokan: ${patokan.trim()})`);
     }
 
-    // 3. Kelurahan
     const activeKel = kelurahan === 'OTHER' ? customKelurahan.trim() : kelurahan.trim();
     if (activeKel) {
       parts.push(`Kel. ${activeKel}`);
     }
 
-    // 4. Kecamatan
     if (kecamatan.trim()) {
       parts.push(`Kec. ${kecamatan.trim()}`);
     }
 
-    // 5. Kota / Kabupaten
     if (kota.trim()) {
       parts.push(kota.trim());
     }
 
-    // 6. Provinsi (diambil dari data kota)
     if (cityData?.province) {
       parts.push(cityData.province);
     }
 
-    // 7. Kode Pos
     if (kodePos.trim()) {
       parts.push(kodePos.trim());
     }
@@ -197,7 +164,6 @@ export default function AddressSelector({
     return parts.join(', ');
   };
 
-  // Sync internal changes to parent onChange
   useEffect(() => {
     isInternalUpdate.current = true;
     const formatted = assembleAddress();
@@ -214,7 +180,6 @@ export default function AddressSelector({
     }
   }, [mode, kota, kecamatan, kelurahan, customKelurahan, detailJalan, patokan, kodePos, manualText]);
 
-  // Inisialisasi awal jika ada value dari luar yang belum diurai
   useEffect(() => {
     if (isInternalUpdate.current) {
       isInternalUpdate.current = false;
@@ -222,7 +187,6 @@ export default function AddressSelector({
     }
     if (value && !detailJalan && !kota && !manualText) {
       setManualText(value);
-      // Cek apakah ada nama kota Jabodetabek yang cocok di string
       const matchedCity = JABODETABEK_REGIONS.find(r => value.includes(r.city));
       if (matchedCity) {
         setKota(matchedCity.city);
@@ -244,14 +208,12 @@ export default function AddressSelector({
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Header & Mode Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1 border-b border-slate-100">
         <div className="flex items-center gap-2 flex-wrap">
           <MapPin className="w-4 h-4 text-blue-600 shrink-0" />
           <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
             Alamat Lokasi Servis {required && <span className="text-rose-500">*</span>}
           </span>
-          {/* Tombol Geolocation */}
           <button
             type="button"
             onClick={fetchCurrentLocation}
@@ -314,9 +276,7 @@ export default function AddressSelector({
 
       {mode === 'structured' ? (
         <div className="space-y-3.5 bg-slate-50/60 p-3.5 sm:p-4 rounded-2xl border border-slate-200/80">
-          {/* Row 1: Kota & Kecamatan */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Kota / Kabupaten */}
             <div>
               <label htmlFor="address-selector-f1" className="text-xs font-bold text-slate-700 block mb-1">
                 1. Kota / Kabupaten <span className="text-rose-500">*</span>
@@ -341,7 +301,6 @@ export default function AddressSelector({
               </div>
             </div>
 
-            {/* Kecamatan (Cascading berdasarkan Kota) */}
             <div>
               <label htmlFor="address-selector-f2" className="text-xs font-bold text-slate-700 block mb-1">
                 2. Kecamatan <span className="text-rose-500">*</span>
@@ -370,9 +329,7 @@ export default function AddressSelector({
             </div>
           </div>
 
-          {/* Row 2: Kelurahan & Kode Pos */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Kelurahan */}
             <div className="sm:col-span-2">
               <label htmlFor="address-selector-f3" className="text-xs font-bold text-slate-700 block mb-1">
                 3. Kelurahan / Desa
@@ -400,9 +357,10 @@ export default function AddressSelector({
                 <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
 
-              {/* Input custom jika kelurahan tidak di daftar */}
               {kelurahan === 'OTHER' && (
                 <input
+                  id="custom-kelurahan-input"
+                  name="custom_kelurahan"
                   type="text"
                   placeholder="Ketik nama kelurahan Anda..."
                   value={customKelurahan}
@@ -412,7 +370,6 @@ export default function AddressSelector({
               )}
             </div>
 
-            {/* Kode Pos */}
             <div>
               <label htmlFor="address-selector-f4" className="text-xs font-bold text-slate-700 block mb-1">
                 Kode Pos (Opsional)
@@ -429,7 +386,6 @@ export default function AddressSelector({
             </div>
           </div>
 
-          {/* Row 3: Nama Jalan, No Rumah, RT/RW */}
           <div>
             <label htmlFor="address-selector-f5" className="text-xs font-bold text-slate-700 block mb-1">
               4. Nama Jalan, No. Rumah, RT/RW, Blok / Unit <span className="text-rose-500">*</span>
@@ -444,7 +400,6 @@ export default function AddressSelector({
             />
           </div>
 
-          {/* Row 4: Patokan Lokasi */}
           <div>
             <label htmlFor="address-selector-f6" className="text-xs font-bold text-slate-700 block mb-1">
               5. Patokan Lokasi / Petunjuk Akses (Sangat Dianjurkan)
@@ -466,9 +421,10 @@ export default function AddressSelector({
           </div>
         </div>
       ) : (
-        /* Manual Full Text Mode */
         <div className="space-y-2">
           <textarea
+            id="manual-address-textarea"
+            name="manual_address"
             rows={4}
             value={manualText}
             onChange={e => setManualText(e.target.value)}
@@ -481,7 +437,6 @@ export default function AddressSelector({
         </div>
       )}
 
-      {/* Live Formatted Address Preview Card */}
       {fullPreview && (
         <div className={`p-3.5 rounded-xl border transition-all ${
           isComplete || mode === 'manual' 

@@ -1,9 +1,3 @@
-/**
- * EstimatorCard Component
- * Kalkulator Estimasi Harga & Waktu untuk Service AC
- * Memungkinkan pengguna untuk menghitung biaya dan waktu servis berdasarkan
- * jumlah unit AC dan paket layanan yang dipilih
- */
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -58,7 +52,6 @@ export default function EstimatorCard({ services = [] }) {
   const calculation = useMemo(() => {
     const s = serviceOptions[selectedService] || serviceOptions.core;
     const subtotal = s.basePrice * unitCount;
-    // Diskon eksklusif untuk Member: 10%
     const memberDiscount = Math.round(subtotal * 0.1);
     const total = subtotal;
     const estTime = Math.round((s.durationPerUnit * unitCount) * (unitCount > 1 ? 0.85 : 1));
@@ -85,7 +78,6 @@ export default function EstimatorCard({ services = [] }) {
       transition={{ duration: 0.5, delay: 0.1 }}
       className="relative"
     >
-      {/* Ambient Pulsing Backing Glow */}
       <motion.div
         animate={{
           opacity: [0.3, 0.55, 0.3],
@@ -97,7 +89,6 @@ export default function EstimatorCard({ services = [] }) {
 
       <div className="relative bg-white/95 backdrop-blur-2xl p-6 sm:p-7 rounded-3xl border border-sky-100 shadow-2xl shadow-blue-900/10 text-left">
         
-        {/* Header */}
         <div className="flex items-center gap-2.5 mb-6">
           <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
             <Calculator className="w-5 h-5" />
@@ -109,7 +100,6 @@ export default function EstimatorCard({ services = [] }) {
         </div>
 
         <div className="space-y-4">
-          {/* Jumlah Unit Selector */}
           <div>
             <div role="group" aria-labelledby="estimator-unit-count-label" className="flex items-center justify-between mb-2">
               <label id="estimator-unit-count-label" className="text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -137,7 +127,6 @@ export default function EstimatorCard({ services = [] }) {
             </div>
           </div>
 
-          {/* Paket Pilihan */}
           <div>
             <label id="estimator-service-label" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
               Pilih Paket Servis
@@ -185,7 +174,6 @@ export default function EstimatorCard({ services = [] }) {
             </div>
           </div>
 
-          {/* Animated Live Summary Box */}
           <motion.div
             layout
             className="bg-gradient-to-br from-sky-50 to-blue-50/70 p-4 rounded-2xl border border-sky-200/80 mt-4 space-y-2.5"

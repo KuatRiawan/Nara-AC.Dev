@@ -21,7 +21,6 @@ export default function CustomerAcUnits() {
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, unitId: null, unitInfo: '' });
   
-  // Close form when route changes
   useEffect(() => {
     setShowForm(false);
     setEditingId(null);
@@ -152,7 +151,6 @@ export default function CustomerAcUnits() {
                   </p>
                 </div>
 
-                {/* BR-15, BR-16: Riwayat & Prediksi Perawatan */}
                 <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100 text-xs space-y-1.5">
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500">Total Servis Selesai:</span>
@@ -206,7 +204,6 @@ export default function CustomerAcUnits() {
         )}
       </div>
 
-      {/* Confirmation Modal for Delete */}
       <ConfirmationModal
         isOpen={deleteConfirmation.isOpen}
         onConfirm={confirmDelete}

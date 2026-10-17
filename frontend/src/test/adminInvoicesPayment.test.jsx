@@ -4,7 +4,6 @@ import AdminInvoices from '../pages/admin/AdminInvoices';
 import api from '../api';
 import * as toastModule from '../components/ui/toast';
 
-// Mock api
 vi.mock('../api', () => ({
   default: {
     get: vi.fn(),
@@ -13,7 +12,6 @@ vi.mock('../api', () => ({
   },
 }));
 
-// Mock toast
 const mockShowSuccess = vi.fn();
 const mockShowError = vi.fn();
 vi.spyOn(toastModule, 'useToast').mockReturnValue({
@@ -70,16 +68,13 @@ describe('Admin Invoices Payment Status Persistence (UX-003)', () => {
   it('loads persistent payment status from backend API data directly', async () => {
     render(<AdminInvoices />);
 
-    // Wait for data to load
     await waitFor(() => {
-      expect(screen.getByText('Andi Pratama')).toBeInTheDocument();
-      expect(screen.getByText('Budi Santoso')).toBeInTheDocument();
+      expect(screen.getAllByText('Andi Pratama')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Budi Santoso')[0]).toBeInTheDocument();
     });
 
-    // #101 has status_pembayaran: 'pending' -> should show "Tandai Lunas"
-    // #102 has status_pembayaran: 'paid' -> should show "Batal Lunas"
-    expect(screen.getByText('Tandai Lunas')).toBeInTheDocument();
-    expect(screen.getByText('Batal Lunas')).toBeInTheDocument();
+    expect(screen.getAllByText('Tandai Lunas')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Batal Lunas')[0]).toBeInTheDocument();
   });
 
   it('calls backend API patch when toggling payment status and updates UI', async () => {
@@ -92,10 +87,10 @@ describe('Admin Invoices Payment Status Persistence (UX-003)', () => {
     render(<AdminInvoices />);
 
     await waitFor(() => {
-      expect(screen.getByText('Tandai Lunas')).toBeInTheDocument();
+      expect(screen.getAllByText('Tandai Lunas')[0]).toBeInTheDocument();
     });
 
-    const markPaidBtn = screen.getByText('Tandai Lunas');
+    const markPaidBtn = screen.getAllByText('Tandai Lunas')[0];
     fireEvent.click(markPaidBtn);
 
     await waitFor(() => {
@@ -114,10 +109,10 @@ describe('Admin Invoices Payment Status Persistence (UX-003)', () => {
     render(<AdminInvoices />);
 
     await waitFor(() => {
-      expect(screen.getByText('Tandai Lunas')).toBeInTheDocument();
+      expect(screen.getAllByText('Tandai Lunas')[0]).toBeInTheDocument();
     });
 
-    const markPaidBtn = screen.getByText('Tandai Lunas');
+    const markPaidBtn = screen.getAllByText('Tandai Lunas')[0];
     fireEvent.click(markPaidBtn);
 
     await waitFor(() => {

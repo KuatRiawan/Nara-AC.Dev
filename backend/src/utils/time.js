@@ -1,8 +1,6 @@
-/** Utilitas waktu. Bisnis berada di WIB (UTC+7, tanpa DST). */
 const WIB_OFFSET_MIN = 7 * 60;
 const DAY_MS = 86400000;
 
-/** Date → {y,m,d,h,min,dow} dalam WIB (dow: 0=Minggu..6=Sabtu) */
 function wibParts(date) {
   const d = new Date(date.getTime() + WIB_OFFSET_MIN * 60000);
   return {
@@ -11,7 +9,6 @@ function wibParts(date) {
   };
 }
 
-/** Komponen WIB → Date (instan UTC yang benar) */
 function fromWib(y, m, d, h = 0, min = 0) {
   return new Date(Date.UTC(y, m - 1, d, h, min) - WIB_OFFSET_MIN * 60000);
 }
@@ -23,7 +20,6 @@ function wibDateString(date) {
   return `${p.y}-${pad(p.m)}-${pad(p.d)}`;
 }
 
-/** 'YYYY-MM-DD' → Date awal hari WIB */
 function startOfWibDay(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number);
   return fromWib(y, m, d, 0, 0);
@@ -33,7 +29,6 @@ function addDaysWibString(dateStr, n) {
   return wibDateString(new Date(startOfWibDay(dateStr).getTime() + n * DAY_MS + 12 * 3600000));
 }
 
-/** Parse input tanggal-waktu. Tanpa zona waktu dianggap WIB. Mengembalikan Date atau null. */
 function parseDateTimeInput(s) {
   if (typeof s !== 'string') return null;
   const str = s.trim().replace(' ', 'T');

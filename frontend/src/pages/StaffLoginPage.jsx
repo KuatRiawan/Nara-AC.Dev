@@ -1,5 +1,6 @@
 import { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useContextualBack } from '../hooks/useContextualBack';
 import { motion } from 'framer-motion';
 import { AuthContext } from '../AuthContext';
 import { Button } from '../components/ui/button';
@@ -31,6 +32,7 @@ import {
 } from 'lucide-react';
 
 export default function StaffLoginPage() {
+  const handleBack = useContextualBack('/');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -75,58 +77,44 @@ export default function StaffLoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50/70 via-slate-50 to-white font-sans flex flex-col text-slate-800 relative selection:bg-blue-600 selection:text-white">
-      {/* Ambient background decoration */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 pointer-events-none overflow-hidden -z-10">
         <div className="absolute -top-24 left-1/4 w-96 h-96 bg-blue-100/50 rounded-full blur-3xl" />
         <div className="absolute -top-12 right-1/4 w-80 h-80 bg-sky-100/40 rounded-full blur-3xl" />
       </div>
 
-      {/* ============================================================== */}
-      {/* 1. TOP NAVBAR (KONSISTEN DENGAN SELURUH SISTEM NARA AC)        */}
-      {/* ============================================================== */}
       <header className="bg-white/90 backdrop-blur-md border-b border-sky-100/80 sticky top-0 z-40 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex justify-between items-center">
-          {/* Logo Brand Resmi */}
           <Link to="/" className="flex items-center hover:opacity-90 transition-opacity">
             <CompanyLogo iconSize="h-8 sm:h-9" />
           </Link>
 
-          {/* Action Links */}
           <div className="flex items-center gap-3">
             <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200/80">
               <Shield className="w-3.5 h-3.5 text-blue-600" /> Akses Khusus Staf Internal
             </span>
 
-            <Link to="/">
-              <Button
+            <Button onClick={handleBack}
                 variant="outline"
                 size="sm"
                 className="rounded-xl border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-2xs"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Ke Beranda</span>
+                <span>Kembali</span>
               </Button>
-            </Link>
           </div>
         </div>
       </header>
 
-      {/* ============================================================== */}
-      {/* 2. MAIN SPLIT CONTENT (KONSISTEN 12-KOLOM DENGAN LOGIN ASLI)   */}
-      {/* ============================================================== */}
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex items-center">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 w-full items-center">
           
-          {/* SISI KIRI: PENJELASAN SISTEM OPERASIONAL STAF NARA AC */}
           <div className="lg:col-span-7 space-y-6">
             
-            {/* Badge Status Sistem */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50/80 border border-blue-200 text-blue-700 text-xs font-bold shadow-2xs">
               <Sparkles className="w-4 h-4 text-blue-600" />
               <span>Workspace Operasional CV. Nara Teknindotama</span>
             </div>
 
-            {/* Headline Utama */}
             <div className="space-y-3">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">
                 Sistem Manajemen Servis &amp; Penugasan Teknisi
@@ -136,7 +124,6 @@ export default function StaffLoginPage() {
               </p>
             </div>
 
-            {/* 3 Pillar Cards (Sesuai Gaya Asli Nara AC) */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-2">
               
               <div className="p-4 rounded-2xl bg-white border border-sky-100/80 shadow-xs hover:border-blue-200 transition-all">
@@ -171,7 +158,6 @@ export default function StaffLoginPage() {
 
             </div>
 
-            {/* Mini Trust Stats Bar */}
             <div className="pt-2 flex flex-wrap items-center gap-6 text-xs text-slate-600 border-t border-slate-200/70">
               <div className="flex items-center gap-1.5">
                 <Briefcase className="w-4 h-4 text-blue-600" />
@@ -192,18 +178,15 @@ export default function StaffLoginPage() {
 
           </div>
 
-          {/* SISI KANAN: KARTU FORM LOGIN STAF ELEGAN (KONSISTEN DENGAN LOGIN ASLI) */}
           <div className="lg:col-span-5">
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               className="bg-white/95 backdrop-blur-md rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/60 border border-sky-100 relative overflow-hidden"
             >
-              {/* Subtle card glow */}
               <div className="absolute -top-16 -right-16 w-40 h-40 bg-blue-50 rounded-full blur-2xl pointer-events-none" />
               <div className="absolute -bottom-16 -left-16 w-40 h-40 bg-sky-50 rounded-full blur-2xl pointer-events-none" />
 
-              {/* Form Title */}
               <div className="mb-5 relative z-10">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-bold text-blue-600 uppercase tracking-wider block">
@@ -221,7 +204,6 @@ export default function StaffLoginPage() {
                 </p>
               </div>
 
-              {/* Error Banner */}
               {error && (
                 <motion.div
                   initial={{ opacity: 0, y: -6 }}
@@ -249,9 +231,7 @@ export default function StaffLoginPage() {
                 </motion.div>
               )}
 
-              {/* Staff Login Form */}
               <form onSubmit={handleStaffLogin} className="space-y-4 relative z-10">
-                {/* Email Field */}
                 <div className="space-y-1.5">
                   <label htmlFor="staff-login-email" className="text-xs font-bold text-slate-700 block">
                     Email Akun Staf
@@ -272,7 +252,6 @@ export default function StaffLoginPage() {
                   </div>
                 </div>
 
-                {/* Password Field */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label htmlFor="staff-login-password" className="text-xs font-bold text-slate-700">
@@ -313,7 +292,6 @@ export default function StaffLoginPage() {
                   </div>
                 </div>
 
-                {/* Submit Button */}
                 <Button
                   type="submit"
                   disabled={isLoading}
@@ -333,7 +311,6 @@ export default function StaffLoginPage() {
                 </Button>
               </form>
 
-              {/* Tautan kembali ke Portal Pelanggan */}
               <div className="mt-6 pt-5 border-t border-slate-100 text-center space-y-2 relative z-10">
                 <p className="text-xs text-slate-600">
                   Bukan staf atau teknisi Nara AC?{' '}
@@ -352,12 +329,9 @@ export default function StaffLoginPage() {
         </div>
       </div>
 
-      {/* ============================================================== */}
-      {/* 3. FOOTER RESMI (KONSISTEN DENGAN SELURUH SISTEM NARA AC)      */}
-      {/* ============================================================== */}
       <footer className="bg-white border-t border-slate-200/80 py-6 text-xs text-slate-500 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          <p className="font-medium text-slate-600">&copy; {new Date().getFullYear()} CV. Nara Teknindotama. Seluruh hak cipta dilindungi.</p>
+          <p className="font-medium text-slate-600">© 2026 CV. Nara Teknindotama. Seluruh hak cipta dilindungi.</p>
           <div className="flex items-center gap-3 font-medium">
             <Link to="/terms" className="hover:text-blue-600 transition-colors">
               Syarat &amp; Ketentuan

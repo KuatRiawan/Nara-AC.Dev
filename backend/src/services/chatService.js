@@ -15,14 +15,10 @@ const FALLBACK_HELP = {
   saran: ['Berapa harga cuci AC?', 'Saya mau booking servis', 'Cek status AC-1234', 'AC saya tidak dingin'],
 };
 
-// Conversation state management with TTL and size limit
 const conversationStates = new Map();
 const CONVERSATION_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const MAX_CONVERSATIONS = 1000;
 
-/**
- * Cleanup expired conversation states
- */
 function cleanupConversationStates() {
   const now = Date.now();
   for (const [userId, state] of conversationStates.entries()) {
@@ -30,9 +26,7 @@ function cleanupConversationStates() {
       conversationStates.delete(userId);
     }
   }
-  // Also limit total number of conversations
   while (conversationStates.size > MAX_CONVERSATIONS) {
-    // Delete the oldest one
     let oldestUserId = null;
     let oldestTime = Infinity;
     for (const [userId, state] of conversationStates.entries()) {
@@ -47,12 +41,7 @@ function cleanupConversationStates() {
   }
 }
 
-/**
- * Get or create conversation state for a user
- * State contains: current context, collected entities, conversation history
- */
 function getConversationState(userId) {
-  // Periodic cleanup (every 100 calls)
   if (Math.random() < 0.01) {
     cleanupConversationStates();
   }
@@ -73,7 +62,6 @@ function getConversationState(userId) {
 function updateConversationState(userId, updates) {
   const state = getConversationState(userId);
   Object.assign(state, updates, { lastUpdated: Date.now() });
-  // Keep history limited to last 10 messages
   if (state.history && state.history.length > 10) {
     state.history = state.history.slice(-10);
   }
@@ -84,7 +72,6 @@ function clearConversationState(userId) {
   conversationStates.delete(userId);
 }
 
-// Intent to action mapping with context awareness
 const INTENT_ACTIONS = {
   greeting: handleGreeting,
   tanya_layanan: handleServiceQuery,
@@ -108,19 +95,16 @@ const INTENT_ACTIONS = {
   feedback: handleFeedback,
   admin_query: handleAdminQuery,
   tech_query: handleTechQuery,
-  // Legacy intents (map to new ones)
   booking: handleBookingRequest,
   keluhan: handleComplaint,
   lainnya: handleUnknown,
 };
 
-// Helper to get service catalog from database
 async function getServiceCatalog() {
   const services = (await query('SELECT * FROM service_catalog WHERE aktif ORDER BY id')).rows;
   return services;
 }
 
-// Helper to get operational settings
 async function getOperationalSettings() {
   const ops = await getOps();
   const hari = ops.days.map((d) => DAY_NAMES[d]).join(', ');
@@ -132,13 +116,11 @@ async function getOperationalSettings() {
   };
 }
 
-// Helper to get payment settings from database
 async function getPaymentSettings() {
   const r = await query("SELECT value FROM settings WHERE key = 'payment_accounts'");
   if (r.rows[0]) {
     return r.rows[0].value;
   }
-  // Return default payment settings
   return {
     accounts: [
       { id: '1', bank_name: 'BCA', account_number: '8720-9182-33', account_holder: 'CV NARA TEKNINDOTAMA' },
@@ -148,13 +130,11 @@ async function getPaymentSettings() {
   };
 }
 
-// Helper to get business profile from database
 async function getBusinessProfile() {
   const r = await query("SELECT value FROM settings WHERE key = 'business_profile'");
   if (r.rows[0]) {
     return r.rows[0].value;
   }
-  // Return default business profile
   return {
     name: 'CV. NARA TEKNINDOTAMA',
     tagline: 'Spesialis Layanan Service, Maintenance & Instalasi AC Profesional',
@@ -165,7 +145,6 @@ async function getBusinessProfile() {
   };
 }
 
-// Helper to identify complaint severity
 function getComplaintSeverity(complaintText) {
   const lowerText = complaintText.toLowerCase();
   const severeKeywords = ['bocor', 'kebakaran', ' listrik ', 'tersengat', 'meledak', 'terbakar', 'asap', 'percikan api'];
@@ -184,7 +163,6 @@ function getComplaintSeverity(complaintText) {
   return 'normal';
 }
 
-// Helper to generate quick replies based on context
 function getQuickReplies(intent, context, entities) {
   const replies = [];
   
@@ -227,7 +205,6 @@ function getQuickReplies(intent, context, entities) {
   return replies;
 }
 
-/** Korpus RAG dibangun dari satu sumber kebenaran: service_catalog + settings (bukan hardcode). */
 async function buildCorpus() {
   const services = (await query('SELECT * FROM service_catalog WHERE aktif ORDER BY id')).rows;
   const ops = await getOps();
@@ -315,14 +292,11 @@ function unavailableWithFallback(e) {
   });
 }
 
-/** Orkestrasi chatbot: intent (model tim) → routing dengan context management. */
 async function handleChat(message, userId = null, userRole = null) {
   const t0 = Date.now();
   
-  // Get conversation state if userId is provided
   const state = userId ? getConversationState(userId) : null;
   
-  // Add to history if state exists
   if (state) {
     state.history.push({ role: 'user', text: message, timestamp: Date.now() });
   }
@@ -336,10 +310,8 @@ async function handleChat(message, userId = null, userRole = null) {
     throw e;
   }
   
-  // Extract entities from the message
   const entities = pred.entities || {};
   
-  // Store entities in conversation state if available
   if (state && Object.keys(entities).length > 0) {
     state.entities = { ...state.entities, ...entities };
   }
@@ -354,7 +326,6 @@ async function handleChat(message, userId = null, userRole = null) {
       fallback: !!payload.fallback, latency: Date.now() - t0, modelVersion: pred.model_version,
     });
     
-    // Add bot response to history
     if (state && payload.jawaban) {
       state.history.push({ role: 'bot', text: payload.jawaban, timestamp: Date.now() });
     }
@@ -368,7 +339,6 @@ async function handleChat(message, userId = null, userRole = null) {
     };
   };
 
-  // If Gemini API is configured, use it for informative, conversational reasoning
   const hasBookingCode = BOOKING_CODE_RE.test(message);
   if (!(hasBookingCode && intent === 'tanya_status') && config.geminiApiKey) {
     try {
@@ -382,11 +352,8 @@ async function handleChat(message, userId = null, userRole = null) {
     }
   }
 
-  // Handle low confidence or unknown intent
   if (intent === 'lainnya' || confidence < threshold) {
-    // Try to use context from previous messages
     if (state && state.context) {
-      // If we're in a booking flow, continue with it
       if (state.context === 'booking_flow') {
         return await handleBookingFollowUp(message, state, done);
       }
@@ -404,11 +371,9 @@ async function handleChat(message, userId = null, userRole = null) {
     }, 'fallback');
   }
 
-  // Route to appropriate handler based on intent
   const handler = INTENT_ACTIONS[intent] || INTENT_ACTIONS.lainnya || handleUnknown;
   
   try {
-    // Call the handler with context
     const result = await handler(message, { 
       entities, 
       state, 
@@ -419,12 +384,10 @@ async function handleChat(message, userId = null, userRole = null) {
       threshold
     });
     
-    // If handler returns a promise, await it
     if (result && typeof result.then === 'function') {
       return await result;
     }
     
-    // Otherwise, use the done helper
     return done(result, intent);
   } catch (e) {
     console.error(`[chatService] Error handling intent ${intent}:`, e.message);
@@ -435,13 +398,9 @@ async function handleChat(message, userId = null, userRole = null) {
   }
 }
 
-
-// Individual intent handlers
-
 async function handleGreeting(message, context) {
   const { state } = context;
   
-  // Check if there's an ongoing conversation
   if (state && state.context) {
     switch (state.context) {
       case 'booking_flow':
@@ -456,7 +415,6 @@ async function handleGreeting(message, context) {
     }
   }
   
-  // New conversation greeting - more casual and friendly
   const greetings = ['Halo!', 'Pagi!', 'Siang!', 'Sore!', 'Assalamualaikum!'];
   const greeting = greetings[Math.floor(Math.random() * greetings.length)];
   
@@ -479,7 +437,6 @@ async function handleServiceQuery(message, context) {
   try {
     r = await answerService(message);
   } catch (e) {
-    // Fallback to database query (BR-44)
     const services = await getServiceCatalog();
     if (services.length === 0) {
       return {
@@ -488,7 +445,6 @@ async function handleServiceQuery(message, context) {
       };
     }
     
-    // Try to match the query
     const lowerMsg = message.toLowerCase();
     for (const service of services) {
       if (lowerMsg.includes(service.nama_layanan.toLowerCase()) ||
@@ -503,7 +459,6 @@ async function handleServiceQuery(message, context) {
       }
     }
     
-    // Return all services
     const serviceList = services.map(s => `• ${s.nama_layanan}: ${rupiah(s.harga)}`).join('\n');
     return {
       jawaban: `Ini beberapa layanan yang kami tawarkan:\n${serviceList}\n\nTertarik dengan yang mana? Atau mau tanya detail suatu layanan?`,
@@ -521,9 +476,7 @@ async function handleServiceQuery(message, context) {
     };
   }
   
-  // Make RAG answer more natural
   let answer = r.answer;
-  // Clean up RAG answer if it looks like it's from the catalog
   if (answer && answer.includes('Layanan')) {
     answer = answer.replace('Layanan', 'Kami punya layanan');
   }
@@ -548,7 +501,6 @@ async function handlePriceQuery(message, context) {
     };
   }
   
-  // Try to find specific service
   const lowerMsg = message.toLowerCase();
   for (const service of services) {
     if (lowerMsg.includes(service.nama_layanan.toLowerCase()) ||
@@ -563,7 +515,6 @@ async function handlePriceQuery(message, context) {
     }
   }
   
-  // Return price list in a more natural way
   const priceList = services.map(s => `• ${s.nama_layanan}: ${rupiah(s.harga)}`).join('\n');
   return {
     jawaban: `Ini daftar harga layanan kami:\n${priceList}\n\nMau tanya harga layanan tertentu? Cukup sebutkan namanya.`,
@@ -576,7 +527,6 @@ async function handleComplaint(message, context) {
   const { entities, userId } = context;
   const lowerMsg = message.toLowerCase();
   
-  // Check severity for safety warnings
   const severity = getComplaintSeverity(message);
   
   let safetyWarning = '';
@@ -586,7 +536,6 @@ async function handleComplaint(message, context) {
     safetyWarning = 'ℹ️ Saran: Kalau AC gak mau nyala sama sekali atau freon habis, sebaiknya segera periksa.\n\n';
   }
   
-  // Extract booking code if available
   const m = BOOKING_CODE_RE.exec(message);
   let bookingId = null;
   if (m) {
@@ -594,7 +543,6 @@ async function handleComplaint(message, context) {
     bookingId = b ? b.id : null;
   }
   
-  // Record the complaint
   const t = (await query(
     "INSERT INTO complaint_tickets (booking_id, pesan, sumber, severity) VALUES ($1,$2,'chatbot',$3) RETURNING id",
     [bookingId, message.slice(0, 1000), severity]
@@ -602,7 +550,6 @@ async function handleComplaint(message, context) {
   
   const response = `${safetyWarning}Oke, keluhanmu sudah aku catat sebagai tiket #${t.id}. Admin akan lihat dan tanggapi secepatnya. Maaf ya atas ketidaknyamanannya.`;
   
-  // Suggest next steps
   const hasBookingCode = m !== null;
   const suggestions = [];
   
@@ -624,26 +571,21 @@ async function handleComplaint(message, context) {
 async function handleBookingRequest(message, context) {
   const { state, userId, entities } = context;
   
-  // If we already have context, this might be a follow-up (BE-002 safe done callback)
   if (state && state.context === 'booking_flow') {
     const safeDone = typeof context.done === 'function' ? context.done : () => clearConversationState(userId);
     return await handleBookingFollowUp(message, state, safeDone);
   }
   
-  // New booking request
-  // Try to extract service type and other entities
   const serviceType = entities.service_type || null;
   const acUnits = entities.ac_units || null;
   const date = entities.date || null;
   const time = entities.time || null;
   const urgency = entities.needs_urgent ? true : null;
   
-  // Build a natural response
   let response;
   let actions = [{ type: 'open_booking', label: 'Buat booking', path: '/booking' }];
   let quickReplies = [];
   
-  // If we have some information, acknowledge it in a natural way
   const infoParts = [];
   if (serviceType) {
     const serviceNames = {
@@ -681,12 +623,10 @@ async function handleBookingRequest(message, context) {
     }
   }
   
-  // If urgency is indicated
   if (urgency) {
     quickReplies.push('Lihat slot tersedia hari ini');
   }
   
-  // Set context for follow-up
   if (userId) {
     updateConversationState(userId, {
       context: 'booking_flow',
@@ -703,19 +643,15 @@ async function handleBookingRequest(message, context) {
 }
 
 async function handleBookingFollowUp(message, state, done) {
-  // This handles follow-up messages in a booking conversation
   const { entities } = state;
   const lowerMsg = message.toLowerCase();
   
-  // Check if user is providing more information
   const newEntities = {};
   
-  // Extract additional info
   if (BOOKING_CODE_RE.test(message)) {
     newEntities.booking_code = BOOKING_CODE_RE.exec(message)[0];
   }
   
-  // Check for date/time
   const datePatterns = [
     /\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b/,
     /\b(besok|lusa|hari ini|minggu depan)\b/,
@@ -730,13 +666,11 @@ async function handleBookingFollowUp(message, state, done) {
     }
   }
   
-  // Check for time
   const timeMatch = message.match(/\b(\d{1,2}:\d{2})\b/);
   if (timeMatch) {
     newEntities.time = timeMatch[0];
   }
   
-  // Check for service type keywords
   const serviceKeywords = ['cuci', 'perbaikan', 'instalasi', 'isi freon', 'bongkar', 'pasang'];
   for (const keyword of serviceKeywords) {
     if (lowerMsg.includes(keyword)) {
@@ -745,10 +679,8 @@ async function handleBookingFollowUp(message, state, done) {
     }
   }
   
-  // Merge with existing entities
   Object.assign(state.entities, newEntities);
   
-  // If we now have enough info, suggest opening booking form
   if (state.entities.service_type || state.entities.date || state.entities.time) {
     return done({
       jawaban: 'Baik, informasi tambahan sudah saya catat. Silakan buka formulir booking untuk melengkapi data.',
@@ -758,7 +690,6 @@ async function handleBookingFollowUp(message, state, done) {
     }, 'booking_followup');
   }
   
-  // Otherwise, ask for missing information
   const missing = [];
   if (!state.entities.service_type) missing.push('jenis layanan');
   if (!state.entities.date && !state.entities.time) missing.push('tanggal/jam');
@@ -790,7 +721,6 @@ async function handleScheduleChange(message, context) {
     };
   }
   
-  // Check if booking exists and can be modified
   try {
     const booking = (await query(
       'SELECT id, kode_booking, status, jadwal_mulai FROM bookings WHERE kode_booking=$1',
@@ -804,7 +734,6 @@ async function handleScheduleChange(message, context) {
       };
     }
     
-    // Check if booking can be modified (not done or cancelled)
     const canModify = ['scheduled', 'rescheduled', 'delayed'].includes(booking.status);
     if (!canModify) {
       return {
@@ -851,7 +780,6 @@ async function handleBookingCancellation(message, context) {
 async function handleStatusQuery(message, context) {
   const { entities } = context;
   
-  // Try to extract booking code
   let bookingCode = entities.booking_code;
   const codeMatch = BOOKING_CODE_RE.exec(message);
   
@@ -872,7 +800,6 @@ async function handleStatusQuery(message, context) {
     const s = await publicStatusByCode(bookingCode);
     const lower = message.toLowerCase();
 
-    // Strict Anti-Hallucination: Verifikasi Pembayaran
     if (lower.includes('bayar') || lower.includes('bukti') || lower.includes('lunas') || lower.includes('pembayaran') || lower.includes('transfer')) {
       const isPaid = s.status_pembayaran === 'paid';
       const isVerified = s.status_verifikasi_pembayaran === 'diverifikasi';
@@ -897,7 +824,6 @@ async function handleStatusQuery(message, context) {
       }
     }
 
-    // Strict Anti-Hallucination: Status Klaim Garansi
     if (lower.includes('klaim') || lower.includes('claim') || lower.includes('garansi') || lower.includes('kompensasi')) {
       const claim = (await query(
         `SELECT id, kode_klaim, status, keluhan, catatan_pemeriksaan, alasan_penolakan 
@@ -939,13 +865,11 @@ async function handleStatusQuery(message, context) {
       }
     }
     
-    // Format status information
     const status = s.status;
     const layanan = s.layanan || 'Service AC';
     const jadwal = formatWib(new Date(s.jadwal_mulai));
     const teknisi = s.teknisi ? ` Teknisi: ${s.teknisi}.` : '';
     
-    // Add natural explanation about what the status means
     let statusExplanation = '';
     switch (status) {
       case 'scheduled':
@@ -988,7 +912,6 @@ async function handlePaymentQuery(message, context) {
   const paymentSettings = await getPaymentSettings();
   const businessProfile = await getBusinessProfile();
   
-  // Build payment methods list from database
   const bankList = paymentSettings.accounts ? paymentSettings.accounts.map(a => `${a.bank_name} (${a.account_number})`).join(', ') : 'BCA, Mandiri';
   const instruction = paymentSettings.instruction_note || '';
   
@@ -1002,7 +925,6 @@ async function handlePaymentQuery(message, context) {
 async function handleTechnicianQuery(message, context) {
   const { entities } = context;
   
-  // Try to extract booking code to get technician info
   const bookingCode = entities.booking_code || (BOOKING_CODE_RE.exec(message) || [null])[0];
   
   if (bookingCode) {
@@ -1021,7 +943,6 @@ async function handleTechnicianQuery(message, context) {
         };
       }
     } catch (e) {
-      // Booking not found, provide general info
     }
   }
   
@@ -1055,7 +976,6 @@ async function handleFollowUp(message, context) {
   const { state } = context;
   const lowerMsg = message.toLowerCase();
   
-  // Positive confirmations
   const positive = ['ya', 'iya', 'benar', 'betul', 'ok', 'oke', 'baikk', 'sip', 'terima kasih', 'makasih', 'thank'];
   const negative = ['tidak', 'gak', 'nggak', 'bukan', 'salah', 'engga', 'ngga'];
   
@@ -1123,10 +1043,6 @@ async function handleRejection(message, context) {
   };
 }
 
-/**
- * Human Handoff / Eskalasi ke Admin (BR-46)
- * Mencatat tiket eskalasi di complaint_tickets (sumber: 'whatsapp_ai') dan menyediakan tautan langsung ke WhatsApp admin.
- */
 async function handleHandoffRequest(message, context = {}) {
   let adminPhone = '081385293137';
   try {
@@ -1136,7 +1052,6 @@ async function handleHandoffRequest(message, context = {}) {
     }
   } catch (_) {}
 
-  // 1. Buat tiket eskalasi di complaint_tickets (BR-46)
   const cleanMsg = String(message || 'Permintaan eskalasi ke CS Admin').slice(0, 950);
   const ticketRes = await query(
     `INSERT INTO complaint_tickets (pesan, status, sumber)
@@ -1146,7 +1061,6 @@ async function handleHandoffRequest(message, context = {}) {
   );
   const ticketId = ticketRes.rows[0].id;
 
-  // 2. Format tautan WhatsApp langsung ke nomor admin
   let waPhone = adminPhone.replace(/[^0-9]/g, '');
   if (waPhone.startsWith('0')) waPhone = '62' + waPhone.slice(1);
   const waText = encodeURIComponent(`Halo Admin Nara AC, saya butuh bantuan CS manusia (Tiket #${ticketId}): ${cleanMsg.slice(0, 100)}`);
@@ -1164,14 +1078,10 @@ async function handleHandoffRequest(message, context = {}) {
   };
 }
 
-/**
- * Memeriksa ketersediaan jadwal slot operasional secara nyata via bookingService.getAvailability (BR-45).
- */
 async function handleAvailabilityCheck(message, context = {}) {
   const { entities = {} } = context;
   const today = new Date();
   
-  // 1. Ekstrak tanggal (format YYYY-MM-DD atau kata kunci)
   let dateStr = null;
   const dateMatch = /\b(\d{4}-\d{2}-\d{2})\b/.exec(message);
   if (dateMatch) {
@@ -1195,7 +1105,6 @@ async function handleAvailabilityCheck(message, context = {}) {
     }
   }
 
-  // 2. Tentukan layanan dari katalog DB (BR-44, BR-45)
   const services = await getServiceCatalog();
   if (!services || services.length === 0) {
     return {
@@ -1213,7 +1122,6 @@ async function handleAvailabilityCheck(message, context = {}) {
     }
   }
 
-  // 3. Panggil bookingService.getAvailability
   try {
     const avail = await getAvailability(dateStr, svc.id);
     if (!avail.buka) {
@@ -1263,62 +1171,45 @@ async function handleAvailabilityCheck(message, context = {}) {
   }
 }
 
-/**
- * Deteksi Intent Berbasis Aturan untuk Fallback saat AI Service Offline (BR-44, BR-45, BR-46)
- */
 function detectIntentRuleBased(message) {
   const lower = String(message || '').toLowerCase();
   
-  // Handoff keywords
   if (['admin', 'cs', 'manusia', 'oper', 'operator', 'orang', 'komplain', 'darurat', 'hubungi admin', 'eskalasi', 'bantuan langsung'].some(k => lower.includes(k))) {
     return { intent: 'human_handoff', confidence: 0.95, model_version: 'rule_based_fallback' };
   }
-  // Schedule / availability check
   if (['jadwal', 'slot', 'ketersediaan', 'kosong', 'bisa kapan', 'kapan bisa', 'jam berapa', 'hari apa'].some(k => lower.includes(k)) && !BOOKING_CODE_RE.test(message)) {
     return { intent: 'cek_jadwal', confidence: 0.95, model_version: 'rule_based_fallback' };
   }
-  // Status check with booking code or status inquiry
   if (BOOKING_CODE_RE.test(message) || ['status', 'lacak', 'cek progress', 'bukti transfer', 'verifikasi pembayaran', 'klaim garansi'].some(k => lower.includes(k))) {
     return { intent: 'tanya_status', confidence: 0.95, model_version: 'rule_based_fallback' };
   }
-  // Price inquiry
   if (['harga', 'biaya', 'tarif', 'ongkos', 'berapa'].some(k => lower.includes(k))) {
     return { intent: 'tanya_harga', confidence: 0.90, model_version: 'rule_based_fallback' };
   }
-  // Service inquiry
   if (['layanan', 'servis', 'service', 'cuci', 'freon', 'bocor', 'netes', 'tidak dingin', 'bau', 'rusak', 'pasang'].some(k => lower.includes(k))) {
     return { intent: 'tanya_layanan', confidence: 0.90, model_version: 'rule_based_fallback' };
   }
-  // Booking inquiry
   if (['booking', 'pesan', 'order', 'jadwalkan'].some(k => lower.includes(k))) {
     return { intent: 'booking_service', confidence: 0.90, model_version: 'rule_based_fallback' };
   }
-  // Greeting
   if (['halo', 'hai', 'pagi', 'siang', 'sore', 'malam', 'assalamualaikum', 'tes'].some(k => lower.includes(k))) {
     return { intent: 'greeting', confidence: 0.90, model_version: 'rule_based_fallback' };
   }
   return { intent: 'lainnya', confidence: 0.5, model_version: 'rule_based_fallback' };
 }
 
-/**
- * Fallback pemrosesan chat langsung ke database resmi saat service AI offline (BR-44, BR-45)
- */
 async function handleFallbackOfflineChat(message, userId) {
   const lower = String(message || '').toLowerCase();
   
-  // 1. Cek kode booking, status, pembayaran, klaim garansi
   if (BOOKING_CODE_RE.test(message) || lower.includes('status') || lower.includes('lacak') || lower.includes('klaim') || lower.includes('garansi') || lower.includes('bukti') || lower.includes('transfer') || lower.includes('bayar')) {
     return await handleStatusQuery(message, { entities: {} });
   }
-  // 2. Tanya harga
   if (lower.includes('harga') || lower.includes('biaya') || lower.includes('tarif')) {
     return await handlePriceQuery(message, { entities: {} });
   }
-  // 3. Permintaan booking baru
   if (lower.includes('booking') || lower.includes('pesan') || lower.includes('order')) {
     return await handleBookingRequest(message, { entities: {}, userId });
   }
-  // 4. Tanya layanan
   if (lower.includes('layanan') || lower.includes('servis') || lower.includes('service') || lower.includes('cuci')) {
     return await handleServiceQuery(message, { entities: {} });
   }
@@ -1332,10 +1223,6 @@ async function handleFallbackOfflineChat(message, userId) {
   };
 }
 
-/**
- * Memproses pesan masuk WhatsApp CS (BR-44, BR-45, BR-46, BR-47).
- * Mencatat percakapan di database whatsapp_conversations dan merespons otomatis.
- */
 const processedWaMessageIds = new Map();
 
 async function handleWhatsAppMessage({ sender, message, message_id = null }) {
@@ -1346,7 +1233,6 @@ async function handleWhatsAppMessage({ sender, message, message_id = null }) {
   const cleanPhone = normalizePhone(sender) || String(sender).trim();
   const cleanMsg = String(message).trim();
 
-  // Duplicate-event protection (Section 9 / DB-004)
   if (message_id) {
     const msgIdStr = String(message_id).trim();
     if (processedWaMessageIds.has(msgIdStr)) {
@@ -1369,18 +1255,15 @@ async function handleWhatsAppMessage({ sender, message, message_id = null }) {
         };
       }
     } catch (_) {
-      // Fallback if table not yet migrated in legacy DB
     }
   }
 
-  // 1. Catat pesan masuk pengguna ke whatsapp_conversations (BR-44)
   await query(
     `INSERT INTO whatsapp_conversations (sender, role, message)
      VALUES ($1, 'user', $2)`,
     [cleanPhone, cleanMsg]
   );
 
-  // 2. Evaluasi handoff ke admin manusia (BR-46)
   const handoffKeywords = ['admin', 'cs', 'manusia', 'oper', 'operator', 'orang', 'komplain', 'darurat', 'hubungi admin', 'eskalasi', 'bantuan langsung'];
   const lowerMsg = cleanMsg.toLowerCase();
   const isHandoffKeyword = handoffKeywords.some(k => lowerMsg.includes(k));
@@ -1395,24 +1278,20 @@ async function handleWhatsAppMessage({ sender, message, message_id = null }) {
     isHandoff = true;
     handoffTicketId = res.ticket_id;
   } else {
-    // 3. Evaluasi cek ketersediaan jadwal (BR-45)
     const availKeywords = ['jadwal', 'slot', 'ketersediaan', 'kosong', 'bisa kapan', 'kapan bisa', 'jam berapa', 'hari apa'];
     const isAvailKeyword = availKeywords.some(k => lowerMsg.includes(k));
 
     if (isAvailKeyword && !BOOKING_CODE_RE.test(cleanMsg)) {
       replyPayload = await handleAvailabilityCheck(cleanMsg, { sender: cleanPhone, userId: cleanPhone });
     } else {
-      // 4. Tanya layanan / harga / status (BR-44)
       try {
         replyPayload = await handleChat(cleanMsg, cleanPhone, 'customer');
       } catch (err) {
-        // Fallback jika AI service offline / 503
         replyPayload = await handleFallbackOfflineChat(cleanMsg, cleanPhone);
       }
     }
   }
 
-  // 5. Simpan balasan bot ke whatsapp_conversations
   await query(
     `INSERT INTO whatsapp_conversations (sender, role, message, intent, is_handoff, handoff_ticket_id)
      VALUES ($1, 'assistant', $2, $3, $4, $5)`,
@@ -1450,7 +1329,6 @@ async function handleFeedback(message, context) {
 }
 
 async function handleAdminQuery(message, context) {
-  // Check if user has admin role
   const userRole = context.userRole;
   if (userRole !== 'admin') {
     throw E.forbidden('Anda tidak memiliki hak akses untuk informasi ini.');
@@ -1468,7 +1346,6 @@ async function handleAdminQuery(message, context) {
 }
 
 async function handleTechQuery(message, context) {
-  // Check if user has technician role
   const userRole = context.userRole;
   if (userRole !== 'technician' && userRole !== 'admin') {
     throw E.forbidden('Anda tidak memiliki hak akses untuk informasi ini.');
@@ -1484,7 +1361,6 @@ async function handleUnknown(message, context) {
   const { state } = context;
   
   if (state && state.context) {
-    // Continue with current context (BE-002 safe done callback)
     if (state.context === 'booking_flow') {
       const safeDone = typeof context.done === 'function' ? context.done : () => clearConversationState(context.userId);
       return await handleBookingFollowUp(message, state, safeDone);

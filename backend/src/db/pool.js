@@ -12,7 +12,6 @@ pool.on('error', (err) => {
   console.error('[db] idle client error', err.message);
 });
 
-/** Jalankan fungsi dalam transaksi. */
 async function withTx(fn) {
   const client = await pool.connect();
   try {
@@ -28,10 +27,6 @@ async function withTx(fn) {
   }
 }
 
-/**
- * Validasi dan sanitize LIMIT dan OFFSET untuk query SQL
- * PostgreSQL tidak support parameterized LIMIT/OFFSET, jadi perlu validasi manual
- */
 function sanitizeLimitOffset(limit, offset = 0) {
   const maxLimit = 1000; // Batas maksimum untuk mencegah DoS
   const l = Number.isInteger(limit) ? Math.min(Math.max(1, limit), maxLimit) : 50;

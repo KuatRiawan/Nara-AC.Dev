@@ -31,6 +31,9 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       // Batasi host yang diizinkan — cegah DNS rebinding (AUD-018)
       allowedHosts: ['localhost', '127.0.0.1'],
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+      },
       proxy: {
         '/api': {
           target: 'http://localhost:4000',

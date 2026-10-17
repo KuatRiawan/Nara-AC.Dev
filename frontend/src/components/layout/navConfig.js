@@ -1,12 +1,6 @@
-/**
- * Navigation Configuration for NARA AC
- * Defines menu items for Admin and Technician roles
- * Used by both BottomNavigation (mobile) and Sidebar (desktop)
- */
 
 import { LayoutDashboard, Calendar as CalendarIcon, CalendarCheck, User, Users, Wrench, Settings, MoreHorizontal, ClipboardList, History, Package, Bot, AirVent, Receipt, Star, Tag, ShieldCheck } from 'lucide-react';
 
-// Admin Navigation Items
 export const adminNavItems = [
   {
     name: 'Dashboard',
@@ -122,7 +116,6 @@ export const adminNavItems = [
   }
 ];
 
-// Technician Navigation Items - All 5 primary items directly on mobile bottom bar
 export const technicianNavItems = [
   {
     name: 'Dashboard',
@@ -161,13 +154,11 @@ export const technicianNavItems = [
   }
 ];
 
-// Get items for Bottom Navigation (mobile) - returns exactly 5 items
 export const getMobileNavItems = (role) => {
   const items = role === 'admin' ? adminNavItems : technicianNavItems;
   const primaryItems = items.filter(item => item.priority === 'primary');
   const secondaryItems = items.filter(item => item.priority === 'secondary');
   
-  // Add "Lainnya" menu if there are secondary items
   if (secondaryItems.length > 0) {
     return [
       ...primaryItems,
@@ -185,12 +176,10 @@ export const getMobileNavItems = (role) => {
   return primaryItems;
 };
 
-// Get all items for Sidebar (desktop)
 export const getSidebarNavItems = (role) => {
   return role === 'admin' ? adminNavItems : technicianNavItems;
 };
 
-// Check if path is active (handles nested routes)
 export const isActivePath = (currentPath, targetPath) => {
   if (targetPath === '/admin' || targetPath === '/admin/') {
     return currentPath === '/admin' || currentPath === '/admin/';
@@ -201,11 +190,9 @@ export const isActivePath = (currentPath, targetPath) => {
   return currentPath.startsWith(targetPath);
 };
 
-// Breadcrumb configuration - maps paths to breadcrumb items
 export const getBreadcrumbItems = (pathname, role) => {
   const items = [];
   
-  // Helper to find nav item by path
   const findNavItem = (path) => {
     const navItems = role === 'admin' ? adminNavItems : technicianNavItems;
     return navItems.find(item => {
@@ -215,17 +202,14 @@ export const getBreadcrumbItems = (pathname, role) => {
     });
   };
   
-  // Helper to check if path is a direct child
   const isChildPath = (parentPath, childPath) => {
     if (!childPath.startsWith(parentPath)) return false;
     const remaining = childPath.slice(parentPath.length);
     return remaining === '' || remaining.startsWith('/');
   };
   
-  // Build breadcrumb trail
   const parts = pathname.split('/').filter(p => p && p !== 'admin' && p !== 'technician');
   
-  // Always start with dashboard/beranda
   const basePath = role === 'admin' ? '/admin' : '/technician';
   const baseItem = role === 'admin' ? adminNavItems[0] : technicianNavItems[0];
   
@@ -233,10 +217,8 @@ export const getBreadcrumbItems = (pathname, role) => {
     return [{ label: baseItem.name, to: basePath }];
   }
   
-  // Start with home
   items.push({ label: 'Beranda', to: basePath });
   
-  // Add path segments
   let currentPath = basePath;
   for (let i = 0; i < parts.length; i++) {
     currentPath += '/' + parts[i];
@@ -244,19 +226,16 @@ export const getBreadcrumbItems = (pathname, role) => {
     if (navItem) {
       items.push({ label: navItem.name, to: currentPath });
     } else {
-      // Try to find a matching nav item
       const matchingItem = role === 'admin' ? adminNavItems : technicianNavItems;
       const exactMatch = matchingItem.find(item => item.path === currentPath);
       if (exactMatch) {
         items.push({ label: exactMatch.name, to: currentPath });
       } else {
-        // Use the path segment as label
         items.push({ label: parts[i].replace(/-/g, ' '), to: currentPath });
       }
     }
   }
   
-  // Special cases for admin paths
   if (role === 'admin') {
     if (pathname.startsWith('/admin/bookings')) {
       return [
@@ -338,7 +317,6 @@ export const getBreadcrumbItems = (pathname, role) => {
     }
   }
   
-  // Special cases for technician paths
   if (role === 'technician') {
     if (pathname.startsWith('/technician/dashboard')) {
       return [{ label: 'Beranda', to: '/technician' }];

@@ -1,6 +1,105 @@
 {
-  "generated_at": "2026-10-17T05:44:13.383202",
+  "generated_at": "2026-10-17T22:54:10.552064",
   "customer_rfm": {
+    "total_customers": 251,
+    "registered_members": 53,
+    "b2b_customers": 27,
+    "residential_customers": 224,
+    "avg_repeat_interval_days": 110.0,
+    "median_repeat_interval_days": 96.5,
+    "segments": {
+      "Dormant / Satu Kali Transaksi (>5 Bulan)": 65,
+      "Champions (Pelanggan Rutin Aktif)": 54,
+      "Perlu Follow-Up Cuci Berkala (3-5 Bulan)": 39,
+      "Pelanggan Baru (Potensial Repeat)": 34,
+      "Berisiko Churn (Repeat Lama Tidak Order)": 34,
+      "Loyal / Repeat Customer": 24,
+      "Terdaftar Belum Transaksi": 1
+    },
+    "top_champions": [
+      {
+        "id_pelanggan": "CUST-034",
+        "segmen_pelanggan": "Korporat / Instansi / Komersial",
+        "terdaftar_di_member": 1,
+        "frequency_total_order": 13,
+        "total_unit_dilayani": 30,
+        "monetary_total_bersih": 4659000
+      },
+      {
+        "id_pelanggan": "CUST-099",
+        "segmen_pelanggan": "Perorangan / Residensial",
+        "terdaftar_di_member": 0,
+        "frequency_total_order": 7,
+        "total_unit_dilayani": 8,
+        "monetary_total_bersih": 2075000
+      },
+      {
+        "id_pelanggan": "CUST-043",
+        "segmen_pelanggan": "Perorangan / Residensial",
+        "terdaftar_di_member": 1,
+        "frequency_total_order": 10,
+        "total_unit_dilayani": 10,
+        "monetary_total_bersih": 2056000
+      },
+      {
+        "id_pelanggan": "CUST-228",
+        "segmen_pelanggan": "Korporat / Instansi / Komersial",
+        "terdaftar_di_member": 0,
+        "frequency_total_order": 5,
+        "total_unit_dilayani": 5,
+        "monetary_total_bersih": 1947800
+      },
+      {
+        "id_pelanggan": "CUST-018",
+        "segmen_pelanggan": "Perorangan / Residensial",
+        "terdaftar_di_member": 1,
+        "frequency_total_order": 9,
+        "total_unit_dilayani": 23,
+        "monetary_total_bersih": 1825000
+      },
+      {
+        "id_pelanggan": "CUST-062",
+        "segmen_pelanggan": "Perorangan / Residensial",
+        "terdaftar_di_member": 0,
+        "frequency_total_order": 10,
+        "total_unit_dilayani": 10,
+        "monetary_total_bersih": 1775000
+      },
+      {
+        "id_pelanggan": "CUST-196",
+        "segmen_pelanggan": "Korporat / Instansi / Komersial",
+        "terdaftar_di_member": 0,
+        "frequency_total_order": 3,
+        "total_unit_dilayani": 3,
+        "monetary_total_bersih": 1585000
+      },
+      {
+        "id_pelanggan": "CUST-021",
+        "segmen_pelanggan": "Perorangan / Residensial",
+        "terdaftar_di_member": 1,
+        "frequency_total_order": 11,
+        "total_unit_dilayani": 17,
+        "monetary_total_bersih": 1225000
+      },
+      {
+        "id_pelanggan": "CUST-027",
+        "segmen_pelanggan": "Perorangan / Residensial",
+        "terdaftar_di_member": 1,
+        "frequency_total_order": 5,
+        "total_unit_dilayani": 6,
+        "monetary_total_bersih": 1225000
+      },
+      {
+        "id_pelanggan": "CUST-003",
+        "segmen_pelanggan": "Perorangan / Residensial",
+        "terdaftar_di_member": 1,
+        "frequency_total_order": 3,
+        "total_unit_dilayani": 5,
+        "monetary_total_bersih": 1100000
+      }
+    ]
+  },
+  "rfm_summary": {
     "total_customers": 251,
     "registered_members": 53,
     "b2b_customers": 27,
@@ -221,11 +320,247 @@
       }
     ]
   },
+  "b2b_summary": {
+    "total_records": 79,
+    "period_range": "2025-07 s/d 2026-10",
+    "total_gross_value_idr": 234005000,
+    "total_project_cost_idr": 56001200,
+    "total_marketing_fee_idr": 20459500,
+    "total_net_profit_idr": 157544300,
+    "monthly_breakdown": [
+      {
+        "periode_bulan": "2025-07",
+        "nilai_proyek": 23190000,
+        "biaya_proyek": 13940000,
+        "fee_marketing": 1124000,
+        "profit_bersih": 8126000
+      },
+      {
+        "periode_bulan": "2025-08",
+        "nilai_proyek": 10675000,
+        "biaya_proyek": 340000,
+        "fee_marketing": 1067500,
+        "profit_bersih": 9267500
+      },
+      {
+        "periode_bulan": "2025-09",
+        "nilai_proyek": 17730000,
+        "biaya_proyek": 5410000,
+        "fee_marketing": 1220000,
+        "profit_bersih": 11100000
+      },
+      {
+        "periode_bulan": "2025-10",
+        "nilai_proyek": 27885000,
+        "biaya_proyek": 12600000,
+        "fee_marketing": 1299500,
+        "profit_bersih": 13985500
+      },
+      {
+        "periode_bulan": "2025-11",
+        "nilai_proyek": 10225000,
+        "biaya_proyek": 0,
+        "fee_marketing": 1187500,
+        "profit_bersih": 9037500
+      },
+      {
+        "periode_bulan": "2025-12",
+        "nilai_proyek": 29540000,
+        "biaya_proyek": 13697200,
+        "fee_marketing": 2071000,
+        "profit_bersih": 13771800
+      },
+      {
+        "periode_bulan": "2026-01",
+        "nilai_proyek": 10995000,
+        "biaya_proyek": 375000,
+        "fee_marketing": 1249500,
+        "profit_bersih": 9370500
+      },
+      {
+        "periode_bulan": "2026-02",
+        "nilai_proyek": 10550000,
+        "biaya_proyek": 0,
+        "fee_marketing": 1270000,
+        "profit_bersih": 9280000
+      },
+      {
+        "periode_bulan": "2026-03",
+        "nilai_proyek": 11075000,
+        "biaya_proyek": 0,
+        "fee_marketing": 1302500,
+        "profit_bersih": 9772500
+      },
+      {
+        "periode_bulan": "2026-04",
+        "nilai_proyek": 23170000,
+        "biaya_proyek": 9639000,
+        "fee_marketing": 1331000,
+        "profit_bersih": 12200000
+      },
+      {
+        "periode_bulan": "2026-05",
+        "nilai_proyek": 9500000,
+        "biaya_proyek": 0,
+        "fee_marketing": 1200000,
+        "profit_bersih": 8300000
+      },
+      {
+        "periode_bulan": "2026-06",
+        "nilai_proyek": 10955000,
+        "biaya_proyek": 0,
+        "fee_marketing": 1285500,
+        "profit_bersih": 9669500
+      },
+      {
+        "periode_bulan": "2026-07",
+        "nilai_proyek": 8840000,
+        "biaya_proyek": 0,
+        "fee_marketing": 1134000,
+        "profit_bersih": 7706000
+      },
+      {
+        "periode_bulan": "2026-08",
+        "nilai_proyek": 9675000,
+        "biaya_proyek": 0,
+        "fee_marketing": 1217500,
+        "profit_bersih": 8457500
+      },
+      {
+        "periode_bulan": "2026-09",
+        "nilai_proyek": 10000000,
+        "biaya_proyek": 0,
+        "fee_marketing": 1250000,
+        "profit_bersih": 8750000
+      },
+      {
+        "periode_bulan": "2026-10",
+        "nilai_proyek": 10000000,
+        "biaya_proyek": 0,
+        "fee_marketing": 1250000,
+        "profit_bersih": 8750000
+      }
+    ]
+  },
   "regular_operations": {
     "total_transactions": 545,
     "total_units_serviced": 724,
     "total_gross_revenue_idr": 96129000,
     "total_net_revenue_idr": 96118800,
+    "top_services": [
+      {
+        "kategori_layanan": "Cuci AC Reguler",
+        "jumlah_transaksi": 318,
+        "total_unit": 480,
+        "pendapatan_kotor": 36439000,
+        "pendapatan_bersih": 36436000
+      },
+      {
+        "kategori_layanan": "Cuci AC & Tambah Freon / Perbaikan Ringan",
+        "jumlah_transaksi": 70,
+        "total_unit": 73,
+        "pendapatan_kotor": 11437000,
+        "pendapatan_bersih": 11429800
+      },
+      {
+        "kategori_layanan": "Pasang AC / Isi Freon Full / Perbaikan",
+        "jumlah_transaksi": 48,
+        "total_unit": 51,
+        "pendapatan_kotor": 16116000,
+        "pendapatan_bersih": 16116000
+      },
+      {
+        "kategori_layanan": "Pengecekan Ringan",
+        "jumlah_transaksi": 36,
+        "total_unit": 36,
+        "pendapatan_kotor": 1580000,
+        "pendapatan_bersih": 1580000
+      },
+      {
+        "kategori_layanan": "Bongkar Pasang / Perbaikan Besar / Paket",
+        "jumlah_transaksi": 27,
+        "total_unit": 27,
+        "pendapatan_kotor": 16661000,
+        "pendapatan_bersih": 16661000
+      },
+      {
+        "kategori_layanan": "Isi / Tambah Freon",
+        "jumlah_transaksi": 12,
+        "total_unit": 12,
+        "pendapatan_kotor": 2876000,
+        "pendapatan_bersih": 2876000
+      },
+      {
+        "kategori_layanan": "Pasang AC Baru",
+        "jumlah_transaksi": 10,
+        "total_unit": 14,
+        "pendapatan_kotor": 3230000,
+        "pendapatan_bersih": 3230000
+      },
+      {
+        "kategori_layanan": "Bongkar / Pindah AC",
+        "jumlah_transaksi": 9,
+        "total_unit": 9,
+        "pendapatan_kotor": 3020000,
+        "pendapatan_bersih": 3020000
+      },
+      {
+        "kategori_layanan": "Perbaikan & Ganti Komponen",
+        "jumlah_transaksi": 4,
+        "total_unit": 4,
+        "pendapatan_kotor": 1300000,
+        "pendapatan_bersih": 1300000
+      },
+      {
+        "kategori_layanan": "Isi Freon & Perbaikan Part",
+        "jumlah_transaksi": 3,
+        "total_unit": 3,
+        "pendapatan_kotor": 1230000,
+        "pendapatan_bersih": 1230000
+      },
+      {
+        "kategori_layanan": "Cuci & Pasang AC",
+        "jumlah_transaksi": 2,
+        "total_unit": 6,
+        "pendapatan_kotor": 900000,
+        "pendapatan_bersih": 900000
+      },
+      {
+        "kategori_layanan": "Cuci AC & Tambah Freon",
+        "jumlah_transaksi": 2,
+        "total_unit": 3,
+        "pendapatan_kotor": 515000,
+        "pendapatan_bersih": 515000
+      },
+      {
+        "kategori_layanan": "Bongkar Pasang AC",
+        "jumlah_transaksi": 1,
+        "total_unit": 3,
+        "pendapatan_kotor": 500000,
+        "pendapatan_bersih": 500000
+      },
+      {
+        "kategori_layanan": "Layanan Lainnya",
+        "jumlah_transaksi": 1,
+        "total_unit": 1,
+        "pendapatan_kotor": 85000,
+        "pendapatan_bersih": 85000
+      },
+      {
+        "kategori_layanan": "Pengecekan & Perbaikan Bocor",
+        "jumlah_transaksi": 1,
+        "total_unit": 1,
+        "pendapatan_kotor": 150000,
+        "pendapatan_bersih": 150000
+      },
+      {
+        "kategori_layanan": "Pengecekan & Cuci AC",
+        "jumlah_transaksi": 1,
+        "total_unit": 1,
+        "pendapatan_kotor": 90000,
+        "pendapatan_bersih": 90000
+      }
+    ],
     "monthly_breakdown": [
       {
         "periode_bulan": "2025-05",
@@ -354,5 +689,367 @@
         "pendapatan_bersih": 6052000
       }
     ]
-  }
+  },
+  "timeseries_summary": {
+    "total_transactions": 545,
+    "total_units_serviced": 724,
+    "total_gross_revenue_idr": 96129000,
+    "total_net_revenue_idr": 96118800,
+    "top_services": [
+      {
+        "kategori_layanan": "Cuci AC Reguler",
+        "jumlah_transaksi": 318,
+        "total_unit": 480,
+        "pendapatan_kotor": 36439000,
+        "pendapatan_bersih": 36436000
+      },
+      {
+        "kategori_layanan": "Cuci AC & Tambah Freon / Perbaikan Ringan",
+        "jumlah_transaksi": 70,
+        "total_unit": 73,
+        "pendapatan_kotor": 11437000,
+        "pendapatan_bersih": 11429800
+      },
+      {
+        "kategori_layanan": "Pasang AC / Isi Freon Full / Perbaikan",
+        "jumlah_transaksi": 48,
+        "total_unit": 51,
+        "pendapatan_kotor": 16116000,
+        "pendapatan_bersih": 16116000
+      },
+      {
+        "kategori_layanan": "Pengecekan Ringan",
+        "jumlah_transaksi": 36,
+        "total_unit": 36,
+        "pendapatan_kotor": 1580000,
+        "pendapatan_bersih": 1580000
+      },
+      {
+        "kategori_layanan": "Bongkar Pasang / Perbaikan Besar / Paket",
+        "jumlah_transaksi": 27,
+        "total_unit": 27,
+        "pendapatan_kotor": 16661000,
+        "pendapatan_bersih": 16661000
+      },
+      {
+        "kategori_layanan": "Isi / Tambah Freon",
+        "jumlah_transaksi": 12,
+        "total_unit": 12,
+        "pendapatan_kotor": 2876000,
+        "pendapatan_bersih": 2876000
+      },
+      {
+        "kategori_layanan": "Pasang AC Baru",
+        "jumlah_transaksi": 10,
+        "total_unit": 14,
+        "pendapatan_kotor": 3230000,
+        "pendapatan_bersih": 3230000
+      },
+      {
+        "kategori_layanan": "Bongkar / Pindah AC",
+        "jumlah_transaksi": 9,
+        "total_unit": 9,
+        "pendapatan_kotor": 3020000,
+        "pendapatan_bersih": 3020000
+      },
+      {
+        "kategori_layanan": "Perbaikan & Ganti Komponen",
+        "jumlah_transaksi": 4,
+        "total_unit": 4,
+        "pendapatan_kotor": 1300000,
+        "pendapatan_bersih": 1300000
+      },
+      {
+        "kategori_layanan": "Isi Freon & Perbaikan Part",
+        "jumlah_transaksi": 3,
+        "total_unit": 3,
+        "pendapatan_kotor": 1230000,
+        "pendapatan_bersih": 1230000
+      },
+      {
+        "kategori_layanan": "Cuci & Pasang AC",
+        "jumlah_transaksi": 2,
+        "total_unit": 6,
+        "pendapatan_kotor": 900000,
+        "pendapatan_bersih": 900000
+      },
+      {
+        "kategori_layanan": "Cuci AC & Tambah Freon",
+        "jumlah_transaksi": 2,
+        "total_unit": 3,
+        "pendapatan_kotor": 515000,
+        "pendapatan_bersih": 515000
+      },
+      {
+        "kategori_layanan": "Bongkar Pasang AC",
+        "jumlah_transaksi": 1,
+        "total_unit": 3,
+        "pendapatan_kotor": 500000,
+        "pendapatan_bersih": 500000
+      },
+      {
+        "kategori_layanan": "Layanan Lainnya",
+        "jumlah_transaksi": 1,
+        "total_unit": 1,
+        "pendapatan_kotor": 85000,
+        "pendapatan_bersih": 85000
+      },
+      {
+        "kategori_layanan": "Pengecekan & Perbaikan Bocor",
+        "jumlah_transaksi": 1,
+        "total_unit": 1,
+        "pendapatan_kotor": 150000,
+        "pendapatan_bersih": 150000
+      },
+      {
+        "kategori_layanan": "Pengecekan & Cuci AC",
+        "jumlah_transaksi": 1,
+        "total_unit": 1,
+        "pendapatan_kotor": 90000,
+        "pendapatan_bersih": 90000
+      }
+    ],
+    "monthly_breakdown": [
+      {
+        "periode_bulan": "2025-05",
+        "total_order": 25,
+        "total_unit": 51,
+        "pendapatan_kotor": 4455000,
+        "pendapatan_bersih": 4455000
+      },
+      {
+        "periode_bulan": "2025-06",
+        "total_order": 36,
+        "total_unit": 53,
+        "pendapatan_kotor": 7080000,
+        "pendapatan_bersih": 7080000
+      },
+      {
+        "periode_bulan": "2025-07",
+        "total_order": 25,
+        "total_unit": 28,
+        "pendapatan_kotor": 3740000,
+        "pendapatan_bersih": 3740000
+      },
+      {
+        "periode_bulan": "2025-08",
+        "total_order": 20,
+        "total_unit": 33,
+        "pendapatan_kotor": 5055000,
+        "pendapatan_bersih": 5055000
+      },
+      {
+        "periode_bulan": "2025-09",
+        "total_order": 22,
+        "total_unit": 26,
+        "pendapatan_kotor": 2650000,
+        "pendapatan_bersih": 2650000
+      },
+      {
+        "periode_bulan": "2025-10",
+        "total_order": 32,
+        "total_unit": 38,
+        "pendapatan_kotor": 4220000,
+        "pendapatan_bersih": 4220000
+      },
+      {
+        "periode_bulan": "2025-11",
+        "total_order": 19,
+        "total_unit": 25,
+        "pendapatan_kotor": 3295000,
+        "pendapatan_bersih": 3295000
+      },
+      {
+        "periode_bulan": "2025-12",
+        "total_order": 24,
+        "total_unit": 35,
+        "pendapatan_kotor": 4175000,
+        "pendapatan_bersih": 4175000
+      },
+      {
+        "periode_bulan": "2026-01",
+        "total_order": 17,
+        "total_unit": 22,
+        "pendapatan_kotor": 1580000,
+        "pendapatan_bersih": 1580000
+      },
+      {
+        "periode_bulan": "2026-02",
+        "total_order": 21,
+        "total_unit": 27,
+        "pendapatan_kotor": 3160000,
+        "pendapatan_bersih": 3160000
+      },
+      {
+        "periode_bulan": "2026-03",
+        "total_order": 13,
+        "total_unit": 28,
+        "pendapatan_kotor": 2815000,
+        "pendapatan_bersih": 2815000
+      },
+      {
+        "periode_bulan": "2026-04",
+        "total_order": 36,
+        "total_unit": 46,
+        "pendapatan_kotor": 5175000,
+        "pendapatan_bersih": 5175000
+      },
+      {
+        "periode_bulan": "2026-05",
+        "total_order": 32,
+        "total_unit": 43,
+        "pendapatan_kotor": 5860000,
+        "pendapatan_bersih": 5860000
+      },
+      {
+        "periode_bulan": "2026-06",
+        "total_order": 43,
+        "total_unit": 54,
+        "pendapatan_kotor": 7887000,
+        "pendapatan_bersih": 7887000
+      },
+      {
+        "periode_bulan": "2026-07",
+        "total_order": 37,
+        "total_unit": 38,
+        "pendapatan_kotor": 7915000,
+        "pendapatan_bersih": 7915000
+      },
+      {
+        "periode_bulan": "2026-08",
+        "total_order": 51,
+        "total_unit": 61,
+        "pendapatan_kotor": 9741000,
+        "pendapatan_bersih": 9741000
+      },
+      {
+        "periode_bulan": "2026-09",
+        "total_order": 61,
+        "total_unit": 84,
+        "pendapatan_kotor": 11271000,
+        "pendapatan_bersih": 11263800
+      },
+      {
+        "periode_bulan": "2026-10",
+        "total_order": 31,
+        "total_unit": 32,
+        "pendapatan_kotor": 6055000,
+        "pendapatan_bersih": 6052000
+      }
+    ]
+  },
+  "top_services_historical": [
+    {
+      "kategori_layanan": "Cuci AC Reguler",
+      "jumlah_transaksi": 318,
+      "total_unit": 480,
+      "pendapatan_kotor": 36439000,
+      "pendapatan_bersih": 36436000
+    },
+    {
+      "kategori_layanan": "Cuci AC & Tambah Freon / Perbaikan Ringan",
+      "jumlah_transaksi": 70,
+      "total_unit": 73,
+      "pendapatan_kotor": 11437000,
+      "pendapatan_bersih": 11429800
+    },
+    {
+      "kategori_layanan": "Pasang AC / Isi Freon Full / Perbaikan",
+      "jumlah_transaksi": 48,
+      "total_unit": 51,
+      "pendapatan_kotor": 16116000,
+      "pendapatan_bersih": 16116000
+    },
+    {
+      "kategori_layanan": "Pengecekan Ringan",
+      "jumlah_transaksi": 36,
+      "total_unit": 36,
+      "pendapatan_kotor": 1580000,
+      "pendapatan_bersih": 1580000
+    },
+    {
+      "kategori_layanan": "Bongkar Pasang / Perbaikan Besar / Paket",
+      "jumlah_transaksi": 27,
+      "total_unit": 27,
+      "pendapatan_kotor": 16661000,
+      "pendapatan_bersih": 16661000
+    },
+    {
+      "kategori_layanan": "Isi / Tambah Freon",
+      "jumlah_transaksi": 12,
+      "total_unit": 12,
+      "pendapatan_kotor": 2876000,
+      "pendapatan_bersih": 2876000
+    },
+    {
+      "kategori_layanan": "Pasang AC Baru",
+      "jumlah_transaksi": 10,
+      "total_unit": 14,
+      "pendapatan_kotor": 3230000,
+      "pendapatan_bersih": 3230000
+    },
+    {
+      "kategori_layanan": "Bongkar / Pindah AC",
+      "jumlah_transaksi": 9,
+      "total_unit": 9,
+      "pendapatan_kotor": 3020000,
+      "pendapatan_bersih": 3020000
+    },
+    {
+      "kategori_layanan": "Perbaikan & Ganti Komponen",
+      "jumlah_transaksi": 4,
+      "total_unit": 4,
+      "pendapatan_kotor": 1300000,
+      "pendapatan_bersih": 1300000
+    },
+    {
+      "kategori_layanan": "Isi Freon & Perbaikan Part",
+      "jumlah_transaksi": 3,
+      "total_unit": 3,
+      "pendapatan_kotor": 1230000,
+      "pendapatan_bersih": 1230000
+    },
+    {
+      "kategori_layanan": "Cuci & Pasang AC",
+      "jumlah_transaksi": 2,
+      "total_unit": 6,
+      "pendapatan_kotor": 900000,
+      "pendapatan_bersih": 900000
+    },
+    {
+      "kategori_layanan": "Cuci AC & Tambah Freon",
+      "jumlah_transaksi": 2,
+      "total_unit": 3,
+      "pendapatan_kotor": 515000,
+      "pendapatan_bersih": 515000
+    },
+    {
+      "kategori_layanan": "Bongkar Pasang AC",
+      "jumlah_transaksi": 1,
+      "total_unit": 3,
+      "pendapatan_kotor": 500000,
+      "pendapatan_bersih": 500000
+    },
+    {
+      "kategori_layanan": "Layanan Lainnya",
+      "jumlah_transaksi": 1,
+      "total_unit": 1,
+      "pendapatan_kotor": 85000,
+      "pendapatan_bersih": 85000
+    },
+    {
+      "kategori_layanan": "Pengecekan & Perbaikan Bocor",
+      "jumlah_transaksi": 1,
+      "total_unit": 1,
+      "pendapatan_kotor": 150000,
+      "pendapatan_bersih": 150000
+    },
+    {
+      "kategori_layanan": "Pengecekan & Cuci AC",
+      "jumlah_transaksi": 1,
+      "total_unit": 1,
+      "pendapatan_kotor": 90000,
+      "pendapatan_bersih": 90000
+    }
+  ]
 }

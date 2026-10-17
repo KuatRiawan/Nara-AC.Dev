@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+import numpy as np
 try:
     import joblib
     from sklearn.feature_extraction.text import TfidfVectorizer
@@ -26,7 +27,6 @@ LABEL_ENCODER_PATH = BASE_DIR / "label_encoder.pkl"
 model = None
 vectorizer = None
 label_encoder = None
-
 
 def load_model():
     """Load model, vectorizer, and label encoder (with auto-rebuild fallback if binary format differs)."""
@@ -49,20 +49,16 @@ def load_model():
         return True
     return False
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """FastAPI lifespan context manager for startup and shutdown lifecycle."""
     load_model()
     yield
 
-
-# Eager load on import for tests and immediate readiness
 load_model()
 
 app = FastAPI(title="Nara AC - AI Service", version="2.0.0", lifespan=lifespan)
 
-# Simple API key authentication
 AI_API_KEY = os.getenv("AI_API_KEY")
 IS_PROD = os.getenv("NODE_ENV") == "production" or os.getenv("ENV") == "production"
 
@@ -70,10 +66,8 @@ if IS_PROD and not AI_API_KEY:
     import sys
     print("[ai-service] FATAL: AI_API_KEY wajib diisi di production. AI Service gagal start.", file=sys.stderr)
 
-
 @app.middleware("http")
 async def verify_api_key(request, call_next):
-    # Skip authentication if no API key is configured (dev mode only)
     if not AI_API_KEY:
         if IS_PROD:
             return JSONResponse(
@@ -82,7 +76,6 @@ async def verify_api_key(request, call_next):
             )
         return await call_next(request)
 
-    # Check for API key in header
     api_key = request.headers.get("X-AI-API-Key")
     if api_key != AI_API_KEY:
         return JSONResponse(
@@ -94,10 +87,8 @@ async def verify_api_key(request, call_next):
 MODEL_VERSION = "2.0"
 CONFIDENCE_THRESHOLD = float(os.getenv("AI_CONFIDENCE_THRESHOLD", "0.55"))
 
-
 class IntentRequest(BaseModel):
     text: str
-
 
 class IntentResponse(BaseModel):
     intent: str
@@ -106,18 +97,14 @@ class IntentResponse(BaseModel):
     model_version: Optional[str] = None
     entities: Optional[Dict[str, Any]] = None
 
-
 class EntityExtractRequest(BaseModel):
     text: str
     intent: Optional[str] = None
-
 
 class EntityResponse(BaseModel):
     entities: Dict[str, Any]
     intent_specific_data: Optional[Dict[str, Any]] = None
 
-
-# All possible intents in the system
 ALL_INTENTS = [
     "greeting", "tanya_layanan", "tanya_harga", "keluhan_ac",
     "booking_service", "ubah_jadwal", "batalkan_booking",
@@ -127,9 +114,6 @@ ALL_INTENTS = [
     "admin_query", "tech_query", "lainnya"
 ]
 
-# Intent label mapping for backward compatibility with older models
-# This maps old model indices to new intent names
-# The new model (trained with train.py) uses label_encoder which has the full set
 INTENT_MAPPING = {
     0: "admin_query",
     1: "booking",
@@ -138,7 +122,6 @@ INTENT_MAPPING = {
     4: "tanya_layanan",
     5: "tanya_status",
     6: "tech_query",
-    # New intents for updated models - these will be used if label_encoder is not available
     7: "greeting",
     8: "tanya_harga",
     9: "keluhan_ac",
@@ -156,8 +139,6 @@ INTENT_MAPPING = {
     21: "feedback",
 }
 
-
-# Entity extraction patterns
 def extract_entities(text: str, intent: str = None) -> Dict[str, Any]:
     """
     Extract entities from text based on intent and patterns.
@@ -167,6 +148,7 @@ def extract_entities(text: str, intent: str = None) -> Dict[str, Any]:
         "booking_code": None,
         "service_type": None,
         "ac_type": None,
+        "ac_brand": None,
         "ac_units": None,
         "location": None,
         "date": None,
@@ -179,25 +161,21 @@ def extract_entities(text: str, intent: str = None) -> Dict[str, Any]:
         "duration": None,
     }
 
-    # Normalize text
     text_lower = text.lower().strip()
 
-    # Booking code patterns (NARA-AC..., AC-XXXX, BK-XXXX, etc.)
     nara_match = re.search(r'\bnara-ac[a-z0-9-]+\b', text_lower)
     if nara_match:
         entities["booking_code"] = nara_match.group(0).upper()
     booking_code_patterns = [
-        r'\b[a-z]{1,4}-\d{3,6}\b',  # AC-1234, BK-555, etc.
-        r'\b(ac|bk)\d{3,6}\b',
+        r'\b(?:bk|ac)-\d{3,6}(?:-[a-z0-9]{1,8})?\b',
+        r'\b[a-z]{1,4}-\d{3,6}\b',
+        r'\b(?:ac|bk)\d{3,6}\b',
     ]
     for pattern in booking_code_patterns:
         match = re.search(pattern, text_lower)
         if match and not entities["booking_code"]:
-            code = match.group(0).upper()
-            if re.match(r'^[A-Z]{1,4}-?\d{3,6}$', code):
-                entities["booking_code"] = code
+            entities["booking_code"] = match.group(0).upper()
 
-    # Service type extraction
     service_keywords = {
         'cuci': ['cuci ac', 'servis', 'pembersihan', 'cleaning', 'maintenance'],
         'perbaikan': ['perbaikan', 'bocor', 'rusak', 'mampet', 'reparasi', 'ganti', 'benerin'],
@@ -213,19 +191,23 @@ def extract_entities(text: str, intent: str = None) -> Dict[str, Any]:
         if entities["service_type"]:
             break
 
-    # AC type and units
     ac_type_patterns = [
-        (r'\b\d+\s*(pk|PK|pengkondisian)\b', 'pk'),
+        (r'\b(?:\d+/\d+|\d+(?:[.,]\d+)?)\s*(?:pk|PK|pengkondisian)\b', 'pk'),
         (r'\b\d+\s*ton\b', 'ton'),
         (r'\b\d+\s*btu\b', 'btu'),
     ]
+    text_no_code = re.sub(r'\bnara-ac[a-z0-9-]+\b', '', text_lower)
+    for brand in ['daikin', 'panasonic', 'sharp', 'samsung', 'lg', 'gree', 'midea', 'mitsubishi', 'polytron', 'aqua', 'changhong', 'tcl']:
+        if re.search(rf'\b{brand}\b', text_no_code):
+            entities["ac_brand"] = brand
+            break
+
     for pattern, unit in ac_type_patterns:
         match = re.search(pattern, text_lower)
         if match:
             entities["ac_type"] = match.group(0)
             break
 
-    # Number of AC units
     unit_patterns = [
         r'\b\d+\s*unit\b',
         r'\b\d+\s*ac\b',
@@ -241,23 +223,17 @@ def extract_entities(text: str, intent: str = None) -> Dict[str, Any]:
             except:
                 pass
 
-    # Location extraction (simple pattern)
     location_keywords = ['di ', 'alamat ', 'lokasi ', 'daerah ', 'di ', 'ke ']
     for keyword in location_keywords:
         if keyword in text_lower:
-            # Extract text after the keyword
             idx = text_lower.find(keyword) + len(keyword)
             if idx < len(text_lower):
                 entities["location"] = text[idx:].strip()
                 break
 
-    # Date extraction
     date_patterns = [
-        # DD/MM/YYYY or DD-MM-YYYY
         (r'\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b', 'date_str'),
-        # Hari ini, besok, lusa
         (r'\b(hari\s+)?(ini|besok|lusa|kemarin)\b', 'relative_date'),
-        # Days of week
         (r'\b(senin|selasa|rabu|kamis|jumat|sabtu|minggu)\b', 'day_of_week'),
     ]
 
@@ -268,13 +244,11 @@ def extract_entities(text: str, intent: str = None) -> Dict[str, Any]:
             entities["date_type"] = date_type
             break
 
-    # Time extraction
     time_pattern = r'\b\d{1,2}:\d{2}\b'
     match = re.search(time_pattern, text_lower)
     if match:
         entities["time"] = match.group(0)
 
-    # Complaint type extraction
     complaint_keywords = [
         ('tidak dingin', 'ac_tidak_dingin'),
         ('kurang dingin', 'ac_kurang_dingin'),
@@ -294,37 +268,31 @@ def extract_entities(text: str, intent: str = None) -> Dict[str, Any]:
             entities["complaint_type"] = complaint_type
             break
 
-    # Price extraction
     price_pattern = r'\b(rp\s*\d+|\d+\s*ribu|\d+\s*juta|\d+\.?\d*)\b'
     match = re.search(price_pattern, text_lower, re.IGNORECASE)
     if match:
         entities["price"] = match.group(0)
 
-    # Payment method
     payment_keywords = ['transfer', 'cash', 'cod', 'dana', 'ovo', 'gopay', 'bca', 'bni', 'bri', 'mandiri']
     for keyword in payment_keywords:
         if keyword in text_lower:
             entities["payment_method"] = keyword
             break
 
-    # Technician name
     tech_name_pattern = r'\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b'
     match = re.search(tech_name_pattern, text)
     if match:
         entities["technician_name"] = match.group(0)
 
-    # Area/Location
     area_keywords = ['jakarta', 'bogor', 'depok', 'tangerang', 'bekasi', 'jaksel', 'jakpus', 'jakbar']
     for keyword in area_keywords:
         if keyword in text_lower:
             entities["area"] = keyword
             break
 
-    # Remove None values for cleaner response
     entities = {k: v for k, v in entities.items() if v is not None}
 
     return entities
-
 
 def extract_service_request_entities(text: str) -> Dict[str, Any]:
     """
@@ -332,7 +300,6 @@ def extract_service_request_entities(text: str) -> Dict[str, Any]:
     """
     entities = extract_entities(text)
 
-    # Additional booking-specific extraction
     additional_info = {
         "needs_urgent": 'segera' in text.lower() or 'cepat' in text.lower(),
         "prefers_morning": 'pagi' in text.lower(),
@@ -341,7 +308,6 @@ def extract_service_request_entities(text: str) -> Dict[str, Any]:
 
     return {**entities, **additional_info}
 
-
 def extract_booking_code(text: str) -> Optional[str]:
     """
     Extract booking code from text.
@@ -349,34 +315,26 @@ def extract_booking_code(text: str) -> Optional[str]:
     entities = extract_entities(text)
     return entities.get("booking_code")
 
-
-
 @app.get("/health")
 def health_check():
     return {"status": "ok", "model_loaded": model is not None}
-
 
 @app.post("/predict-intent", response_model=IntentResponse)
 def predict_intent(req: IntentRequest):
     if not model or not vectorizer:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
-    # Sanitize input to prevent prompt injection
     text = req.text.strip()
     if not text:
         return IntentResponse(intent="unknown", confidence=0.0, fallback=True)
 
-    # Basic sanitization: remove potentially harmful patterns
-    # Remove common prompt injection attempts
     sanitized_text = text
-    # Remove attempts to override system prompts
     for pattern in ["ignore all previous", "forget all", "disregard all", "ignore all instructions",
                    "system:", "assistant:", "user:", "[INST]", "[/INST]",
                    "<s>", "</s>", "<|im_start|>", "<|im_end|>"]:
         sanitized_text = sanitized_text.replace(pattern.lower(), "")
         sanitized_text = sanitized_text.replace(pattern, "")
 
-    # Limit input length to prevent DoS
     max_input_length = 1000
     if len(sanitized_text) > max_input_length:
         sanitized_text = sanitized_text[:max_input_length]
@@ -384,10 +342,21 @@ def predict_intent(req: IntentRequest):
     text = sanitized_text
 
     X = vectorizer.transform([text])
-    probabilities = model.predict_proba(X)[0]
-    max_prob = max(probabilities)
-    intent_idx = list(probabilities).index(max_prob)
-    # Map integer label to intent name
+    if hasattr(model, "predict_proba"):
+        probabilities = model.predict_proba(X)[0]
+        max_prob = float(max(probabilities))
+        intent_idx = int(list(probabilities).index(max_prob))
+    elif hasattr(model, "decision_function"):
+        df_scores = model.decision_function(X)[0]
+        exp_scores = np.exp(df_scores - np.max(df_scores))
+        probabilities = exp_scores / np.sum(exp_scores)
+        max_prob = float(np.max(probabilities))
+        intent_idx = int(np.argmax(probabilities))
+    else:
+        pred_label = model.predict(X)[0]
+        max_prob = 0.95
+        intent_idx = int(pred_label) if isinstance(pred_label, (int, np.integer)) else 0
+
     if label_encoder:
         intent = label_encoder.inverse_transform([intent_idx])[0]
     else:
@@ -395,8 +364,6 @@ def predict_intent(req: IntentRequest):
 
     fallback = max_prob < CONFIDENCE_THRESHOLD
 
-    # Handle legacy intent names for backward compatibility
-    # Map old intent names to new ones
     LEGACY_INTENT_MAP = {
         "booking": "booking_service",
         "keluhan": "keluhan_ac",
@@ -404,7 +371,6 @@ def predict_intent(req: IntentRequest):
     if intent in LEGACY_INTENT_MAP:
         intent = LEGACY_INTENT_MAP[intent]
 
-    # Extract entities based on intent
     entities = extract_entities(text, intent)
 
     return IntentResponse(
@@ -414,7 +380,6 @@ def predict_intent(req: IntentRequest):
         model_version=MODEL_VERSION,
         entities=entities if entities else None
     )
-
 
 @app.post("/extract-entities", response_model=EntityResponse)
 def extract_entities_endpoint(req: EntityExtractRequest):
@@ -428,7 +393,6 @@ def extract_entities_endpoint(req: EntityExtractRequest):
     intent = req.intent
     entities = extract_entities(text, intent)
 
-    # Add intent-specific extraction if intent is provided
     intent_specific = None
     if intent:
         if intent in ["booking_service", "ubah_jadwal"]:
@@ -439,7 +403,6 @@ def extract_entities_endpoint(req: EntityExtractRequest):
         intent_specific_data=intent_specific
     )
 
-
 @app.post("/extract-booking-code")
 def extract_booking_code_endpoint(req: IntentRequest):
     """
@@ -448,26 +411,21 @@ def extract_booking_code_endpoint(req: IntentRequest):
     code = extract_booking_code(req.text)
     return {"booking_code": code, "found": code is not None}
 
-
 class Document(BaseModel):
     id: str
     title: str
     source: str
     text: str
 
-
 class RagIndexRequest(BaseModel):
     documents: list[Document]
     corpus_hash: str
-
 
 class RagAnswerRequest(BaseModel):
     question: str
     corpus_hash: str
 
-
 corpus_cache = {}
-
 
 @app.post("/rag/index")
 def rag_index(req: RagIndexRequest):
@@ -481,14 +439,12 @@ def rag_index(req: RagIndexRequest):
     corpus_cache[req.corpus_hash] = {"docs": req.documents, "tfidf": tfidf, "X": X}
     return {"status": "ok", "indexed": len(req.documents)}
 
-
 @app.post("/rag/answer")
 def rag_answer(req: RagAnswerRequest):
     corpus = corpus_cache.get(req.corpus_hash)
     if not corpus:
         raise HTTPException(status_code=409, detail="Corpus hash not found, please re-index")
 
-    # Sanitize question to prevent prompt injection
     question = req.question.strip()
     sanitized_question = question
     for pattern in ["ignore all previous", "forget all", "disregard all", "ignore all instructions",
@@ -517,12 +473,10 @@ def rag_answer(req: RagAnswerRequest):
         "mode": "extractive",
     }
 
-
 if __name__ == "__main__":
     import uvicorn
     import os
 
-    # Use 127.0.0.1 by default for security; bind to 0.0.0.0 only if explicitly configured
     host = os.getenv("AI_HOST", "127.0.0.1")
     port = int(os.getenv("AI_PORT", "8000"))
     reload = os.getenv("AI_RELOAD", "true").lower() == "true"

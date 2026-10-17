@@ -1,21 +1,11 @@
-/**
- * Structured Logger Utility - Phase 3 (BE-050)
- * Simple logger without circular dependencies
- */
 
 const config = require('../config');
 
-/**
- * Generate a unique request ID
- */
 function generateRequestId() {
   const crypto = require('crypto');
   return crypto.randomBytes(8).toString('hex');
 }
 
-/**
- * Structured logger that outputs JSON in production
- */
 function log(level, req, message, additionalData = {}) {
   const timestamp = new Date().toISOString();
   const requestId = req?.requestId || 'unknown';
@@ -38,16 +28,12 @@ function log(level, req, message, additionalData = {}) {
     };
     console[level === 'error' ? 'error' : 'log'](JSON.stringify(logEntry));
   } else {
-    // Development mode: simple logging
     const prefix = requestId ? `[${requestId}]` : '';
     const userInfo = userId ? ` user=${userId}(${userRole})` : '';
     console[level === 'error' ? 'error' : 'log'](`[${level.toUpperCase()}] ${prefix}${method} ${path}${userInfo} - ${message}`);
   }
 }
 
-/**
- * Log error with structured format
- */
 function logError(req, err, additionalData = {}) {
   const errorData = {
     errorCode: err.code,
@@ -62,17 +48,12 @@ function logError(req, err, additionalData = {}) {
   log('error', req, err.message || 'Unknown error', errorData);
 }
 
-/**
- * Request logging middleware
- */
 function requestLogger(req, res, next) {
   req.requestId = generateRequestId();
   req.startTime = process.hrtime.bigint();
   
-  // Log request start
   log('info', req, 'Request started');
   
-  // Add response logging
   res.on('finish', () => {
     const durationMs = Number(process.hrtime.bigint() - req.startTime) / 1_000_000;
     const statusCode = res.statusCode;
@@ -84,7 +65,6 @@ function requestLogger(req, res, next) {
   });
   
   res.on('close', () => {
-    // Only warn if client disconnected before response finished writing
     if (!res.writableEnded) {
       const durationMs = Number(process.hrtime.bigint() - req.startTime) / 1_000_000;
       log('warn', req, 'Request closed before completion', {
@@ -96,9 +76,6 @@ function requestLogger(req, res, next) {
   next();
 }
 
-/**
- * Dependency health check
- */
 async function checkDependencies() {
   const { pool } = require('../db/pool');
   
@@ -109,7 +86,6 @@ async function checkDependencies() {
     },
   };
   
-  // Check database
   try {
     await pool.query('SELECT 1');
     checks.database.status = 'ok';
@@ -122,9 +98,6 @@ async function checkDependencies() {
   return checks;
 }
 
-/**
- * Enhanced health check handler
- */
 async function healthCheckHandler(req, res) {
   const dbStatus = { status: 'ok', message: 'Connected' };
   const depsStatus = { status: 'ok', message: 'All dependencies healthy' };

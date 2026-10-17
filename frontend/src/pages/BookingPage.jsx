@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useContext } from 'react';
 import { createPortal } from 'react-dom';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../api';
 import { AuthContext } from '../AuthContext';
@@ -11,21 +11,51 @@ import AddressSelector from '../components/booking/AddressSelector';
 import OfficialInvoicePaper from '../components/OfficialInvoicePaper';
 import ScrollToTopButton from '../components/ui/ScrollToTopButton';
 import { cn } from '../lib/utils';
-import { useBusinessProfile, buildWhatsAppUrl } from '../hooks/useBusinessProfile';
+import { useBusinessProfile, buildWhatsAppUrl, COPYRIGHT_TEXT } from '../hooks/useBusinessProfile';
+import { useContextualBack } from '../hooks/useContextualBack';
 import { useFocusTrap } from '../hooks/useFocusTrap';
-import { Clock, ArrowLeft, ArrowRight, Wrench, ShieldCheck, CheckCircle2, Loader2, Sparkles, User, Phone, Check, Copy, Wind, FileText, MessageSquare, AlertCircle, HelpCircle, Percent, CalendarOff, Sun, Sunset, Printer, X, History, Plus, Trash2, Layers, Ticket } from 'lucide-react';
+import {
+  Clock,
+  ArrowLeft,
+  ArrowRight,
+  Wrench,
+  ShieldCheck,
+  CheckCircle2,
+  Loader2,
+  Sparkles,
+  User,
+  Phone,
+  Check,
+  Copy,
+  Wind,
+  FileText,
+  MessageSquare,
+  AlertCircle,
+  Percent,
+  CalendarOff,
+  Sun,
+  Sunset,
+  Printer,
+  X,
+  History,
+  Plus,
+  Trash2,
+  Layers,
+  Ticket,
+  Send,
+  RefreshCw,
+} from 'lucide-react';
 
 export default function BookingPage() {
-  const navigate = useNavigate();
-  const location = useLocation();
   const { whatsappNumber } = useBusinessProfile();
   const { user } = useContext(AuthContext);
+  const { goBack, fallbackLabel } = useContextualBack('/');
 
   const [services, setServices] = useState([]);
+  const [customerUnits, setCustomerUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
-  // Wizard state: 1: Layanan, 2: Jadwal, 3: Data Diri, 4: Konfirmasi, 5: Sukses
+
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
@@ -33,20 +63,19 @@ export default function BookingPage() {
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [successData, setSuccessData] = useState(null);
   const [copiedTicket, setCopiedTicket] = useState(false);
+  const [waInvoiceState, setWaInvoiceState] = useState({ status: 'idle', message: '' });
   const invoiceModalRef = useRef(null);
-  
-  // Focus trap untuk modal invoice
+
   useFocusTrap(invoiceModalRef, isInvoiceModalOpen, () => setIsInvoiceModalOpen(false));
 
-  // Real-time availability state from backend
   const [availability, setAvailability] = useState(null);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [availabilityError, setAvailabilityError] = useState('');
   const [availabilityRetry, setAvailabilityRetry] = useState(0);
 
-  // Form state
   const [form, setForm] = useState({
     layanan_id: '',
+    ac_unit_id: '',
     nama: '',
     kontak: '',
     alamat: '',
@@ -56,13 +85,11 @@ export default function BookingPage() {
     jumlah_unit: 1,
     extra_items: [],
   });
-  
-  // State untuk tracking unsaved changes
+
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showRestoreDraft, setShowRestoreDraft] = useState(false);
   const [userHasInteracted, setUserHasInteracted] = useState(false);
 
-  // Helper for checking if date string (YYYY-MM-DD) is Sunday (libur)
   const isSunday = (dateStr) => {
     if (!dateStr) return false;
     const [y, m, d] = dateStr.split('-').map(Number);
@@ -70,7 +97,6 @@ export default function BookingPage() {
     return dt.getDay() === 0;
   };
 
-  // Helper for consistent local date string YYYY-MM-DD
   const getLocalDateStr = (daysAhead = 0) => {
     const d = new Date();
     if (daysAhead) d.setDate(d.getDate() + daysAhead);
@@ -80,7 +106,6 @@ export default function BookingPage() {
     return `${year}-${month}-${day}`;
   };
 
-  // Format date to Indonesian human readable (e.g., "Selasa, 13 Okt 2026")
   const formatIndoDate = (dateStr) => {
     if (!dateStr) return '';
     try {
@@ -92,7 +117,6 @@ export default function BookingPage() {
     }
   };
 
-  // Quick date status badge
   const getQuickDateBadge = (daysAhead) => {
     const dStr = getLocalDateStr(daysAhead);
     if (isSunday(dStr)) {
@@ -101,7 +125,7 @@ export default function BookingPage() {
     if (daysAhead === 0) {
       const now = new Date();
       const currentHour = now.getHours();
-      if (currentHour >= 16) {
+      if (currentHour >= 18) {
         return { label: 'Slot Habis Hari Ini', status: 'closed' };
       }
       return { label: 'Slot Tersedia', status: 'available' };
@@ -112,14 +136,11 @@ export default function BookingPage() {
     return { label: 'Slot Lengkap', status: 'available' };
   };
 
-  // Load draft from localStorage and check for unsaved changes
   useEffect(() => {
-    // Cek apakah ada draft tersimpan
     try {
       const savedDraft = localStorage.getItem('bookingFormDraft');
       if (savedDraft && !userHasInteracted) {
         const draft = JSON.parse(savedDraft);
-        // Draft valid selama 24 jam
         const ONE_DAY = 24 * 60 * 60 * 1000;
         if (Date.now() - (draft.timestamp || 0) < ONE_DAY) {
           setShowRestoreDraft(true);
@@ -127,216 +148,112 @@ export default function BookingPage() {
           localStorage.removeItem('bookingFormDraft');
         }
       }
-    } catch (err) {
-      console.error('Gagal memuat draft booking:', err);
-    }
-    
-    // Setup beforeunload warning
+    } catch (_) {}
+
     const handleBeforeUnload = (e) => {
       if (hasUnsavedChanges) {
         e.preventDefault();
-        e.returnValue = 'Anda memiliki data booking yang belum disimpan. Apakah Anda yakin ingin meninggalkan halaman ini?';
+        e.returnValue = 'Anda memiliki data booking yang belum disimpan.';
         return e.returnValue;
       }
     };
-    
+
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges, userHasInteracted]);
 
-  // Fetch Services from API and parse query params
+  useEffect(() => {
+    if (user && user.role === 'customer') {
+      setForm((prev) => ({
+        ...prev,
+        nama: prev.nama || user.nama || '',
+        kontak: prev.kontak || user.kontak || '',
+      }));
+      api.get('/customer/ac-units')
+        .then((res) => {
+          const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+          setCustomerUnits(list);
+        })
+        .catch(() => {});
+      api.get('/customer/profile')
+        .then((res) => {
+          const cust = res?.data?.customer || res?.customer;
+          if (cust) {
+            setForm((prev) => ({
+              ...prev,
+              nama: prev.nama || cust.nama || user.nama || '',
+              kontak: prev.kontak || cust.kontak || user.kontak || '',
+              alamat: prev.alamat || cust.alamat || '',
+            }));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const preselectedLayanan = params.get('layanan');
     const preselectedPaket = params.get('paket') || params.get('service');
     const preselectedUnits = parseInt(params.get('units') || params.get('jumlah') || '1', 10);
+    const preselectedAcUnitId = params.get('ac_unit_id');
 
-    // Default dates: jika besok hari Minggu, defaultkan ke lusa (H+2)
     const defaultDate = isSunday(getLocalDateStr(1)) ? getLocalDateStr(2) : getLocalDateStr(1);
 
     api.get('/services')
-      .then(res => {
+      .then((res) => {
         const sList = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : (res?.data?.data || []));
         setServices(sList);
 
-        // Find service matching query parameters
         let matchedService = null;
         if (preselectedPaket) {
           const p = preselectedPaket.toLowerCase();
           if (p.includes('core_freon') || p.includes('freon_core') || p === 'freon') {
-            matchedService = sList.find(s => s.kode === 'SRV-CUCI-FREON' || s.nama_layanan.toLowerCase().includes('freon') && s.nama_layanan.toLowerCase().includes('core'));
+            matchedService = sList.find((s) => s.kode === 'SRV-CUCI-FREON' || (s.nama_layanan.toLowerCase().includes('freon') && s.nama_layanan.toLowerCase().includes('core')));
           } else if (p.includes('core')) {
-            matchedService = sList.find(s => s.kode === 'SRV-CUCI-CORE' || s.nama_layanan.toLowerCase().includes('core'));
+            matchedService = sList.find((s) => s.kode === 'SRV-CUCI-CORE' || s.nama_layanan.toLowerCase().includes('core'));
           } else if (p.includes('standard') || p.includes('standar')) {
-            matchedService = sList.find(s => s.kode === 'SRV-CUCI-01' || s.nama_layanan.toLowerCase().includes('standard'));
+            matchedService = sList.find((s) => s.kode === 'SRV-CUCI-01' || s.nama_layanan.toLowerCase().includes('standard'));
           }
         }
 
         if (!matchedService && preselectedLayanan) {
-          matchedService = sList.find(s => String(s.id) === String(preselectedLayanan) || s.kode === preselectedLayanan);
+          matchedService = sList.find((s) => String(s.id) === String(preselectedLayanan) || s.kode === preselectedLayanan);
         }
 
-        // Fallback default: select Core (Deep Clean) if available or first service
-        const defaultService = matchedService || sList.find(s => s.kode === 'SRV-CUCI-CORE') || sList[0];
+        const defaultService = matchedService || sList.find((s) => s.kode === 'SRV-CUCI-01') || sList[0];
 
-        setForm(prev => ({
+        setForm((prev) => ({
           ...prev,
           layanan_id: defaultService ? String(defaultService.id) : '',
+          ac_unit_id: preselectedAcUnitId ? String(preselectedAcUnitId) : prev.ac_unit_id,
           jumlah_unit: preselectedUnits > 0 ? preselectedUnits : 1,
           tanggal: prev.tanggal || defaultDate,
-          jam: prev.jam || '', // Slot jam akan diisi otomatis berdasarkan ketersediaan aktif
-          keluhan: preselectedPaket === 'core' 
-            ? 'Request Paket Cuci Core / Deep Clean' 
-            : preselectedPaket === 'core_freon' 
-              ? 'Request Paket Core + Pengisian Freon' 
-              : prev.keluhan
+          jam: prev.jam || '',
+          keluhan: preselectedPaket === 'core'
+            ? 'Request Paket Cuci Core / Deep Clean'
+            : preselectedPaket === 'core_freon'
+              ? 'Request Paket Core + Pengisian Freon'
+              : prev.keluhan,
         }));
       })
       .catch(() => setError('Gagal memuat layanan. Pastikan koneksi internet stabil.'))
       .finally(() => setLoading(false));
   }, []);
 
-  const totalUnits = useMemo(() => {
-    const primary = Number(form.jumlah_unit) || 1;
-    const extra = (form.extra_items || []).reduce((acc, it) => acc + (Number(it.jumlah_unit) || 1), 0);
-    return primary + extra;
-  }, [form.jumlah_unit, form.extra_items]);
-
-  // Fetch real-time availability whenever tanggal, layanan_id, or totalUnits changes
-  useEffect(() => {
-    if (!form.tanggal || !form.layanan_id) return;
-    let isMounted = true;
-    setLoadingAvailability(true);
-    setAvailabilityError('');
-
-    api.get('/availability', {
-      params: {
-        tanggal: form.tanggal,
-        layanan_id: form.layanan_id,
-        jumlah_unit: totalUnits
-      }
-    })
-      .then(res => {
-        if (!isMounted) return;
-        // The API returns { tanggal, buka, jam_operasional, slot }
-        // Axios interceptor returns response.data, so res might be the object directly
-        const data = (res && typeof res === 'object' && res.slot !== undefined)
-          ? res
-          : (res?.data || res);
-
-        if (!data || typeof data !== 'object') {
-          throw new Error('Format data ketersediaan tidak valid dari server.');
-        }
-
-        setAvailability(data);
-
-        if (!data.buka) {
-          // Toko libur pada hari yang dipilih
-          setForm(prev => ({ ...prev, jam: '' }));
-        } else {
-          // Toko buka: periksa apakah jam yang sedang dipilih masih valid & tersedia
-          setForm(prev => {
-            const currentSlotValid = Array.isArray(data.slot) && data.slot.some(s => s.jam === prev.jam && s.tersedia);
-            if (!currentSlotValid) {
-              const firstAvailable = Array.isArray(data.slot) ? data.slot.find(s => s.tersedia) : null;
-              return { ...prev, jam: firstAvailable ? firstAvailable.jam : '' };
-            }
-            return prev;
-          });
-        }
-      })
-      .catch((err) => {
-        if (!isMounted) return;
-        console.error('Ketersediaan jadwal error:', err);
-        setAvailability(null);
-        setAvailabilityError('Gagal memverifikasi ketersediaan jadwal. Silakan periksa koneksi internet.');
-      })
-      .finally(() => {
-        if (isMounted) setLoadingAvailability(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [form.tanggal, form.layanan_id, totalUnits, availabilityRetry]);
-
-  // Restore draft dari localStorage
-  const restoreDraft = () => {
-    try {
-      const savedDraft = localStorage.getItem('bookingFormDraft');
-      if (savedDraft) {
-        const draft = JSON.parse(savedDraft);
-        delete draft.timestamp;
-        setForm({ ...form, ...draft });
-        setShowRestoreDraft(false);
-        // Hapus draft setelah direstore
-        localStorage.removeItem('bookingFormDraft');
-        setHasUnsavedChanges(false);
-        setUserHasInteracted(true); // User is now interacting with restored data
-      }
-    } catch (err) {
-      console.error('Gagal memulihkan draft booking:', err);
-    }
-  };
-  
-  // Hapus draft
-  const discardDraft = () => {
-    try {
-      localStorage.removeItem('bookingFormDraft');
-      setShowRestoreDraft(false);
-      setHasUnsavedChanges(false);
-      setUserHasInteracted(false); // User chose to start fresh
-    } catch (err) {
-      console.error('Gagal menghapus draft booking:', err);
-    }
-  };
-  
-  // Auto-save saat step berubah
-  useEffect(() => {
-    if (step > 1 && step < 5) {
-      try {
-        localStorage.setItem('bookingFormDraft', JSON.stringify({
-          ...form,
-          timestamp: Date.now(),
-          currentStep: step
-        }));
-      } catch (err) {
-        console.error('Gagal menyimpan draft booking:', err);
-      }
-    }
-  }, [step, form]);
-  
-  const handleChange = (e) => {
-    const newForm = { ...form, [e.target.name]: e.target.value };
-    setForm(newForm);
-    if (!userHasInteracted) setUserHasInteracted(true);
-    // Auto-save ke localStorage
-    try {
-      localStorage.setItem('bookingFormDraft', JSON.stringify({
-        ...newForm,
-        timestamp: Date.now()
-      }));
-      if (userHasInteracted) setHasUnsavedChanges(true);
-    } catch (err) {
-      console.error('Gagal menyimpan draft booking:', err);
-    }
-  };
-
-  // Currently selected service object
   const selectedService = useMemo(() => {
-    return services.find(s => String(s.id) === String(form.layanan_id)) || null;
+    return services.find((s) => String(s.id) === String(form.layanan_id)) || null;
   }, [services, form.layanan_id]);
 
-  // Preview estimate only — final pricing is calculated by backend (bookingService.calculateInvoice)
-  // This client-side calculation is for UX preview during the wizard and may differ from the final invoice.
   const calculation = useMemo(() => {
     if (!selectedService) {
       return { basePrice: 0, subtotal: 0, discount: 0, total: 0, estDuration: 60, warranty: '14 Hari', totalUnits: 1, items: [] };
     }
-    const primaryPrice = selectedService.harga || 0;
+    const primaryPrice = Number(selectedService.harga) || 0;
     const primaryUnits = Number(form.jumlah_unit) || 1;
     let subtotal = primaryPrice * primaryUnits;
     let units = primaryUnits;
+    let estDuration = (Number(selectedService.durasi_menit) || 60) * primaryUnits;
 
     const itemsSummary = [{
       layanan_id: selectedService.id,
@@ -348,13 +265,14 @@ export default function BookingPage() {
 
     if (Array.isArray(form.extra_items)) {
       for (const extra of form.extra_items) {
-        const extraSvc = services.find((s) => s.id === Number(extra.layanan_id));
+        const extraSvc = services.find((s) => Number(s.id) === Number(extra.layanan_id));
         if (extraSvc) {
           const eUnits = Number(extra.jumlah_unit) || 1;
           const ePrice = Number(extraSvc.harga) || 0;
           const eSubtotal = ePrice * eUnits;
           subtotal += eSubtotal;
           units += eUnits;
+          estDuration += (Number(extraSvc.durasi_menit) || 60) * eUnits;
           itemsSummary.push({
             layanan_id: extraSvc.id,
             nama: extraSvc.nama_layanan,
@@ -367,7 +285,6 @@ export default function BookingPage() {
       }
     }
 
-    // Diskon khusus eksklusif untuk Member (10% Biaya Jasa). Non-member: 0%
     let discount = 0;
     let discountLabel = '';
     const isMember = Boolean(user && user.role === 'customer');
@@ -379,34 +296,130 @@ export default function BookingPage() {
 
     const total = subtotal - discount;
 
-    // Estimate duration & warranty based on service tier
-    let estDuration = (selectedService.durasi_menit || 60) * primaryUnits;
-    if (Array.isArray(form.extra_items)) {
-      for (const extra of form.extra_items) {
-        const extraSvc = services.find((s) => s.id === Number(extra.layanan_id));
-        if (extraSvc) {
-          estDuration += (extraSvc.durasi_menit || 60) * (Number(extra.jumlah_unit) || 1);
-        }
-      }
-    }
-    if (units > 1) {
-      estDuration = Math.round(estDuration * 0.85); // concurrency efficiency
-    }
-
-    let warranty = '14 Hari';
-    const allNames = itemsSummary.map(i => (i.nama || '').toLowerCase()).join(' ');
-    if (allNames.includes('freon') && allNames.includes('core')) {
+    let warranty = `${selectedService.garansi_hari || 14} Hari`;
+    const allNames = itemsSummary.map((i) => (i.nama || '').toLowerCase()).join(' ');
+    if (Number(selectedService.garansi_hari) === 45 || (allNames.includes('freon') && allNames.includes('core'))) {
       warranty = '45 Hari Penuh';
-    } else if (allNames.includes('core')) {
+    } else if (Number(selectedService.garansi_hari) === 30 || allNames.includes('core') || allNames.includes('bongkar') || allNames.includes('freon')) {
       warranty = '30 Hari Penuh';
-    } else if (allNames.includes('bongkar')) {
-      warranty = '30 Hari';
     }
 
-    return { basePrice: primaryPrice, subtotal, discount, discountLabel, isMember, total, estDuration, warranty, totalUnits: units, items: itemsSummary };
+    return {
+      basePrice: primaryPrice,
+      subtotal,
+      discount,
+      discountLabel,
+      isMember,
+      total,
+      estDuration,
+      warranty,
+      totalUnits: units,
+      items: itemsSummary,
+    };
   }, [selectedService, form.jumlah_unit, form.extra_items, services, user]);
 
-  // Validation handlers
+  useEffect(() => {
+    if (!form.tanggal || !form.layanan_id) return;
+    let isMounted = true;
+    setLoadingAvailability(true);
+    setAvailabilityError('');
+
+    api.get('/availability', {
+      params: {
+        tanggal: form.tanggal,
+        layanan_id: form.layanan_id,
+        jumlah_unit: calculation.totalUnits,
+        durasi_menit: calculation.estDuration,
+      },
+    })
+      .then((res) => {
+        if (!isMounted) return;
+        const data = (res && typeof res === 'object' && res.slot !== undefined)
+          ? res
+          : (res?.data || res);
+
+        if (!data || typeof data !== 'object') {
+          throw new Error('Format data ketersediaan tidak valid dari server.');
+        }
+
+        setAvailability(data);
+
+        if (!data.buka) {
+          setForm((prev) => ({ ...prev, jam: '' }));
+        } else {
+          setForm((prev) => {
+            const currentSlotValid = Array.isArray(data.slot) && data.slot.some((s) => s.jam === prev.jam && s.tersedia);
+            if (!currentSlotValid) {
+              const firstAvailable = Array.isArray(data.slot) ? data.slot.find((s) => s.tersedia) : null;
+              return { ...prev, jam: firstAvailable ? firstAvailable.jam : '' };
+            }
+            return prev;
+          });
+        }
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setAvailability(null);
+        setAvailabilityError('Gagal memverifikasi ketersediaan jadwal. Silakan periksa koneksi internet.');
+      })
+      .finally(() => {
+        if (isMounted) setLoadingAvailability(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [form.tanggal, form.layanan_id, calculation.totalUnits, calculation.estDuration, availabilityRetry]);
+
+  const restoreDraft = () => {
+    try {
+      const savedDraft = localStorage.getItem('bookingFormDraft');
+      if (savedDraft) {
+        const draft = JSON.parse(savedDraft);
+        delete draft.timestamp;
+        setForm((prev) => ({ ...prev, ...draft }));
+        setShowRestoreDraft(false);
+        localStorage.removeItem('bookingFormDraft');
+        setHasUnsavedChanges(false);
+        setUserHasInteracted(true);
+      }
+    } catch (_) {}
+  };
+
+  const discardDraft = () => {
+    try {
+      localStorage.removeItem('bookingFormDraft');
+      setShowRestoreDraft(false);
+      setHasUnsavedChanges(false);
+      setUserHasInteracted(false);
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    if (step > 1 && step < 5) {
+      try {
+        localStorage.setItem('bookingFormDraft', JSON.stringify({
+          ...form,
+          timestamp: Date.now(),
+          currentStep: step,
+        }));
+      } catch (_) {}
+    }
+  }, [step, form]);
+
+  const handleChange = (e) => {
+    const newForm = { ...form, [e.target.name]: e.target.value };
+    setForm(newForm);
+    if (!userHasInteracted) setUserHasInteracted(true);
+    try {
+      localStorage.setItem('bookingFormDraft', JSON.stringify({
+        ...newForm,
+        timestamp: Date.now(),
+      }));
+      if (userHasInteracted) setHasUnsavedChanges(true);
+    } catch (_) {}
+  };
+
   const handleNext = () => {
     if (step === 1) {
       if (!form.layanan_id) {
@@ -431,7 +444,7 @@ export default function BookingPage() {
         setError('Silakan pilih jam kedatangan teknisi yang masih tersedia.');
         return;
       }
-      const selectedSlot = availability?.slot?.find(s => s.jam === form.jam);
+      const selectedSlot = availability?.slot?.find((s) => s.jam === form.jam);
       if (selectedSlot && !selectedSlot.tersedia) {
         setError(`Slot jam ${form.jam} WIB tidak dapat dipilih: ${selectedSlot.alasan || 'Sudah lewat atau penuh'}. Silakan pilih slot jam lain.`);
         return;
@@ -450,28 +463,26 @@ export default function BookingPage() {
         setError('Harap lengkapi alamat lokasi (pilih Kota, Kecamatan, dan masukkan Nama Jalan / Nomor Rumah).');
         return;
       }
-      // Generate idempotency key saat melangkah ke Step 4 (Konfirmasi) jika belum ada
       if (!idempotencyKeyRef.current) {
         idempotencyKeyRef.current = `idem-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
       }
     }
     setError('');
-    setStep(prev => prev + 1);
+    setStep((prev) => prev + 1);
     setHasUnsavedChanges(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handlePrev = () => {
     setError('');
-    setStep(prev => prev - 1);
+    setStep((prev) => prev - 1);
     setHasUnsavedChanges(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Submission handler with synchronous ref lock & idempotency key
   const handleSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (isSubmittingRef.current) return; // Mencegah double submit paralel
+    if (isSubmittingRef.current) return;
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     setError('');
@@ -503,6 +514,7 @@ export default function BookingPage() {
         jadwal_mulai: `${form.tanggal}T${form.jam}:00+07:00`,
         keluhan: form.keluhan.trim(),
         jumlah_unit: allItems ? allItems.reduce((acc, it) => acc + it.jumlah_unit, 0) : (parseInt(form.jumlah_unit, 10) || 1),
+        ac_unit_id: form.ac_unit_id ? parseInt(form.ac_unit_id, 10) : null,
         idempotency_key: idempotencyKeyRef.current,
         ...(allItems ? { items: allItems } : {}),
       };
@@ -510,27 +522,60 @@ export default function BookingPage() {
       const res = await api.post('/bookings', payload);
       const bookingResult = res?.kode_booking ? res : (res?.data || res);
       setSuccessData(bookingResult);
-      idempotencyKeyRef.current = null; // Reset setelah sukses
-      setStep(5); // Success step
+      setWaInvoiceState({ status: 'idle', message: '' });
+      idempotencyKeyRef.current = null;
+      setStep(5);
       setHasUnsavedChanges(false);
       setUserHasInteracted(false);
-      // Hapus draft setelah booking sukses
       try {
         localStorage.removeItem('bookingFormDraft');
-      } catch (err) {
-        console.error('Gagal menghapus draft:', err);
-      }
+        localStorage.setItem('nara_booking_sync_timestamp', Date.now().toString());
+        localStorage.setItem('nara_notification_sync', Date.now().toString());
+      } catch (_) {}
+      window.dispatchEvent(new CustomEvent('nara-booking-created', { detail: bookingResult }));
+      window.dispatchEvent(new CustomEvent('nara-booking-updated', { detail: bookingResult }));
+      window.dispatchEvent(new CustomEvent('nara-notification-updated', { detail: bookingResult }));
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
-      const msg = err?.error?.message || 
-                  err?.message || 
-                  err?.response?.data?.error?.message || 
-                  err?.pesan || 
-                  'Terjadi kesalahan saat memproses booking. Silakan coba lagi.';
+      const msg = err?.fields?.jadwal_mulai
+        || err?.error?.message
+        || err?.message
+        || err?.response?.data?.error?.message
+        || 'Terjadi kesalahan saat memproses booking. Silakan coba lagi.';
       setError(msg);
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
+    }
+  };
+
+  const handleSendWhatsAppInvoice = async () => {
+    const bookingId = successData?.id || successData?.data?.id;
+    if (!bookingId || waInvoiceState.status === 'sending') return;
+
+    setWaInvoiceState({ status: 'sending', message: 'Mengirim invoice ke WhatsApp...' });
+    try {
+      const res = await api.post(`/payments/bookings/${bookingId}/send-whatsapp`, {
+        tipe_invoice: 'initial',
+        kontak: form.kontak,
+      });
+      const payload = res?.data || res;
+      if (payload?.success === false || payload?.status === 'failed') {
+        setWaInvoiceState({
+          status: 'failed',
+          message: payload?.message || 'Pengiriman invoice gagal. Klik untuk mencoba kirim ulang.',
+        });
+      } else {
+        setWaInvoiceState({
+          status: 'sent',
+          message: payload?.message || `Invoice berhasil dikirim ke WhatsApp ${form.kontak}.`,
+        });
+      }
+    } catch (err) {
+      setWaInvoiceState({
+        status: 'failed',
+        message: err?.message || 'Gagal mengirim invoice ke WhatsApp. Silakan coba lagi.',
+      });
     }
   };
 
@@ -540,37 +585,47 @@ export default function BookingPage() {
     setTimeout(() => setCopiedTicket(false), 2500);
   };
 
-  // Helper date buttons
   const setQuickDate = (daysAhead) => {
-    setForm(prev => ({ ...prev, tanggal: getLocalDateStr(daysAhead) }));
+    setForm((prev) => ({ ...prev, tanggal: getLocalDateStr(daysAhead) }));
   };
 
-  // Quick complaint tags
   const complaintTags = [
     'AC Bocor Air Menetes',
     'AC Kurang Dingin',
     'Bau Apek & Berdebu',
     'Hembusan Angin Pelan',
-    'Perawatan Servis Rutin'
+    'Perawatan Servis Rutin',
   ];
 
   const handleAddComplaint = (tag) => {
     if (!form.keluhan) {
-      setForm(prev => ({ ...prev, keluhan: tag }));
+      setForm((prev) => ({ ...prev, keluhan: tag }));
     } else if (!form.keluhan.includes(tag)) {
-      setForm(prev => ({ ...prev, keluhan: `${prev.keluhan}, ${tag}` }));
+      setForm((prev) => ({ ...prev, keluhan: `${prev.keluhan}, ${tag}` }));
     }
   };
 
-  // Step names
   const steps = [
     { num: 1, title: 'Paket & Unit' },
     { num: 2, title: 'Jadwal Servis' },
     { num: 3, title: 'Data & Alamat' },
-    { num: 4, title: 'Konfirmasi' }
+    { num: 4, title: 'Konfirmasi' },
   ];
 
-  // Lock body scroll and set print classes when invoice modal is opened
+  const renderSlotBadge = (s, isSelected) => {
+    if (!s.tersedia) {
+      if (s.kode_alasan === 'DURATION_EXCEEDS_CLOSING' || s.alasan?.includes('melampaui') || s.alasan?.includes('melewati')) {
+        return 'Melewati Jam Tutup';
+      }
+      if (s.kode_alasan === 'PAST_TIME' || s.kode_alasan === 'MIN_LEAD_TIME' || s.alasan?.includes('lewat') || s.alasan?.includes('minimal')) {
+        return 'Lewat';
+      }
+      return 'Penuh';
+    }
+    if (isSelected) return 'Terpilih';
+    return 'Tersedia';
+  };
+
   useEffect(() => {
     if (isInvoiceModalOpen) {
       document.body.classList.add('invoice-modal-open');
@@ -584,14 +639,9 @@ export default function BookingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50/50 via-slate-50 to-white font-sans flex flex-col text-slate-800 print:bg-white print:min-h-0 print:block">
-      
-      {/* SCOPED PRINT STYLES FOR FLAWLESS A4 PRINTING */}
       <style>{`
         @media print {
-          @page {
-            size: A4 portrait;
-            margin: 8mm 10mm 10mm 10mm;
-          }
+          @page { size: A4 portrait; margin: 8mm 10mm 10mm 10mm; }
           html, body {
             background: #ffffff !important;
             color: #0f172a !important;
@@ -605,12 +655,8 @@ export default function BookingPage() {
             font-size: 11px !important;
           }
           body.invoice-modal-open #root,
-          body:has(#invoice-print-portal) #root {
-            display: none !important;
-          }
-          header, footer, aside, nav, .print\\:hidden, [data-print-hide="true"] {
-            display: none !important;
-          }
+          body:has(#invoice-print-portal) #root { display: none !important; }
+          header, footer, aside, nav, .print\\:hidden, [data-print-hide="true"] { display: none !important; }
           .invoice-modal-backdrop {
             position: static !important;
             inset: auto !important;
@@ -619,10 +665,6 @@ export default function BookingPage() {
             margin: 0 !important;
             display: block !important;
             overflow: visible !important;
-            height: auto !important;
-            min-height: 0 !important;
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
           }
           .invoice-modal-card {
             position: static !important;
@@ -631,82 +673,58 @@ export default function BookingPage() {
             margin: 0 !important;
             padding: 0 !important;
             border: none !important;
-            border-radius: 0 !important;
             box-shadow: none !important;
             background: #ffffff !important;
-            height: auto !important;
             max-height: none !important;
             overflow: visible !important;
             display: block !important;
-            transform: none !important;
-          }
-          #printable-invoice {
-            display: block !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border: none !important;
-            box-shadow: none !important;
-            background: #ffffff !important;
           }
         }
       `}</style>
-      
-      {/* ============================================================== */}
-      {/* 1. TOP NAVBAR                                                 */}
-      {/* ============================================================== */}
+
       <header className="bg-white/90 backdrop-blur-md border-b border-sky-100/80 sticky top-0 z-40 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex justify-between items-center">
           <Link to="/" className="flex items-center hover:opacity-90 transition-opacity">
             <CompanyLogo iconSize="h-8" />
           </Link>
-          
-          <div className="flex items-center gap-4">
-            <Link 
-              to="/status" 
+
+          <div className="flex items-center gap-3">
+            <Link
+              to="/status"
               className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors py-2 px-3 rounded-xl hover:bg-sky-50"
             >
               <FileText className="w-3.5 h-3.5 text-blue-500" />
               <span>Cek Status Tiket</span>
             </Link>
 
-            <Link to="/">
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="rounded-xl border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-100 flex items-center gap-1.5"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Ke Beranda</span>
-              </Button>
-            </Link>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={goBack}
+              className="rounded-xl border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>{fallbackLabel}</span>
+            </Button>
           </div>
         </div>
       </header>
 
-      {/* ============================================================== */}
-      {/* 2. MAIN CONTAINER & WIZARD                                     */}
-      {/* ============================================================== */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        
-        {/* Progress Bar (Hidden on success step) */}
         {step < 5 && (
           <div className="max-w-3xl mx-auto mb-10 sm:mb-12">
-            {/* Progress text untuk mobile */}
             <div className="flex justify-between text-xs text-slate-500 mb-3 sm:hidden">
               <span>Langkah {step} dari {steps.length}</span>
               <span>{steps[step - 1]?.title}</span>
             </div>
             <div className="flex items-center justify-between relative px-4 sm:px-8">
-              {/* Background Line */}
-              <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 h-1 bg-slate-200 rounded-full z-0" />
-              {/* Active Animated Progress Line */}
-              <motion.div 
-                className="absolute left-8 top-1/2 -translate-y-1/2 h-1 bg-gradient-to-r from-blue-600 to-sky-500 rounded-full z-0"
+              <div className="absolute left-8 right-8 top-5 -translate-y-1/2 h-1 bg-slate-200 rounded-full z-0" />
+              <motion.div
+                className="absolute left-8 top-5 -translate-y-1/2 h-1 bg-gradient-to-r from-blue-600 to-sky-500 rounded-full z-0"
                 initial={false}
                 animate={{ width: `calc(${((step - 1) / (steps.length - 1)) * 100}% - 16px)` }}
-                transition={{ duration: 0.4, ease: 'easeInOut' }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
               />
 
               {steps.map((s) => {
@@ -715,28 +733,26 @@ export default function BookingPage() {
 
                 return (
                   <div key={s.num} className="relative z-10 flex flex-col items-center">
-                    <div className={cn(
-                      "w-10 h-10 rounded-2xl flex items-center justify-center text-xs font-black transition-all duration-300 shadow-sm",
-                      isPassed 
-                        ? "bg-blue-600 text-white shadow-blue-500/25" 
-                        : isCurrent 
-                          ? "bg-white text-blue-600 border-2 border-blue-600 ring-4 ring-blue-500/15 shadow-md" 
-                          : "bg-white text-slate-500 border border-slate-200"
-                    )}>
+                    <div
+                      className={cn(
+                        'w-10 h-10 rounded-2xl flex items-center justify-center text-xs font-black transition-all duration-300 shadow-xs',
+                        isPassed
+                          ? 'bg-blue-600 text-white'
+                          : isCurrent
+                            ? 'bg-white text-blue-600 border-2 border-blue-600 ring-4 ring-blue-500/15'
+                            : 'bg-white text-slate-500 border border-slate-200'
+                      )}
+                    >
                       {isPassed ? <Check className="w-5 h-5 stroke-[2.5]" /> : s.num}
                     </div>
-                    <span className={cn(
-                      "mt-2 text-xs font-bold uppercase tracking-wider whitespace-nowrap",
-                      isCurrent ? "text-blue-600 font-black" : isPassed ? "text-slate-700" : "text-slate-500"
-                    )}>
+                    <span
+                      className={cn(
+                        'mt-2 text-xs font-bold uppercase tracking-wider whitespace-nowrap hidden sm:inline',
+                        isCurrent ? 'text-blue-600 font-black' : isPassed ? 'text-slate-700' : 'text-slate-500'
+                      )}
+                    >
                       {s.title}
                     </span>
-                    {/* Label untuk mobile */}
-                    {isCurrent && (
-                      <span className="sm:hidden absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-lg border border-blue-100 whitespace-nowrap">
-                        {s.title}
-                      </span>
-                    )}
                   </div>
                 );
               })}
@@ -744,49 +760,41 @@ export default function BookingPage() {
           </div>
         )}
 
-        {/* Global Error Banner */}
         {error && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }} 
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             className="max-w-5xl mx-auto mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-sm font-semibold flex items-center gap-3 shadow-xs"
           >
-            <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0" />
+            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
             <span className="flex-1">{error}</span>
           </motion.div>
         )}
 
-        {/* ============================================================== */}
-        {/* STEP 5: SUCCESS STATE (FULL SCREEN HERO TICKET)                */}
-        {/* ============================================================== */}
         {step === 5 && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4 }}
-            className="max-w-2xl mx-auto py-6 sm:py-10 text-center"
+            transition={{ duration: 0.3 }}
+            className="max-w-2xl mx-auto py-4 sm:py-8 text-center"
           >
-            {/* Success Ring */}
-            <div className="w-20 h-20 bg-emerald-100 border border-emerald-200 rounded-3xl flex items-center justify-center mx-auto mb-6 relative shadow-lg shadow-emerald-500/10">
-              <div className="absolute inset-0 bg-emerald-400/20 rounded-3xl animate-ping opacity-60" />
-              <CheckCircle2 className="w-10 h-10 text-emerald-600 relative z-10" />
+            <div className="w-18 h-18 bg-emerald-100 border border-emerald-200 rounded-3xl flex items-center justify-center mx-auto mb-5">
+              <CheckCircle2 className="w-10 h-10 text-emerald-600" />
             </div>
 
             <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-2">
               Booking Berhasil Dibuat!
             </h1>
             <p className="text-slate-500 text-sm sm:text-base max-w-lg mx-auto mb-8">
-              Terima kasih! Jadwal servis Anda telah terdaftar di sistem NARA AC. Teknisi kami akan mengonfirmasi via WhatsApp sebelum kunjungan.
+              Jadwal servis Anda telah terdaftar di sistem NARA AC. Simpan kode tiket di bawah untuk memantau pengerjaan teknisi dan mengunduh invoice.
             </p>
 
-            {/* Digital Ticket Card */}
             {(() => {
               const bCode = successData?.kode_booking || successData?.data?.kode_booking || 'AC-XXXX';
               return (
-                <div className="bg-white rounded-3xl border border-sky-100 shadow-2xl shadow-blue-950/10 p-6 sm:p-8 mb-8 text-left relative overflow-hidden">
+                <div className="bg-white rounded-3xl border border-sky-100 shadow-xl p-6 sm:p-8 mb-6 text-left relative overflow-hidden">
                   <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-blue-600 via-sky-500 to-emerald-500" />
-                  
-                  {/* Ticket Header & Status */}
+
                   <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-100">
                     <div className="flex items-center gap-2">
                       <Ticket className="w-4 h-4 text-blue-600" />
@@ -794,22 +802,18 @@ export default function BookingPage() {
                         KODE TIKET LAYANAN
                       </span>
                     </div>
-
-                    <div>
-                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full shadow-2xs">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        Status: Terjadwal (Scheduled)
-                      </span>
-                    </div>
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      Status: Terjadwal (Scheduled)
+                    </span>
                   </div>
 
-                  {/* Highlighted Ticket Box */}
-                  <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-sky-50/90 via-blue-50/50 to-slate-50 border border-sky-200/80 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 shadow-2xs">
+                  <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-sky-50/90 via-blue-50/50 to-slate-50 border border-sky-200/80 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5">
                     <div className="min-w-0 flex-1">
                       <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
                         Nomor Tiket Pemesanan Resmi
                       </span>
-                      <div className="font-mono font-black text-blue-700 text-base sm:text-lg md:text-xl tracking-wider break-all select-all leading-snug">
+                      <div className="font-mono font-black text-blue-700 text-base sm:text-lg md:text-xl tracking-wider break-all select-all">
                         {bCode}
                       </div>
                     </div>
@@ -817,25 +821,23 @@ export default function BookingPage() {
                     <button
                       type="button"
                       onClick={() => copyBookingCode(bCode)}
-                      className="shrink-0 w-full sm:w-auto py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-blue-500/20"
-                      title="Salin Kode Tiket"
+                      className="shrink-0 w-full sm:w-auto py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       {copiedTicket ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
                       <span>{copiedTicket ? 'Kode Tersalin!' : 'Salin Kode'}</span>
                     </button>
                   </div>
 
-                  {/* Summary Rows */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs mb-6">
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                       <span className="text-slate-500 font-semibold block mb-1">Paket & Volume:</span>
                       <p className="font-bold text-slate-900 text-sm">{selectedService?.nama_layanan || 'Service AC'}</p>
-                      <p className="text-slate-600 font-semibold mt-0.5">{form.jumlah_unit} Unit AC</p>
+                      <p className="text-slate-600 font-semibold mt-0.5">{calculation.totalUnits} Unit AC</p>
                     </div>
 
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                       <span className="text-slate-500 font-semibold block mb-1">Waktu Pengerjaan:</span>
-                      <p className="font-bold text-slate-900 text-sm">{form.tanggal}</p>
+                      <p className="font-bold text-slate-900 text-sm">{formatIndoDate(form.tanggal)}</p>
                       <p className="text-slate-600 font-semibold mt-0.5">Pukul {form.jam} WIB</p>
                     </div>
 
@@ -848,24 +850,22 @@ export default function BookingPage() {
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                       <span className="text-slate-500 font-semibold block mb-1">Estimasi Biaya Jasa:</span>
                       <p className="font-black text-blue-600 text-base font-mono">Rp {calculation.total.toLocaleString('id-ID')}</p>
-                      <p className="text-slate-500 text-xs">Pembayaran selesai setelah pengerjaan</p>
+                      <p className="text-slate-500 text-xs">Invoice Awal (Estimasi Booking)</p>
                     </div>
                   </div>
 
                   <div className="p-3.5 bg-sky-50/70 border border-sky-100 rounded-xl text-xs text-slate-600 flex items-start gap-2.5">
-                    <ShieldCheck className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                     <span>Garansi pengerjaan <strong>{calculation.warranty}</strong> aktif otomatis setelah teknisi menyelesaikan servis.</span>
                   </div>
                 </div>
               );
             })()}
 
-            {/* CTA Buttons */}
             <div className="max-w-xl mx-auto space-y-4">
-              {/* Primary Actions (2-Column Grid) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <Link to={`/status/${successData?.kode_booking || ''}`} className="w-full">
-                  <Button className="w-full h-12 px-5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-600/20 cursor-pointer flex items-center justify-center gap-2 transition-all">
+                  <Button className="w-full h-12 px-5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-600/20 cursor-pointer flex items-center justify-center gap-2">
                     <FileText className="w-4 h-4" />
                     <span>Pantau Status Tiket</span>
                     <ArrowRight className="w-4 h-4 ml-0.5" />
@@ -875,53 +875,100 @@ export default function BookingPage() {
                 <Button
                   type="button"
                   onClick={() => setIsInvoiceModalOpen(true)}
-                  className="w-full h-12 px-5 rounded-2xl bg-white hover:bg-emerald-50 border-2 border-emerald-600 text-emerald-700 font-bold text-sm shadow-xs cursor-pointer flex items-center justify-center gap-2 transition-all"
+                  className="w-full h-12 px-5 rounded-2xl bg-white hover:bg-blue-50 border-2 border-blue-600 text-blue-700 font-bold text-sm cursor-pointer flex items-center justify-center gap-2"
                 >
-                  <Printer className="w-4 h-4 text-emerald-600" />
-                  <span>Lihat & Cetak E-Invoice</span>
+                  <Printer className="w-4 h-4 text-blue-600" />
+                  <span>Lihat & Cetak Invoice</span>
                 </Button>
               </div>
 
-              {/* Secondary Utility Action (WhatsApp) */}
-              <div className="flex items-center justify-center pt-1">
-                <a 
-                  href={buildWhatsAppUrl(whatsappNumber, `Halo Admin Nara AC, saya sudah membuat booking dengan kode ${successData?.kode_booking || ''}`)}
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="w-full sm:w-auto"
-                >
-                  <Button 
-                    variant="outline" 
-                    className="w-full sm:w-auto h-10 px-6 rounded-xl border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/70 text-slate-700 hover:text-emerald-700 font-semibold text-xs cursor-pointer flex items-center justify-center gap-2 transition-all shadow-2xs"
+              <div className="bg-white rounded-2xl border border-slate-200 p-4 text-left space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs font-bold text-slate-900">Pengiriman Invoice & Bantuan WhatsApp</div>
+                    <div className="text-[11px] text-slate-500">
+                      Kirim salinan E-Invoice ke nomor WhatsApp Anda ({form.kontak}) atau hubungi Customer Service.
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={waInvoiceState.status === 'sending'}
+                      onClick={handleSendWhatsAppInvoice}
+                      className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold h-9 px-3.5 cursor-pointer flex items-center gap-1.5"
+                    >
+                      {waInvoiceState.status === 'sending' ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : waInvoiceState.status === 'failed' ? (
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      ) : (
+                        <Send className="w-3.5 h-3.5" />
+                      )}
+                      <span>
+                        {waInvoiceState.status === 'sent'
+                          ? 'Kirim Ulang Invoice WA'
+                          : waInvoiceState.status === 'failed'
+                            ? 'Coba Kirim Ulang'
+                            : 'Kirim Invoice ke WA'}
+                      </span>
+                    </Button>
+
+                    <a
+                      href={buildWhatsAppUrl(whatsappNumber, `Halo Admin NARA AC, saya butuh bantuan terkait tiket ${successData?.kode_booking || ''}`)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-bold h-9 px-3.5 cursor-pointer flex items-center gap-1.5"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Chat CS NARA AC</span>
+                      </Button>
+                    </a>
+                  </div>
+                </div>
+
+                {waInvoiceState.status !== 'idle' && (
+                  <div
+                    className={cn(
+                      'p-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 border',
+                      waInvoiceState.status === 'sent'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : waInvoiceState.status === 'failed'
+                          ? 'bg-rose-50 text-rose-800 border-rose-200'
+                          : 'bg-blue-50 text-blue-800 border-blue-200'
+                    )}
                   >
-                    <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Konfirmasi via WhatsApp</span>
-                    <span className="sr-only"> (buka di tab baru)</span>
-                  </Button>
-                </a>
+                    {waInvoiceState.status === 'sent' ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    ) : waInvoiceState.status === 'failed' ? (
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                    ) : (
+                      <Loader2 className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
+                    )}
+                    <span>{waInvoiceState.message}</span>
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>
         )}
 
-        {/* ============================================================== */}
-        {/* STEPS 1 - 4: DUAL COLUMN WIZARD + STICKY PRICE SUMMARY          */}
-        {/* ============================================================== */}
         {step < 5 && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            
-            {/* LEFT COLUMN: THE ACTIVE STEP FORM */}
             <div className="lg:col-span-7 bg-white rounded-3xl border border-sky-100/90 shadow-xl shadow-blue-900/5 p-6 sm:p-8 relative">
               <AnimatePresence mode="wait">
-
-                {/* ---------------- STEP 1: PILIH PAKET & UNIT ---------------- */}
                 {step === 1 && (
                   <motion.div
                     key="step-1"
                     initial={{ opacity: 0, x: -16 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 16 }}
-                    transition={{ duration: 0.25 }}
+                    transition={{ duration: 0.22 }}
                     className="space-y-6"
                   >
                     <div>
@@ -936,10 +983,30 @@ export default function BookingPage() {
                       </p>
                     </div>
 
-                    {/* Services Cards Grid */}
+                    {customerUnits.length > 0 && (
+                      <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200/80 space-y-2">
+                        <label htmlFor="booking-ac-unit-select" className="text-xs font-bold text-slate-800 block">
+                          Pilih Unit AC Terdaftar (Opsional — untuk Pencatatan Riwayat Per Unit):
+                        </label>
+                        <select
+                          id="booking-ac-unit-select"
+                          value={form.ac_unit_id || ''}
+                          onChange={(e) => setForm((f) => ({ ...f, ac_unit_id: e.target.value }))}
+                          className="w-full h-10 rounded-xl border border-blue-200 bg-white px-3 text-xs font-semibold text-slate-800"
+                        >
+                          <option value="">-- Tidak Spesifik / Unit Baru --</option>
+                          {customerUnits.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.brand} {u.model || ''} ({u.kapasitas_pk || 1} PK) — {u.lokasi}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     {loading ? (
                       <div className="space-y-3">
-                        {[1, 2, 3].map(i => (
+                        {[1, 2, 3].map((i) => (
                           <div key={i} className="h-24 bg-slate-100 animate-pulse rounded-2xl" />
                         ))}
                       </div>
@@ -950,32 +1017,29 @@ export default function BookingPage() {
                           const sName = (svc.nama_layanan || '').toLowerCase();
                           const isPopular = sName.includes('core') && !sName.includes('freon');
                           const isFreon = sName.includes('freon');
+                          const garansiHari = Number(svc.garansi_hari || (isFreon && isPopular ? 45 : (isPopular || isFreon) ? 30 : 14));
 
                           return (
                             <div
                               key={svc.id}
                               onClick={() => setForm({ ...form, layanan_id: String(svc.id) })}
                               className={cn(
-                                "p-4 sm:p-5 rounded-2xl border-2 transition-all cursor-pointer relative group flex items-start justify-between gap-4",
+                                'p-4 sm:p-5 rounded-2xl border-2 transition-all cursor-pointer relative group flex items-start justify-between gap-4',
                                 isSelected
-                                  ? "border-blue-600 bg-blue-50/60 shadow-md shadow-blue-600/10 ring-1 ring-blue-500"
-                                  : "border-slate-100 hover:border-sky-300 bg-white hover:bg-sky-50/30"
+                                  ? 'border-blue-600 bg-blue-50/60 shadow-md shadow-blue-600/10 ring-1 ring-blue-500'
+                                  : 'border-slate-100 hover:border-sky-300 bg-white hover:bg-sky-50/30'
                               )}
                             >
                               <div className="flex items-start gap-3.5 min-w-0">
-                                <div className={cn(
-                                  "w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors mt-0.5",
-                                  isSelected 
-                                    ? "bg-blue-600 text-white" 
-                                    : "bg-sky-100/70 text-blue-600 group-hover:bg-blue-600 group-hover:text-white"
-                                )}>
-                                  {isFreon ? (
-                                    <Wind className="w-5 h-5" />
-                                  ) : isPopular ? (
-                                    <Sparkles className="w-5 h-5" />
-                                  ) : (
-                                    <Wrench className="w-5 h-5" />
+                                <div
+                                  className={cn(
+                                    'w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-colors mt-0.5',
+                                    isSelected
+                                      ? 'bg-blue-600 text-white'
+                                      : 'bg-sky-100/70 text-blue-600 group-hover:bg-blue-600 group-hover:text-white'
                                   )}
+                                >
+                                  {isFreon ? <Wind className="w-5 h-5" /> : isPopular ? <Sparkles className="w-5 h-5" /> : <Wrench className="w-5 h-5" />}
                                 </div>
 
                                 <div className="min-w-0">
@@ -984,8 +1048,8 @@ export default function BookingPage() {
                                       {svc.nama_layanan}
                                     </h3>
                                     {isPopular && (
-                                      <span className="text-xs font-black uppercase tracking-wider bg-gradient-to-r from-blue-600 to-sky-600 text-white px-2 py-0.5 rounded-full shadow-xs">
-                                        ⭐ Best Value
+                                      <span className="text-xs font-bold uppercase tracking-wider bg-blue-600 text-white px-2 py-0.5 rounded-full">
+                                        Best Value
                                       </span>
                                     )}
                                   </div>
@@ -997,23 +1061,23 @@ export default function BookingPage() {
                                   <div className="flex items-center gap-3 mt-2 text-xs font-semibold text-slate-500">
                                     <span className="flex items-center gap-1 text-slate-600">
                                       <Clock className="w-3.5 h-3.5 text-blue-500" />
-                                      ± {svc.durasi_menit} Menit
+                                      ± {svc.durasi_menit} Menit / unit
                                     </span>
                                     <span>•</span>
                                     <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-bold">
-                                      {isPopular ? 'Garansi 30 Hari' : isFreon ? 'Garansi 45 Hari' : 'Garansi 14 Hari'}
+                                      Garansi {garansiHari} Hari
                                     </span>
                                   </div>
                                 </div>
                               </div>
 
-                              <div className="text-right flex-shrink-0 flex flex-col items-end justify-between self-stretch">
-                                <div className={cn(
-                                  "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
-                                  isSelected 
-                                    ? "bg-blue-600 border-blue-600 text-white" 
-                                    : "border-slate-300 bg-white"
-                                )}>
+                              <div className="text-right shrink-0 flex flex-col items-end justify-between self-stretch">
+                                <div
+                                  className={cn(
+                                    'w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all',
+                                    isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 bg-white'
+                                  )}
+                                >
                                   {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                                 </div>
 
@@ -1030,7 +1094,6 @@ export default function BookingPage() {
                       </div>
                     )}
 
-                    {/* Unit Selector Component */}
                     <div className="pt-6 border-t border-slate-100">
                       <div role="group" aria-labelledby="booking-unit-count-label" className="flex items-center justify-between mb-3">
                         <div>
@@ -1038,7 +1101,9 @@ export default function BookingPage() {
                             Jumlah Unit AC yang Diservis
                           </label>
                           <p className="text-xs text-slate-500">
-                            {Boolean(user && user.role === 'customer') ? 'Diskon 10% membership aktif otomatis' : 'Daftar / Masuk Member untuk hemat 10%'}
+                            {Boolean(user && user.role === 'customer')
+                              ? 'Diskon 10% membership aktif otomatis untuk biaya jasa'
+                              : 'Member terdaftar mendapatkan diskon 10% khusus biaya jasa'}
                           </p>
                         </div>
                         <span className="text-xs font-black text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg">
@@ -1046,34 +1111,30 @@ export default function BookingPage() {
                         </span>
                       </div>
 
-                      {/* Quick Unit Pills */}
                       <div className="grid grid-cols-4 gap-2 mb-3">
                         {[1, 2, 3, 4].map((num) => (
                           <button
                             key={num}
                             type="button"
-                            onClick={() => setForm(f => ({ ...f, jumlah_unit: num }))}
+                            onClick={() => setForm((f) => ({ ...f, jumlah_unit: num }))}
                             className={cn(
-                              "py-2.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer flex flex-col items-center justify-center",
+                              'py-2.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center',
                               form.jumlah_unit === num
-                                ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20"
-                                : "bg-slate-50/80 text-slate-700 border-slate-200 hover:bg-slate-100"
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
+                                : 'bg-slate-50/80 text-slate-700 border-slate-200 hover:bg-slate-100'
                             )}
                           >
-                            <span>{num} {num === 4 ? 'Unit+' : 'Unit'}</span>
-                            {num === 2 && <span className="text-[9px] text-emerald-300 font-normal">Diskon 5%</span>}
-                            {num >= 3 && <span className="text-[9px] text-emerald-300 font-normal">Diskon 10%</span>}
+                            <span>{num} Unit</span>
                           </button>
                         ))}
                       </div>
 
-                      {/* Stepper Controls */}
                       <div className="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                        <span className="text-xs font-semibold text-slate-600">Sesuaikan jumlah persis:</span>
+                        <span className="text-xs font-semibold text-slate-600">Sesuaikan jumlah unit:</span>
                         <div className="flex items-center gap-3">
                           <button
                             type="button"
-                            onClick={() => setForm(f => ({ ...f, jumlah_unit: Math.max(1, f.jumlah_unit - 1) }))}
+                            onClick={() => setForm((f) => ({ ...f, jumlah_unit: Math.max(1, f.jumlah_unit - 1) }))}
                             aria-label="Kurangi jumlah unit"
                             className="w-8 h-8 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 font-black text-slate-700 flex items-center justify-center cursor-pointer"
                           >
@@ -1084,7 +1145,7 @@ export default function BookingPage() {
                           </span>
                           <button
                             type="button"
-                            onClick={() => setForm(f => ({ ...f, jumlah_unit: Math.min(20, f.jumlah_unit + 1) }))}
+                            onClick={() => setForm((f) => ({ ...f, jumlah_unit: Math.min(20, f.jumlah_unit + 1) }))}
                             aria-label="Tambah jumlah unit"
                             className="w-8 h-8 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 font-black text-slate-700 flex items-center justify-center cursor-pointer"
                           >
@@ -1093,7 +1154,6 @@ export default function BookingPage() {
                         </div>
                       </div>
 
-                      {/* Multi-Service: Tambah Layanan Berbeda dalam 1 Booking */}
                       <div className="mt-4 p-4 rounded-2xl bg-blue-50/50 border border-blue-100/80">
                         <div className="flex items-start justify-between gap-3">
                           <div>
@@ -1102,32 +1162,31 @@ export default function BookingPage() {
                               Layanan Berbeda untuk Unit Lain?
                             </span>
                             <p className="text-xs text-slate-500 mt-0.5">
-                              Butuh kombinasi layanan (mis. cuci standar + isi freon)? Tambahkan langsung di sini tanpa booking berulang.
+                              Tambahkan kombinasi layanan dalam satu jadwal kunjungan.
                             </p>
                           </div>
                           <button
                             type="button"
                             onClick={() => {
-                              const otherServices = services.filter(s => s.id !== Number(form.layanan_id));
+                              const otherServices = services.filter((s) => s.id !== Number(form.layanan_id));
                               const nextSvc = otherServices[0] || services[0];
                               if (!nextSvc) return;
-                              setForm(f => ({
+                              setForm((f) => ({
                                 ...f,
-                                extra_items: [...(f.extra_items || []), { layanan_id: nextSvc.id, jumlah_unit: 1, catatan: '' }]
+                                extra_items: [...(f.extra_items || []), { layanan_id: nextSvc.id, jumlah_unit: 1, catatan: '' }],
                               }));
                             }}
-                            className="shrink-0 text-xs font-bold text-blue-600 hover:text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 cursor-pointer shadow-xs"
+                            className="shrink-0 text-xs font-bold text-blue-600 hover:text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl flex items-center gap-1 cursor-pointer"
                           >
                             <Plus className="w-3.5 h-3.5" />
                             <span>Tambah Layanan</span>
                           </button>
                         </div>
 
-                        {/* List of Extra Items */}
                         {form.extra_items && form.extra_items.length > 0 && (
                           <div className="mt-3 space-y-2.5 pt-3 border-t border-blue-100">
                             {form.extra_items.map((extra, idx) => (
-                              <div key={idx} className="bg-white p-3 rounded-xl border border-blue-100/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                              <div key={idx} className="bg-white p-3 rounded-xl border border-blue-100/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                                 <div className="flex-1">
                                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                                     Layanan Tambahan #{idx + 1}
@@ -1136,16 +1195,16 @@ export default function BookingPage() {
                                     value={extra.layanan_id}
                                     onChange={(e) => {
                                       const val = Number(e.target.value);
-                                      setForm(f => ({
+                                      setForm((f) => ({
                                         ...f,
-                                        extra_items: f.extra_items.map((it, i) => i === idx ? { ...it, layanan_id: val } : it)
+                                        extra_items: f.extra_items.map((it, i) => (i === idx ? { ...it, layanan_id: val } : it)),
                                       }));
                                     }}
-                                    className="w-full text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-blue-500 outline-none"
+                                    className="w-full text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg p-2"
                                   >
-                                    {services.map(s => (
+                                    {services.map((s) => (
                                       <option key={s.id} value={s.id}>
-                                        {s.nama_layanan} — Rp {Number(s.harga).toLocaleString('id-ID')}
+                                        {s.nama_layanan} — Rp {Number(s.harga).toLocaleString('id-ID')} ({s.durasi_menit} mnt)
                                       </option>
                                     ))}
                                   </select>
@@ -1156,12 +1215,11 @@ export default function BookingPage() {
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        setForm(f => ({
+                                        setForm((f) => ({
                                           ...f,
-                                          extra_items: f.extra_items.map((it, i) => i === idx ? { ...it, jumlah_unit: Math.max(1, it.jumlah_unit - 1) } : it)
+                                          extra_items: f.extra_items.map((it, i) => (i === idx ? { ...it, jumlah_unit: Math.max(1, it.jumlah_unit - 1) } : it)),
                                         }));
                                       }}
-                                      aria-label={`Kurangi unit layanan tambahan ${idx + 1}`}
                                       className="w-6 h-6 rounded bg-white text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer border border-slate-200"
                                     >
                                       -
@@ -1172,12 +1230,11 @@ export default function BookingPage() {
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        setForm(f => ({
+                                        setForm((f) => ({
                                           ...f,
-                                          extra_items: f.extra_items.map((it, i) => i === idx ? { ...it, jumlah_unit: Math.min(10, it.jumlah_unit + 1) } : it)
+                                          extra_items: f.extra_items.map((it, i) => (i === idx ? { ...it, jumlah_unit: Math.min(10, it.jumlah_unit + 1) } : it)),
                                         }));
                                       }}
-                                      aria-label={`Tambah unit layanan tambahan ${idx + 1}`}
                                       className="w-6 h-6 rounded bg-white text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer border border-slate-200"
                                     >
                                       +
@@ -1187,13 +1244,12 @@ export default function BookingPage() {
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      setForm(f => ({
+                                      setForm((f) => ({
                                         ...f,
-                                        extra_items: f.extra_items.filter((_, i) => i !== idx)
+                                        extra_items: f.extra_items.filter((_, i) => i !== idx),
                                       }));
                                     }}
-                                    aria-label={`Hapus layanan tambahan ${idx + 1}`}
-                                    className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                    className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg cursor-pointer"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
@@ -1205,12 +1261,11 @@ export default function BookingPage() {
                       </div>
                     </div>
 
-                    {/* Step Navigation */}
                     <div className="pt-6 border-t border-slate-100 flex justify-end">
                       <Button
                         type="button"
                         onClick={handleNext}
-                        className="h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/25 transition-all cursor-pointer flex items-center gap-2"
+                        className="h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/25 cursor-pointer flex items-center gap-2"
                       >
                         <span>Pilih Jadwal Kedatangan</span>
                         <ArrowRight className="w-4 h-4" />
@@ -1219,14 +1274,13 @@ export default function BookingPage() {
                   </motion.div>
                 )}
 
-                {/* ---------------- STEP 2: JADWAL KEDATANGAN ---------------- */}
                 {step === 2 && (
                   <motion.div
                     key="step-2"
                     initial={{ opacity: 0, x: -16 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 16 }}
-                    transition={{ duration: 0.25 }}
+                    transition={{ duration: 0.22 }}
                     className="space-y-6"
                   >
                     <div>
@@ -1237,11 +1291,10 @@ export default function BookingPage() {
                         Tentukan Tanggal & Jam Servis
                       </h2>
                       <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                        Pilih slot waktu yang paling nyaman bagi Anda untuk menerima teknisi.
+                        Jam operasional Senin–Sabtu ({availability?.jam_operasional || '08:00–19:00'} WIB). Estimasi durasi layanan Anda: <strong>{calculation.estDuration} menit</strong>.
                       </p>
                     </div>
 
-                    {/* Date Selection */}
                     <div>
                       <div role="group" aria-labelledby="booking-date-label" className="flex items-center justify-between mb-2">
                         <label id="booking-date-label" className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
@@ -1253,13 +1306,12 @@ export default function BookingPage() {
                           </span>
                         )}
                       </div>
-                      
-                      {/* Quick Date Shortcuts */}
+
                       <div className="grid grid-cols-3 gap-2 mb-3">
                         {[
                           { days: 0, label: 'Hari Ini' },
                           { days: 1, label: 'Besok' },
-                          { days: 2, label: 'Lusa' }
+                          { days: 2, label: 'Lusa' },
                         ].map(({ days, label }) => {
                           const targetDate = getLocalDateStr(days);
                           const isSelected = form.tanggal === targetDate;
@@ -1271,23 +1323,25 @@ export default function BookingPage() {
                               type="button"
                               onClick={() => setQuickDate(days)}
                               className={cn(
-                                "py-2.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer flex flex-col items-center justify-center text-center",
+                                'py-2.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer flex flex-col items-center justify-center text-center',
                                 isSelected
-                                  ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20"
-                                  : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                                  ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
+                                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                               )}
                             >
                               <span>{label}</span>
-                              <span className={cn(
-                                "text-xs font-semibold mt-0.5",
-                                isSelected
-                                  ? "text-sky-200"
-                                  : badge.status === 'closed'
-                                    ? "text-rose-500"
-                                    : badge.status === 'recommended'
-                                      ? "text-blue-600"
-                                      : "text-emerald-600"
-                              )}>
+                              <span
+                                className={cn(
+                                  'text-xs font-semibold mt-0.5',
+                                  isSelected
+                                    ? 'text-sky-200'
+                                    : badge.status === 'closed'
+                                      ? 'text-rose-500'
+                                      : badge.status === 'recommended'
+                                        ? 'text-blue-600'
+                                        : 'text-emerald-600'
+                                )}
+                              >
                                 {badge.label}
                               </span>
                             </button>
@@ -1295,24 +1349,20 @@ export default function BookingPage() {
                         })}
                       </div>
 
-                      {/* Date Picker Input */}
-                      <div className="relative">
-                        <Input
-                          type="date"
-                          name="tanggal"
-                          value={form.tanggal}
-                          min={getLocalDateStr(0)}
-                          onChange={handleChange}
-                          className="h-12 rounded-xl text-sm font-semibold border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
-                        />
-                      </div>
+                      <Input
+                        type="date"
+                        name="tanggal"
+                        value={form.tanggal}
+                        min={getLocalDateStr(0)}
+                        onChange={handleChange}
+                        className="h-12 rounded-xl text-sm font-semibold border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                      />
                     </div>
 
-                    {/* Time Slot Selection */}
                     <div>
                       <div role="group" aria-labelledby="booking-time-label" className="flex items-center justify-between mb-2">
                         <label id="booking-time-label" className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
-                          Pilihan Jam Kedatangan
+                          Pilihan Jam Kedatangan ({availability?.jam_operasional || '08:00–19:00'} WIB)
                         </label>
                         {form.jam && availability?.buka && (
                           <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
@@ -1321,38 +1371,33 @@ export default function BookingPage() {
                         )}
                       </div>
 
-                      {/* State 1: Loading Availability */}
                       {loadingAvailability && (
-                        <div className="p-6 rounded-2xl bg-sky-50/60 border border-sky-100 flex items-center justify-center gap-3 text-slate-600 text-xs font-semibold animate-pulse">
+                        <div className="p-6 rounded-2xl bg-sky-50/60 border border-sky-100 flex items-center justify-center gap-3 text-slate-600 text-xs font-semibold">
                           <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
                           <span>Memeriksa ketersediaan teknisi untuk {formatIndoDate(form.tanggal)}...</span>
                         </div>
                       )}
 
-                      {/* State 2: Availability Error */}
                       {!loadingAvailability && availabilityError && (
                         <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
                             <span>{availabilityError}</span>
                           </div>
                           <button
                             type="button"
-                            onClick={() => {
-                              setAvailabilityRetry(prev => prev + 1);
-                            }}
-                            className="text-xs font-bold text-rose-700 underline hover:no-underline cursor-pointer"
+                            onClick={() => setAvailabilityRetry((prev) => prev + 1)}
+                            className="text-xs font-bold text-rose-700 underline cursor-pointer"
                           >
                             Coba Lagi
                           </button>
                         </div>
                       )}
 
-                      {/* State 3: Hari Libur (e.g. Hari Minggu) */}
                       {!loadingAvailability && availability && !availability.buka && (
                         <div className="p-5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-950">
                           <div className="flex items-start gap-3.5">
-                            <div className="w-10 h-10 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center flex-shrink-0 text-amber-700">
+                            <div className="w-10 h-10 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center shrink-0 text-amber-700">
                               <CalendarOff className="w-5 h-5" />
                             </div>
                             <div className="flex-1">
@@ -1360,40 +1405,37 @@ export default function BookingPage() {
                                 {availability.alasan || 'Libur Operasional Servis'}
                               </h4>
                               <p className="text-xs text-amber-800 mt-1 leading-relaxed">
-                                CV. Nara Teknindotama melayani operasional Senin s/d Sabtu (08:00 – 17:00 WIB). Pada hari {formatIndoDate(form.tanggal)}, seluruh tim teknisi kami libur operasional.
+                                CV. Nara Teknindotama melayani operasional Senin s/d Sabtu (08:00 – 19:00 WIB). Silakan pilih hari kerja berikutnya.
                               </p>
-                              <div className="mt-3 flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => setQuickDate(isSunday(getLocalDateStr(1)) ? 2 : 1)}
-                                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
-                                >
-                                  <span>Pilih Hari Kerja Berikutnya</span>
-                                  <ArrowRight className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setQuickDate(isSunday(getLocalDateStr(1)) ? 2 : 1)}
+                                className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold cursor-pointer"
+                              >
+                                <span>Pilih Hari Kerja Berikutnya</span>
+                                <ArrowRight className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           </div>
                         </div>
                       )}
 
-                      {/* State 4: Toko Buka - Render Slots */}
                       {!loadingAvailability && availability && availability.buka && (
                         <div className="space-y-4">
                           {(() => {
                             const slots = availability.slot || [];
-                            const availableCount = slots.filter(s => s.tersedia).length;
-                            const morningSlots = slots.filter(s => parseInt(s.jam.split(':')[0], 10) < 12);
-                            const afternoonSlots = slots.filter(s => parseInt(s.jam.split(':')[0], 10) >= 12);
+                            const availableCount = slots.filter((s) => s.tersedia).length;
+                            const morningSlots = slots.filter((s) => parseInt(s.jam.split(':')[0], 10) < 12);
+                            const afternoonSlots = slots.filter((s) => parseInt(s.jam.split(':')[0], 10) >= 12);
 
                             if (availableCount === 0) {
                               return (
                                 <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-3">
-                                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                                   <div>
-                                    <p className="font-bold text-amber-950">Seluruh slot waktu untuk hari ini sudah terisi atau lewat jam operasional.</p>
+                                    <p className="font-bold text-amber-950">Seluruh slot waktu untuk tanggal ini sudah penuh atau telah melewati batas jam operasional.</p>
                                     <p className="text-amber-800 mt-1">
-                                      Pemesanan memerlukan minimal 60 menit sebelum jadwal pengerjaan. Silakan pilih tanggal besok atau hari kerja berikutnya.
+                                      Pemesanan memerlukan minimal 60 menit sebelum jadwal dan pengerjaan selesai sebelum pukul 19:00 WIB.
                                     </p>
                                     <button
                                       type="button"
@@ -1410,13 +1452,12 @@ export default function BookingPage() {
 
                             return (
                               <>
-                                {/* Morning Slots */}
                                 {morningSlots.length > 0 && (
                                   <div>
                                     <div className="flex items-center gap-1.5 mb-2">
                                       <Sun className="w-3.5 h-3.5 text-amber-500" />
                                       <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                        Slot Pagi (08:00 – 11:00)
+                                        Slot Pagi (08:00 – 11:00 WIB)
                                       </span>
                                     </div>
                                     <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-2">
@@ -1427,28 +1468,32 @@ export default function BookingPage() {
                                             key={s.jam}
                                             type="button"
                                             disabled={!s.tersedia}
+                                            title={s.alasan || `Pukul ${s.jam} WIB`}
                                             onClick={() => s.tersedia && setForm({ ...form, jam: s.jam })}
                                             className={cn(
-                                              "py-2.5 px-2 rounded-xl text-xs font-bold border transition-all text-center flex flex-col items-center justify-center relative",
+                                              'py-2.5 px-2 rounded-xl text-xs font-bold border transition-all text-center flex flex-col items-center justify-center',
                                               !s.tersedia
-                                                ? "bg-slate-100/70 text-slate-500 border-slate-200 cursor-not-allowed opacity-50"
+                                                ? 'bg-slate-100/70 text-slate-500 border-slate-200 cursor-not-allowed opacity-55'
                                                 : isSelected
-                                                  ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20 cursor-pointer"
-                                                  : "bg-white text-slate-700 border-slate-200 hover:border-sky-300 hover:bg-sky-50/50 cursor-pointer"
+                                                  ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20 cursor-pointer'
+                                                  : 'bg-white text-slate-700 border-slate-200 hover:border-sky-300 hover:bg-sky-50/50 cursor-pointer'
                                             )}
                                           >
-                                            <span className={cn(!s.tersedia && "line-through decoration-slate-400/60")}>
+                                            <span className={cn(!s.tersedia && 'line-through decoration-slate-400/60')}>
                                               {s.jam} WIB
                                             </span>
-                                            {!s.tersedia ? (
-                                              <span className="text-[9px] text-slate-500 font-normal mt-0.5">
-                                                {s.alasan?.includes('lewat') || s.alasan?.includes('minimal') ? 'Lewat' : 'Penuh'}
-                                              </span>
-                                            ) : isSelected ? (
-                                              <span className="text-[9px] text-sky-200 font-semibold mt-0.5">Terpilih</span>
-                                            ) : (
-                                              <span className="text-[9px] text-emerald-600 font-semibold mt-0.5">Tersedia</span>
-                                            )}
+                                            <span
+                                              className={cn(
+                                                'text-[9px] mt-0.5',
+                                                !s.tersedia
+                                                  ? 'text-slate-500 font-normal'
+                                                  : isSelected
+                                                    ? 'text-sky-200 font-semibold'
+                                                    : 'text-emerald-600 font-semibold'
+                                              )}
+                                            >
+                                              {renderSlotBadge(s, isSelected)}
+                                            </span>
                                           </button>
                                         );
                                       })}
@@ -1456,16 +1501,15 @@ export default function BookingPage() {
                                   </div>
                                 )}
 
-                                {/* Afternoon Slots */}
                                 {afternoonSlots.length > 0 && (
                                   <div>
                                     <div className="flex items-center gap-1.5 mb-2">
                                       <Sunset className="w-3.5 h-3.5 text-blue-500" />
                                       <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                        Slot Siang & Sore (12:00 – 16:00)
+                                        Slot Siang & Sore (12:00 – 18:00 WIB)
                                       </span>
                                     </div>
-                                    <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                                    <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-2">
                                       {afternoonSlots.map((s) => {
                                         const isSelected = form.jam === s.jam;
                                         return (
@@ -1473,28 +1517,32 @@ export default function BookingPage() {
                                             key={s.jam}
                                             type="button"
                                             disabled={!s.tersedia}
+                                            title={s.alasan || `Pukul ${s.jam} WIB`}
                                             onClick={() => s.tersedia && setForm({ ...form, jam: s.jam })}
                                             className={cn(
-                                              "py-2.5 px-2 rounded-xl text-xs font-bold border transition-all text-center flex flex-col items-center justify-center relative",
+                                              'py-2.5 px-2 rounded-xl text-xs font-bold border transition-all text-center flex flex-col items-center justify-center',
                                               !s.tersedia
-                                                ? "bg-slate-100/70 text-slate-500 border-slate-200 cursor-not-allowed opacity-50"
+                                                ? 'bg-slate-100/70 text-slate-500 border-slate-200 cursor-not-allowed opacity-55'
                                                 : isSelected
-                                                  ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20 cursor-pointer"
-                                                  : "bg-white text-slate-700 border-slate-200 hover:border-sky-300 hover:bg-sky-50/50 cursor-pointer"
+                                                  ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20 cursor-pointer'
+                                                  : 'bg-white text-slate-700 border-slate-200 hover:border-sky-300 hover:bg-sky-50/50 cursor-pointer'
                                             )}
                                           >
-                                            <span className={cn(!s.tersedia && "line-through decoration-slate-400/60")}>
+                                            <span className={cn(!s.tersedia && 'line-through decoration-slate-400/60')}>
                                               {s.jam} WIB
                                             </span>
-                                            {!s.tersedia ? (
-                                              <span className="text-[9px] text-slate-500 font-normal mt-0.5">
-                                                {s.alasan?.includes('lewat') || s.alasan?.includes('minimal') ? 'Lewat' : 'Penuh'}
-                                              </span>
-                                            ) : isSelected ? (
-                                              <span className="text-[9px] text-sky-200 font-semibold mt-0.5">Terpilih</span>
-                                            ) : (
-                                              <span className="text-[9px] text-emerald-600 font-semibold mt-0.5">Tersedia</span>
-                                            )}
+                                            <span
+                                              className={cn(
+                                                'text-[9px] mt-0.5',
+                                                !s.tersedia
+                                                  ? 'text-slate-500 font-normal'
+                                                  : isSelected
+                                                    ? 'text-sky-200 font-semibold'
+                                                    : 'text-emerald-600 font-semibold'
+                                              )}
+                                            >
+                                              {renderSlotBadge(s, isSelected)}
+                                            </span>
                                           </button>
                                         );
                                       })}
@@ -1508,12 +1556,13 @@ export default function BookingPage() {
                       )}
 
                       <div className="mt-4 p-3 bg-sky-50/80 rounded-xl border border-sky-100 flex items-center gap-2.5 text-xs text-slate-600">
-                        <Clock className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                        <span>Estimasi kedatangan tepat waktu dengan toleransi rentang ±15 menit dari jam yang dipilih.</span>
+                        <Clock className="w-4 h-4 text-blue-600 shrink-0" />
+                        <span>
+                          Jam operasional berakhir pukul 19:00 WIB. Slot pukul 18:00 WIB tersedia untuk layanan berdurasi ≤ 60 menit (1 unit).
+                        </span>
                       </div>
                     </div>
 
-                    {/* Step Navigation */}
                     <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
                       <Button
                         type="button"
@@ -1528,7 +1577,7 @@ export default function BookingPage() {
                       <Button
                         type="button"
                         onClick={handleNext}
-                        className="h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/25 transition-all cursor-pointer flex items-center gap-2"
+                        className="h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/25 cursor-pointer flex items-center gap-2"
                       >
                         <span>Lanjut Isi Alamat</span>
                         <ArrowRight className="w-4 h-4" />
@@ -1537,14 +1586,13 @@ export default function BookingPage() {
                   </motion.div>
                 )}
 
-                {/* ---------------- STEP 3: DATA DIRI & ALAMAT ---------------- */}
                 {step === 3 && (
                   <motion.div
                     key="step-3"
                     initial={{ opacity: 0, x: -16 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 16 }}
-                    transition={{ duration: 0.25 }}
+                    transition={{ duration: 0.22 }}
                     className="space-y-6"
                   >
                     <div>
@@ -1560,7 +1608,6 @@ export default function BookingPage() {
                     </div>
 
                     <div className="space-y-4">
-                      {/* Nama Lengkap */}
                       <div>
                         <label htmlFor="booking-nama" className="text-xs font-bold text-slate-800 uppercase tracking-wider block mb-1.5">
                           Nama Lengkap Pemesan *
@@ -1573,13 +1620,12 @@ export default function BookingPage() {
                             value={form.nama}
                             onChange={handleChange}
                             placeholder="Contoh: Budi Santoso"
-                            className="h-12 pl-10 rounded-xl text-sm border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
+                            className="h-12 pl-10 rounded-xl text-sm border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500"
                             autoComplete="name"
                           />
                         </div>
                       </div>
 
-                      {/* No. WhatsApp */}
                       <div>
                         <label htmlFor="booking-kontak" className="text-xs font-bold text-slate-800 uppercase tracking-wider block mb-1.5">
                           Nomor WhatsApp Aktif *
@@ -1593,7 +1639,7 @@ export default function BookingPage() {
                             onChange={handleChange}
                             placeholder="Contoh: 081234567890"
                             type="tel"
-                            className="h-12 pl-10 rounded-xl text-sm border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all font-mono"
+                            className="h-12 pl-10 rounded-xl text-sm border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 font-mono"
                             autoComplete="tel"
                           />
                         </div>
@@ -1602,11 +1648,10 @@ export default function BookingPage() {
                         </p>
                       </div>
 
-                      {/* Alamat Lengkap Terstruktur Berjenjang */}
                       <AddressSelector
                         value={form.alamat}
                         onChange={(assembled) => {
-                          setForm(prev => ({ ...prev, alamat: assembled }));
+                          setForm((prev) => ({ ...prev, alamat: assembled }));
                           if (assembled.trim() && error.includes('Alamat')) {
                             setError('');
                           }
@@ -1614,7 +1659,6 @@ export default function BookingPage() {
                         required={true}
                       />
 
-                      {/* Catatan / Keluhan */}
                       <div>
                         <label htmlFor="booking-keluhan" className="text-xs font-bold text-slate-800 uppercase tracking-wider block mb-1.5">
                           Catatan Keluhan AC (Opsional)
@@ -1625,18 +1669,17 @@ export default function BookingPage() {
                           value={form.keluhan}
                           onChange={handleChange}
                           rows={2}
-                          placeholder="Jelaskan kendala AC Anda agar teknisi dapat menyiapkan peralatan spesifik..."
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-y"
+                          placeholder="Jelaskan kendala AC Anda..."
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
                         />
 
-                        {/* Quick Symptoms Chips */}
                         <div className="flex flex-wrap gap-1.5 mt-2">
                           {complaintTags.map((tag) => (
                             <button
                               key={tag}
                               type="button"
                               onClick={() => handleAddComplaint(tag)}
-                              className="text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 px-2.5 py-1 rounded-lg border border-slate-200/80 transition-colors cursor-pointer"
+                              className="text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 px-2.5 py-1 rounded-lg border border-slate-200/80 cursor-pointer"
                             >
                               + {tag}
                             </button>
@@ -1645,7 +1688,6 @@ export default function BookingPage() {
                       </div>
                     </div>
 
-                    {/* Step Navigation */}
                     <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
                       <Button
                         type="button"
@@ -1660,7 +1702,7 @@ export default function BookingPage() {
                       <Button
                         type="button"
                         onClick={handleNext}
-                        className="h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/25 transition-all cursor-pointer flex items-center gap-2"
+                        className="h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/25 cursor-pointer flex items-center gap-2"
                       >
                         <span>Cek Ringkasan Pesanan</span>
                         <ArrowRight className="w-4 h-4" />
@@ -1669,14 +1711,13 @@ export default function BookingPage() {
                   </motion.div>
                 )}
 
-                {/* ---------------- STEP 4: REVIEW & KONFIRMASI ---------------- */}
                 {step === 4 && (
                   <motion.div
                     key="step-4"
                     initial={{ opacity: 0, x: -16 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 16 }}
-                    transition={{ duration: 0.25 }}
+                    transition={{ duration: 0.22 }}
                     className="space-y-6"
                   >
                     <div>
@@ -1691,9 +1732,7 @@ export default function BookingPage() {
                       </p>
                     </div>
 
-                    {/* Order Details Recap Card */}
                     <div className="bg-sky-50/50 border border-sky-100 rounded-2xl p-5 space-y-4">
-                      
                       <div className="pb-3 border-b border-sky-100">
                         <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">Paket Layanan Dipilih:</span>
                         <div className="space-y-1.5">
@@ -1713,7 +1752,7 @@ export default function BookingPage() {
                         <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Jadwal Servis:</span>
                         <div className="text-right">
                           <span className="font-bold text-slate-900 text-sm block">{formatIndoDate(form.tanggal)}</span>
-                          <span className="text-xs text-slate-500 font-semibold">Pukul {form.jam} WIB</span>
+                          <span className="text-xs text-slate-500 font-semibold">Pukul {form.jam} WIB (±{calculation.estDuration} menit)</span>
                         </div>
                       </div>
 
@@ -1742,23 +1781,21 @@ export default function BookingPage() {
                       )}
                     </div>
 
-                    {/* Guarantee & Quality Assurances */}
                     <div className="space-y-2 text-xs text-slate-600 bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
                       <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                         <span>SOP 7 Langkah Pengerjaan Standar Industri CV. Nara Teknindotama</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <ShieldCheck className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                        <span>Garansi Pengerjaan Nyata <strong>{calculation.warranty}</strong></span>
+                        <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                        <span>Garansi Pengerjaan Resmi <strong>{calculation.warranty}</strong></span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Percent className="w-4 h-4 text-sky-600 flex-shrink-0" />
-                        <span>Pembayaran aman di tempat (COD/Transfer) setelah pengerjaan selesai dicek</span>
+                        <Percent className="w-4 h-4 text-sky-600 shrink-0" />
+                        <span>Tersedia pembayaran Transfer Bank, QRIS, maupun Tunai</span>
                       </div>
                     </div>
 
-                    {/* Step Navigation & Submission */}
                     <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
                       <Button
                         type="button"
@@ -1775,7 +1812,7 @@ export default function BookingPage() {
                         type="button"
                         onClick={handleSubmit}
                         disabled={isSubmitting}
-                        className="h-12 px-8 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-xl shadow-emerald-600/25 transition-all cursor-pointer flex items-center gap-2 group"
+                        className="h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm shadow-xl shadow-blue-600/25 cursor-pointer flex items-center gap-2"
                       >
                         {isSubmitting ? (
                           <>
@@ -1793,22 +1830,20 @@ export default function BookingPage() {
 
                     <p className="text-center text-xs text-slate-500 mt-4">
                       Dengan membuat pesanan, Anda menyetujui{' '}
-                      <a href="/terms" target="_blank" rel="noreferrer" className="text-blue-600 underline hover:text-blue-700">
+                      <Link to="/terms-conditions" className="text-blue-600 underline hover:text-blue-700">
                         Syarat &amp; Ketentuan Layanan
-                      </a>{' '}
+                      </Link>{' '}
                       serta{' '}
-                      <a href="/privacy" target="_blank" rel="noreferrer" className="text-blue-600 underline hover:text-blue-700">
+                      <Link to="/privacy-policy" className="text-blue-600 underline hover:text-blue-700">
                         Kebijakan Privasi
-                      </a>{' '}
+                      </Link>{' '}
                       NARA AC.
                     </p>
                   </motion.div>
                 )}
-
               </AnimatePresence>
             </div>
 
-            {/* RIGHT COLUMN: STICKY LIVE ORDER SUMMARY SIDEBAR */}
             <div className="lg:col-span-5 sticky top-24">
               <div className="bg-white rounded-3xl border border-sky-100 shadow-xl shadow-blue-900/5 p-6 relative overflow-hidden">
                 <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-blue-600 to-sky-500" />
@@ -1820,14 +1855,11 @@ export default function BookingPage() {
 
                 {selectedService ? (
                   <div className="space-y-4">
-                    {/* Selected Service Cardlet */}
                     <div className="p-3.5 rounded-2xl bg-sky-50/70 border border-sky-100 space-y-2">
                       {calculation.items.map((it, idx) => (
                         <div key={idx} className="flex justify-between items-start">
                           <div>
-                            <p className="font-bold text-slate-900 text-sm">
-                              {it.nama}
-                            </p>
+                            <p className="font-bold text-slate-900 text-sm">{it.nama}</p>
                             <p className="text-xs text-slate-500 font-medium mt-0.5">
                               Rp {it.hargaSatuan.toLocaleString('id-ID')} × {it.units} Unit
                             </p>
@@ -1839,7 +1871,6 @@ export default function BookingPage() {
                       ))}
                     </div>
 
-                    {/* Transparent Price Breakdown */}
                     <div className="space-y-2.5 text-xs pt-2">
                       <div className="flex justify-between text-slate-600">
                         <span>Subtotal Jasa ({calculation.totalUnits} Unit):</span>
@@ -1862,7 +1893,7 @@ export default function BookingPage() {
                         <div className="text-xs text-slate-500 flex items-center justify-between bg-blue-50/60 border border-blue-100 px-2.5 py-1.5 rounded-lg">
                           <span className="flex items-center gap-1.5 text-blue-700 font-medium">
                             <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                            Hemat 10% dengan Akun Member
+                            Hemat 10% Jasa dengan Akun Member
                           </span>
                           <Link to="/login" className="text-blue-700 underline font-bold hover:text-blue-800">
                             Masuk
@@ -1885,7 +1916,6 @@ export default function BookingPage() {
                       </div>
                     </div>
 
-                    {/* Operational Highlights */}
                     <div className="pt-4 border-t border-slate-100 space-y-2 text-xs text-slate-600">
                       <div className="flex items-center justify-between">
                         <span className="flex items-center gap-1.5 text-slate-500">
@@ -1903,7 +1933,6 @@ export default function BookingPage() {
                         <span className="font-bold text-emerald-700">{calculation.warranty}</span>
                       </div>
                     </div>
-
                   </div>
                 ) : (
                   <div className="py-8 text-center text-slate-500 text-xs">
@@ -1911,7 +1940,6 @@ export default function BookingPage() {
                   </div>
                 )}
 
-                {/* Micro Support Strip */}
                 <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                   <span className="flex items-center gap-1.5 font-medium">
                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -1919,135 +1947,119 @@ export default function BookingPage() {
                   </span>
                   <a
                     href={buildWhatsAppUrl(whatsappNumber, 'Halo NARA AC, saya butuh bantuan booking')}
-                    target="_blank" rel="noopener noreferrer"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="text-blue-600 hover:underline font-bold flex items-center gap-1"
                   >
                     <span>Bantuan CS</span>
-<span className="sr-only"> (buka di tab baru)</span>
                   </a>
                 </div>
-
               </div>
             </div>
-
           </div>
         )}
-
       </main>
 
-      {/* ============================================================== */}
-      {/* 3. FOOTER COPYRIGHT                                            */}
-      {/* ============================================================== */}
       <footer className="bg-white border-t border-slate-200/80 py-6 text-xs text-slate-500 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          <p>&copy; {new Date().getFullYear()} CV. Nara Teknindotama. Seluruh hak cipta dilindungi.</p>
+          <p>{COPYRIGHT_TEXT}</p>
           <div className="flex items-center gap-3 font-medium">
-            <Link to="/terms" className="hover:text-blue-600 transition-colors">
+            <Link to="/terms-conditions" className="hover:text-blue-600 transition-colors">
               Syarat &amp; Ketentuan
             </Link>
             <span className="text-slate-300">&bull;</span>
-            <Link to="/privacy" className="hover:text-blue-600 transition-colors">
+            <Link to="/privacy-policy" className="hover:text-blue-600 transition-colors">
               Kebijakan Privasi
             </Link>
           </div>
         </div>
       </footer>
 
-      {/* ============================================================== */}
-      {/* 4. MODAL E-INVOICE RESMI CV. NARA TEKNINDOTAMA                 */}
-      {/* ============================================================== */}
-      <>
-        {isInvoiceModalOpen && successData && typeof document !== 'undefined' && createPortal(
-          <div 
-            id="invoice-print-portal"
-            className="invoice-modal-backdrop fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 print:static print:p-0 print:m-0 print:bg-white print:overflow-visible print:block print:w-full print:h-auto"
-            onClick={(e) => { if (e.target === e.currentTarget) setIsInvoiceModalOpen(false); }}
+      {isInvoiceModalOpen && successData && typeof document !== 'undefined' && createPortal(
+        <div
+          id="invoice-print-portal"
+          className="invoice-modal-backdrop fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 print:static print:p-0 print:m-0 print:bg-white print:overflow-visible print:block print:w-full print:h-auto"
+          onClick={(e) => { if (e.target === e.currentTarget) setIsInvoiceModalOpen(false); }}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            className="invoice-modal-card bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] print:max-w-none print:w-full print:rounded-none print:shadow-none print:border-none print:max-h-none print:h-auto print:overflow-visible print:block"
+            ref={invoiceModalRef}
+            tabIndex={-1}
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
-              className="invoice-modal-card bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] print:max-w-none print:w-full print:rounded-none print:shadow-none print:border-none print:max-h-none print:h-auto print:overflow-visible print:block print:transform-none"
-              ref={invoiceModalRef}
-              tabIndex={-1}
-            >
-              {/* Modal Top Actions (Non-printable) */}
-              <div className="p-4 bg-slate-900 text-white flex items-center justify-between print:hidden">
-                <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                  <FileText className="w-4 h-4 text-sky-400" />
-                  Pratinjau E-Invoice Resmi CV. Nara Teknindotama
-                </span>
-                
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      const origTitle = document.title;
-                      document.title = `Invoice_${successData?.kode_booking || successData?.data?.kode_booking || 'NARA'}_CV_Nara_Teknindotama`;
-                      window.print();
-                      setTimeout(() => { document.title = origTitle; }, 1000);
-                    }}
-                    className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Printer className="w-3.5 h-3.5" />
-                    <span>Cetak / Unduh PDF</span>
-                  </Button>
+            <div className="p-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white flex items-center justify-between print:hidden">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                <FileText className="w-4 h-4 text-sky-200" />
+                Pratinjau E-Invoice Resmi CV. Nara Teknindotama
+              </span>
 
-                  <button
-                    type="button"
-                    onClick={() => setIsInvoiceModalOpen(false)}
-                    className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-                    aria-label="Tutup modal"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const origTitle = document.title;
+                    document.title = `Invoice_${successData?.kode_booking || successData?.data?.kode_booking || 'NARA'}_CV_Nara_Teknindotama`;
+                    window.print();
+                    setTimeout(() => { document.title = origTitle; }, 1000);
+                  }}
+                  className="h-8 px-3 rounded-lg bg-white text-blue-700 hover:bg-blue-50 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Cetak / Unduh PDF</span>
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsInvoiceModalOpen(false)}
+                  className="w-8 h-8 rounded-lg hover:bg-white/15 text-white flex items-center justify-center cursor-pointer"
+                  aria-label="Tutup modal"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
+            </div>
 
-              {/* PRINTABLE INVOICE PAPER */}
-              <OfficialInvoicePaper 
-                booking={{
-                  ...successData,
-                  id: successData?.id || successData?.data?.id,
-                  kode_booking: successData?.kode_booking || successData?.data?.kode_booking || 'AC-XXXX',
-                  items: successData?.items || calculation.items,
-                  layanan: selectedService?.nama_layanan || successData?.layanan?.nama || successData?.layanan || 'Cuci AC Standard',
-                  customer_nama: form.nama,
-                  kontak: form.kontak,
-                  alamat: form.alamat,
-                  keluhan: form.keluhan,
-                  jadwal_mulai: `${form.tanggal}T${form.jam}:00+07:00`,
-                  harga: calculation.basePrice,
-                  jumlah_unit: calculation.totalUnits || form.jumlah_unit,
-                  total: calculation.total,
-                  discount: calculation.discount
-                }} 
-              />
-            </motion.div>
-          </div>,
-          document.body
-        )}
-      </>
-      
-      {/* ============================================================== */}
-      {/* MODAL RESTORE DRAFT AUTO-SAVE                                */}
-      {/* ============================================================== */}
+            <OfficialInvoicePaper
+              booking={{
+                ...successData,
+                id: successData?.id || successData?.data?.id,
+                kode_booking: successData?.kode_booking || successData?.data?.kode_booking || 'AC-XXXX',
+                items: successData?.items || calculation.items,
+                layanan: selectedService?.nama_layanan || successData?.layanan?.nama || successData?.layanan || 'Cuci AC Standard',
+                customer_nama: form.nama,
+                kontak: form.kontak,
+                alamat: form.alamat,
+                keluhan: form.keluhan,
+                jadwal_mulai: `${form.tanggal}T${form.jam}:00+07:00`,
+                harga: calculation.basePrice,
+                jumlah_unit: calculation.totalUnits || form.jumlah_unit,
+                total: calculation.total,
+                discount: calculation.discount,
+              }}
+            />
+          </motion.div>
+        </div>,
+        document.body
+      )}
+
       <AnimatePresence>
         {showRestoreDraft && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs"
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl shadow-slate-900/20"
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200"
             >
               <div className="flex items-start gap-4 mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
                   <History className="w-6 h-6" />
                 </div>
                 <div>
@@ -2057,7 +2069,7 @@ export default function BookingPage() {
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex gap-3 justify-end">
                 <Button
                   variant="outline"
@@ -2077,10 +2089,8 @@ export default function BookingPage() {
           </motion.div>
         )}
       </AnimatePresence>
-      
-      {/* Tombol Kembali ke Atas */}
-      <ScrollToTopButton />
 
+      <ScrollToTopButton />
     </div>
   );
 }

@@ -69,7 +69,6 @@ describe('Tracker Booking Validation & Microcopy (UX-002)', () => {
         </BrowserRouter>
       );
 
-      // Switch to tracker tab
       fireEvent.click(screen.getByRole('button', { name: /lacak status tiket/i }));
 
       const input = await screen.findByLabelText(/kode booking layanan/i);

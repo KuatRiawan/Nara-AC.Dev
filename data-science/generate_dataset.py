@@ -47,7 +47,6 @@ except ImportError:
         def fit(self, X, y):
             X_arr = np.asarray(X, dtype=float)
             y_arr = np.asarray(y, dtype=float)
-            # Include sinusoidal weekly feature internally for non-linear weekly pattern capture
             dow = X_arr[:, 0]
             X_aug = np.column_stack([X_arr, np.sin(dow * (2 * np.pi / 7.0)), np.cos(dow * (2 * np.pi / 7.0))])
             X_b = np.c_[np.ones((len(X_aug), 1)), X_aug]
@@ -85,11 +84,9 @@ MODEL_METADATA = {
     "baseline_comparison": {}
 }
 
-
 def calculate_wape(y_true, y_pred):
     """Calculate Weighted Absolute Percentage Error (WAPE)."""
     return float(np.sum(np.abs(np.asarray(y_true) - np.asarray(y_pred))) / np.sum(np.asarray(y_true)))
-
 
 def generate_dataset():
     np.random.seed(42)
@@ -162,7 +159,6 @@ def generate_dataset():
     }
     joblib.dump(model_metadata, MODELS_DIR / "demand_model_v2.pkl")
     return df, model, MODEL_METADATA
-
 
 if __name__ == "__main__":
     generate_dataset()

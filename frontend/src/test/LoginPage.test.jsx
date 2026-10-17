@@ -3,7 +3,6 @@ import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import LoginPage from '../pages/LoginPage';
 
-// Mock AuthContext
 vi.mock('../AuthContext', async () => {
   const { createContext } = await import('react');
   const MockAuthContext = createContext({ login: () => {}, logout: () => {}, user: null, loading: false });
@@ -14,14 +13,13 @@ vi.mock('../AuthContext', async () => {
   };
 });
 
-// Mock useBusinessProfile
 vi.mock('../hooks/useBusinessProfile', () => ({
   useBusinessProfile: () => ({ whatsappNumber: '6281234567890', profile: { phone: '0812-3456-7890' }, loading: false }),
   buildWhatsAppUrl: (num, msg) => `https://wa.me/${num}${msg ? `?text=${encodeURIComponent(msg)}` : ''}`,
   normalizeWhatsAppNumber: (p) => p,
+  COPYRIGHT_TEXT: '© 2026 CV. Nara Teknindotama. Seluruh hak cipta dilindungi.',
 }));
 
-// Mock api
 vi.mock('../api', () => ({
   default: { get: vi.fn(), post: vi.fn() },
   setCsrfToken: vi.fn(),
@@ -74,7 +72,6 @@ describe('LoginPage', () => {
     const waLink = screen.getByRole('link', { name: /Bantuan CS/i });
     expect(waLink).toHaveAttribute('target', '_blank');
     expect(waLink).toHaveAttribute('rel', expect.stringContaining('noopener'));
-    // Check sr-only text is present
     expect(waLink.textContent).toContain('(buka di tab baru)');
   });
 });

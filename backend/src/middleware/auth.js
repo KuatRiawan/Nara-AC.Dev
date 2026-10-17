@@ -3,7 +3,6 @@ const config = require('../config');
 const { E } = require('../errors');
 
 function parseToken(req) {
-  // Try Authorization header first
   const h = req.headers.authorization || '';
   if (h.startsWith('Bearer ')) {
     try {
@@ -13,7 +12,6 @@ function parseToken(req) {
     }
   }
   
-  // Fallback to cookie-based token (for HttpOnly cookies)
   const token = req.cookies?.nara_token;
   if (token) {
     try {
@@ -26,7 +24,6 @@ function parseToken(req) {
   return null;
 }
 
-/** Wajib login; roles opsional (array). */
 function requireAuth(roles) {
   return (req, _res, next) => {
     const p = parseToken(req);
@@ -38,7 +35,6 @@ function requireAuth(roles) {
   };
 }
 
-/** Login opsional (untuk endpoint publik yang bisa dipakai admin). */
 function optionalAuth(req, _res, next) {
   const p = parseToken(req);
   if (p && p !== 'invalid') req.user = { id: p.sub, role: p.role, nama: p.nama, technicianId: p.tid || null, customerId: p.cid || null, customer_id: p.cid || null, technician_id: p.tid || null };

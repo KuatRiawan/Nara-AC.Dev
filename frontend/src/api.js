@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-// Module-level CSRF token storage so the interceptor can access it
 let csrfTokenValue = null;
 
 export function setCsrfToken(token) {
@@ -17,18 +16,63 @@ const api = axios.create({
   withCredentials: true, // Enable credentials for cookies (HttpOnly)
 });
 
-api.interceptors.request.use((config) => {
-  // With HttpOnly cookies, we cannot read the token from JS
-  // Axios withCredentials: true will automatically send the HttpOnly cookie
-  // No need to manually set Authorization header
+let refreshingCsrfPromise = null;
 
-  // Add CSRF token for state-changing requests (AUD-004)
+async function refreshCsrfToken() {
+  if (!refreshingCsrfPromise) {
+    refreshingCsrfPromise = axios
+      .get((import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1') + '/auth/csrf-token', {
+        withCredentials: true,
+      })
+      .then((res) => {
+        const token = res.data?.csrfToken;
+        if (token) {
+          csrfTokenValue = token;
+        }
+        return token;
+      })
+      .catch((err) => {
+        csrfTokenValue = null;
+        throw err;
+      })
+      .finally(() => {
+        refreshingCsrfPromise = null;
+      });
+  }
+  return refreshingCsrfPromise;
+}
+
+const PUBLIC_CSRF_EXEMPT_ROUTES = [
+  '/auth/login',
+  '/auth/staff/login',
+  '/auth/register',
+  '/auth/customer/',
+  '/auth/csrf-token',
+  '/public/',
+  '/feedback',
+  '/bookings',
+];
+
+function isPublicRoute(url = '') {
+  return PUBLIC_CSRF_EXEMPT_ROUTES.some((route) => url.includes(route));
+}
+
+api.interceptors.request.use(async (config) => {
   const stateChangingMethods = ['post', 'put', 'patch', 'delete'];
-  if (stateChangingMethods.includes(config.method?.toLowerCase()) && csrfTokenValue) {
-    config.headers['X-CSRF-Token'] = csrfTokenValue;
+  if (stateChangingMethods.includes(config.method?.toLowerCase())) {
+    if (!csrfTokenValue && !isPublicRoute(config.url || '')) {
+      try {
+        await refreshCsrfToken();
+      } catch {
+        // Biarkan request lanjut, backend akan merespon jika diperlukan
+      }
+    }
+    if (csrfTokenValue) {
+      config.headers = config.headers || {};
+      config.headers['X-CSRF-Token'] = csrfTokenValue;
+    }
   }
 
-  // Anti-cache untuk semua request GET
   if (config.method === 'get') {
     config.params = config.params || {};
     config.params._t = Date.now();
@@ -39,21 +83,33 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => response.data,
-  (error) => {
-    // If request was canceled by AbortController, propagate the cancel error
+  async (error) => {
     if (axios.isCancel(error)) {
       return Promise.reject(error);
     }
+    const originalRequest = error.config;
     if (error.response) {
       if (error.response.status === 401) {
-        // Clear cookie by calling logout endpoint or manually
         document.cookie = 'nara_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
         csrfTokenValue = null;
         window.dispatchEvent(new Event('auth-expired'));
-      }
-      // Jika CSRF token ditolak, clear agar di-fetch ulang
-      if (error.response.status === 403 && error.response.data?.error?.code?.startsWith('CSRF_')) {
-        csrfTokenValue = null;
+      } else if (
+        error.response.status === 403 &&
+        error.response.data?.error?.code?.startsWith('CSRF_') &&
+        originalRequest &&
+        !originalRequest._csrfRetry
+      ) {
+        originalRequest._csrfRetry = true;
+        try {
+          const newToken = await refreshCsrfToken();
+          if (newToken) {
+            originalRequest.headers = originalRequest.headers || {};
+            originalRequest.headers['X-CSRF-Token'] = newToken;
+            return api(originalRequest);
+          }
+        } catch {
+          // If refresh fails, fall through to reject
+        }
       }
       return Promise.reject(error.response.data);
     }
@@ -61,7 +117,6 @@ api.interceptors.response.use(
   }
 );
 
-// Function to create API request with CSRF token for state-changing operations
 export function apiWithCsrf(csrfToken) {
   const apiCsrf = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1',
@@ -70,16 +125,12 @@ export function apiWithCsrf(csrfToken) {
   });
 
   apiCsrf.interceptors.request.use((config) => {
-    // With HttpOnly cookies, we rely on withCredentials: true
-    // No need to manually set Authorization header
     
-    // Add CSRF token for state-changing requests
     const stateChangingMethods = ['post', 'put', 'patch', 'delete'];
     if (stateChangingMethods.includes(config.method?.toLowerCase()) && csrfToken) {
       config.headers['X-CSRF-Token'] = csrfToken;
     }
     
-    // Anti-cache untuk semua request GET
     if (config.method === 'get') {
       config.params = config.params || {};
       config.params._t = Date.now();

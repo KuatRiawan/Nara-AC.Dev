@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/utils';
-import { Menu, Bell, LogOut, Settings, History, ChevronLeft } from 'lucide-react';
+import { Menu, Bell, LogOut, Settings, History, ChevronLeft, Globe, ExternalLink } from 'lucide-react';
 import { AuthContext } from '../../AuthContext';
 import CompanyLogo from '../CompanyLogo';
 import BottomNavigation from './BottomNavigation';
@@ -10,20 +10,6 @@ import ScrollToTopButton from '../ui/ScrollToTopButton';
 import Breadcrumb from '../ui/Breadcrumb';
 import { getSidebarNavItems, isActivePath, getBreadcrumbItems } from './navConfig';
 
-/**
- * Unified Responsive Dashboard Layout for NARA AC
- * Enforces:
- * 1. Mobile (< 768px):
- *    - Bottom Navigation ONLY
- *    - NO desktop sidebar
- *    - Header locked at top (never scrolls away)
- *    - Independent smooth scrolling content
- * 2. Desktop (>= 768px):
- *    - Prominent Hamburger Menu in header to collapse/expand sidebar
- *    - Header locked at top (never scrolls away)
- *    - Collapsible left sidebar with icon-only tooltips
- *    - Independent smooth scrolling content
- */
 export default function DashboardLayout({ children, role, title, onOpenNotif, unreadCount = 0 }) {
   const { user, logout, confirmLogout, cancelLogout, executeLogout, showLogoutConfirm, isLoggingOut } = useContext(AuthContext);
   const location = useLocation();
@@ -33,14 +19,14 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
   const currentRole = role || user?.role || 'admin';
   const sidebarNavItems = getSidebarNavItems(currentRole);
 
-  // Mobile profile dropdown state
   const [isMobileProfileOpen, setIsMobileProfileOpen] = useState(false);
 
-  // Desktop sidebar collapsed state with localStorage persistence
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     if (typeof window !== 'undefined' && currentRole) {
       const saved = localStorage.getItem(`nara_ac_sidebar_${currentRole}_collapsed`);
-      return saved === 'true';
+      if (saved !== null) return saved === 'true';
+      // Auto-collapse on tablet screens (768px - 1023px) for optimal canvas width
+      return window.innerWidth < 1024;
     }
     return false;
   });
@@ -51,7 +37,6 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
     }
   }, [isSidebarCollapsed, currentRole]);
 
-  // Reset scroll to top and close mobile profile when changing route
   useEffect(() => {
     setIsMobileProfileOpen(false);
     if (mainRef.current) {
@@ -59,7 +44,6 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
     }
   }, [location.pathname]);
 
-  // Handle auth-logout event to redirect
   useEffect(() => {
     const handleLogout = () => {
       navigate('/login');
@@ -72,7 +56,6 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
     setIsSidebarCollapsed(prev => !prev);
   };
 
-  // Compute Indonesian page title from path if title prop is omitted
   const getComputedTitle = () => {
     if (title) return title;
     const path = location.pathname;
@@ -105,27 +88,19 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
 
   return (
     <>
-      {/* ============================================================== */}
-      {/* SKIP TO MAIN CONTENT - Aksesibilitas                             */}
-      {/* ============================================================== */}
       <a href="#main-content" className="sr-only focus:not-sr-only absolute top-0 left-0 z-50 p-4 bg-blue-600 text-white font-bold rounded-br-xl text-sm hover:bg-blue-700 transition-colors">
         Lewati ke Konten Utama
       </a>
       
       <div className="h-screen h-[100dvh] w-full bg-slate-50/60 font-sans flex text-slate-800 selection:bg-blue-100 selection:text-blue-900">
-        {/* ============================================================== */}
-        {/* DESKTOP SIDEBAR (>= 768px ONLY) - CONSISTENT LIGHT THEME       */}
-        {/* ============================================================== */}
         <aside
           className={cn(
             "hidden md:flex flex-col shrink-0 h-full z-30 bg-white text-slate-800 shadow-md shadow-slate-200/40 border-r border-slate-200/80 relative transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[width]",
-            isSidebarCollapsed ? "w-20" : "w-72"
+            isSidebarCollapsed ? "w-20" : "w-64 lg:w-72"
           )}
         >
-          {/* Subtle Ambient Breeze Glow */}
           <div className="absolute top-0 right-0 w-36 h-36 bg-blue-100 rounded-full blur-[70px] opacity-40 pointer-events-none"></div>
 
-          {/* Floating Border Toggle Pill Button (Glides with sidebar edge) */}
           <button
             onClick={toggleSidebar}
             className="absolute -right-3.5 top-5.5 z-40 w-7 h-7 rounded-full bg-white border border-slate-200/90 shadow-md hover:shadow-lg hover:bg-blue-50 text-slate-500 hover:text-blue-600 flex items-center justify-center transition-all duration-200 cursor-pointer group"
@@ -135,7 +110,6 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
             <ChevronLeft className={cn("w-4 h-4 transition-transform duration-300 text-slate-600 group-hover:text-blue-600", isSidebarCollapsed && "rotate-180")} />
           </button>
 
-          {/* Sidebar Brand Header */}
           <div className={cn(
             "h-18 lg:h-20 flex items-center border-b border-slate-100 relative z-10 shrink-0 transition-all duration-300",
             isSidebarCollapsed ? "justify-center px-2" : "px-5"
@@ -154,7 +128,6 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
             </Link>
           </div>
 
-          {/* Navigation Items with Clean Grouping */}
           <div className="p-3 flex-1 overflow-y-auto overflow-x-hidden space-y-1 relative z-10 custom-scrollbar">
             {sidebarNavItems.map(item => {
               const Icon = item.icon;
@@ -200,14 +173,12 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
                       )}
                     </span>
 
-                    {/* Collapsed dot badge for notifications */}
                     {isSidebarCollapsed && item.path === '/admin/notifications' && unreadCount > 0 && (
                       <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-600 ring-2 ring-white" />
                     )}
 
-                    {/* Floating Tooltip when collapsed */}
                     {isSidebarCollapsed && (
-                      <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-lg shadow-xl whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 border border-slate-800">
+                      <div className="absolute left-full ml-3 px-3 py-1.5 bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xl whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 border border-slate-800">
                         {item.name} {item.path === '/admin/notifications' && unreadCount > 0 ? `(${unreadCount})` : ''}
                       </div>
                     )}
@@ -217,7 +188,6 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
             })}
           </div>
 
-          {/* User Card & Logout */}
           <div className="p-3 border-t border-slate-100 relative z-10 bg-slate-50/80 shrink-0">
             <div className={cn(
               "flex items-center rounded-2xl bg-white border border-slate-200/70 shadow-2xs transition-all duration-300",
@@ -264,16 +234,9 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
           </div>
         </aside>
 
-        {/* ============================================================== */}
-        {/* MAIN CONTAINER (DESKTOP & MOBILE)                             */}
-        {/* ============================================================== */}
         <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden relative">
-          {/* ------------------------------------------------------------ */}
-          {/* DESKTOP HEADER (>= 768px) - LOCKED AT TOP                    */}
-          {/* ------------------------------------------------------------ */}
           <header className="hidden md:flex shrink-0 z-20 h-18 lg:h-20 bg-white/95 backdrop-blur-md px-6 sm:px-8 justify-between items-center border-b border-slate-200/80 shadow-xs">
             <div className="flex items-center gap-3.5 min-w-0">
-              {/* Judul Halaman Aktif (Diperbesar) & Jejak Breadcrumb di Bawahnya */}
               <div className="min-w-0 flex flex-col justify-center">
                 <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight truncate leading-tight">
                   {displayTitle}
@@ -284,8 +247,8 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
               </div>
             </div>
 
-            <div className="flex items-center gap-4 shrink-0">
-              {/* Notifications (for Admin) */}
+            <div className="flex items-center gap-3 lg:gap-4 shrink-0">
+
               {currentRole === 'admin' && onOpenNotif && (
                 <button
                   onClick={onOpenNotif}
@@ -306,7 +269,6 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
                 <div className="h-6 w-px bg-slate-200 hidden lg:block"></div>
               )}
 
-              {/* Date Display */}
               <div className="text-right hidden lg:block">
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   {new Date().toLocaleDateString('id-ID', { weekday: 'long' })}
@@ -318,10 +280,6 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
             </div>
           </header>
 
-          {/* ------------------------------------------------------------ */}
-          {/* MOBILE HEADER (< 768px) - LOCKED AT TOP                      */}
-          {/* Rule 1.A: NO HAMBURGER MENU ON MOBILE. Clean & minimal header*/}
-          {/* ------------------------------------------------------------ */}
           <header className="flex md:hidden shrink-0 z-20 h-16 bg-white/95 backdrop-blur-md px-4 justify-between items-center border-b border-slate-100 shadow-xs relative">
             <div className="flex items-center gap-2.5">
               <CompanyLogo dark={false} iconSize="h-7" />
@@ -333,7 +291,18 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Link
+                to="/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 text-slate-600 hover:text-blue-600 hover:bg-sky-50 rounded-xl transition-colors cursor-pointer"
+                aria-label="Buka Landing Page NARA AC"
+                title="Buka Landing Page NARA AC"
+              >
+                <Globe className="w-5 h-5 text-blue-600" />
+              </Link>
+
               {currentRole === 'admin' && onOpenNotif && (
                 <button
                   onClick={onOpenNotif}
@@ -349,7 +318,6 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
                 </button>
               )}
 
-              {/* Profile Avatar Button on Mobile */}
               <button
                 onClick={() => setIsMobileProfileOpen(prev => !prev)}
                 className="flex items-center p-0.5 rounded-2xl hover:bg-slate-100 transition-colors cursor-pointer border border-slate-200/80 active:scale-95"
@@ -363,46 +331,42 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
             </div>
           </header>
 
-          {/* ------------------------------------------------------------ */}
-          {/* SCROLLABLE PAGE CONTENT                                      */}
-          {/* Content scrolls independently; header remains fixed at top.  */}
-          {/* ------------------------------------------------------------ */}
           <main
             id="main-content"
             ref={mainRef}
             className="flex-1 w-full min-w-0 overflow-y-auto overflow-x-hidden relative custom-scrollbar flex flex-col"
           >
             <div
-              className="flex-1 w-full min-w-0 pb-24 md:pb-8"
+              className="flex-1 w-full min-w-0 pb-24 md:pb-8 flex flex-col justify-between"
               style={{ paddingBottom: 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' }}
             >
-              {children}
+              <div>{children}</div>
+              <footer className="mt-8 pt-4 px-6 border-t border-slate-200/70 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
+                <p>© 2026 CV. Nara Teknindotama. Seluruh hak cipta dilindungi.</p>
+                <div className="flex items-center gap-3 font-medium">
+                  <Link to="/terms" className="hover:text-blue-600 transition-colors">Syarat &amp; Ketentuan</Link>
+                  <span className="text-slate-300">&bull;</span>
+                  <Link to="/privacy" className="hover:text-blue-600 transition-colors">Kebijakan Privasi</Link>
+                </div>
+              </footer>
             </div>
           </main>
 
-          {/* ------------------------------------------------------------ */}
-          {/* MOBILE BOTTOM NAVIGATION BAR                                 */}
-          {/* Rendered ONLY on mobile (< 768px via md:hidden inside)       */}
-          {/* ------------------------------------------------------------ */}
           <BottomNavigation />
         </div>
       </div>
 
-      {/* MOBILE PROFILE POPUP MENU */}
       {isMobileProfileOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
-          {/* Backdrop */}
           <div
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-2xs transition-opacity animate-in fade-in"
             onClick={() => setIsMobileProfileOpen(false)}
           />
 
-          {/* Profile Dropdown Container */}
           <div 
             className="absolute top-16 right-3 w-[calc(100vw-1.5rem)] max-w-[280px] bg-white rounded-3xl shadow-2xl border border-slate-200/90 overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col z-10"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Profile User Info Header */}
             <div className="p-4 bg-slate-50/80 border-b border-slate-100 flex items-center gap-3">
               <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-base shadow-sm shrink-0">
                 {(user?.nama || (currentRole === 'admin' ? 'A' : 'T')).charAt(0).toUpperCase()}
@@ -420,7 +384,6 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
               </div>
             </div>
 
-            {/* Menu Links */}
             <div className="p-2 space-y-1">
               <Link
                 to={currentRole === 'admin' ? '/admin/settings' : '/technician/profile'}
@@ -441,9 +404,20 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
                   <span>Log Aktivitas</span>
                 </Link>
               )}
+
+              <Link
+                to="/"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setIsMobileProfileOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-50 hover:text-blue-600 font-semibold text-xs transition-colors"
+              >
+                <Globe className="w-4 h-4 text-blue-600" />
+                <span>Lihat Website Publik</span>
+                <ExternalLink className="w-3 h-3 text-slate-400 ml-auto" />
+              </Link>
             </div>
 
-            {/* Logout Action */}
             <div className="p-2 border-t border-slate-100 bg-slate-50/50">
               <button
                 type="button"
@@ -462,7 +436,6 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
         </div>
       )}
 
-      {/* LOGOUT CONFIRMATION DIALOG */}
       <LogoutConfirmationDialog
         isOpen={showLogoutConfirm}
         onConfirm={executeLogout}
@@ -470,7 +443,6 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
         message="Apakah Anda yakin ingin mengakhiri sesi sekarang?"
       />
       
-      {/* Tombol Kembali ke Atas */}
       <ScrollToTopButton />
     </>
   );

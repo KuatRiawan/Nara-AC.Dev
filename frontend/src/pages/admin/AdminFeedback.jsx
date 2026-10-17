@@ -22,7 +22,6 @@ export default function AdminFeedback() {
         const raw = res?.data?.data || res?.data || res;
         const list = Array.isArray(raw) ? raw : (raw?.data && Array.isArray(raw.data) ? raw.data : []);
 
-        // Use actual data from API - no fake feedback injection (UX-004)
         setFeedbacks(list);
       } catch (err) {
         showError('Gagal memuat ulasan pelanggan: ' + (err?.response?.data?.error?.message || err?.message));
@@ -33,7 +32,6 @@ export default function AdminFeedback() {
     fetchFeedback();
   }, [showError]);
 
-  // Metrics
   const stats = useMemo(() => {
     if (feedbacks.length === 0) {
       return { avg: '-', total: 0, positivePercent: 0, topTech: '-' };
@@ -43,7 +41,6 @@ export default function AdminFeedback() {
     const positive = feedbacks.filter(f => (f.rating || 0) >= 4).length;
     const positivePercent = Math.round((positive / feedbacks.length) * 100);
 
-    // Find top technician by frequency
     const techCount = {};
     feedbacks.forEach(f => {
       if (f.teknisi) {
@@ -55,7 +52,6 @@ export default function AdminFeedback() {
     return { avg, total: feedbacks.length, positivePercent, topTech };
   }, [feedbacks]);
 
-  // Filtered
   const filteredFeedbacks = useMemo(() => {
     return feedbacks.filter(f => {
       const q = search.toLowerCase();
@@ -76,12 +72,10 @@ export default function AdminFeedback() {
     });
   }, [feedbacks, search, ratingFilter]);
 
-  // Reset pagination when search or ratingFilter changes
   useEffect(() => {
     setCurrentPage(1);
   }, [search, ratingFilter]);
 
-  // Paginated feedbacks
   const totalPages = Math.max(1, Math.ceil(filteredFeedbacks.length / itemsPerPage));
   const paginatedFeedbacks = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -91,7 +85,6 @@ export default function AdminFeedback() {
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 bg-slate-50/50 relative min-w-0">
       
-      {/* Title */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
           Feedback & Ulasan Konsumen
@@ -101,10 +94,8 @@ export default function AdminFeedback() {
         </p>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* Rating Rata-rata */}
         <div className="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Skor Rata-Rata</span>
@@ -123,7 +114,6 @@ export default function AdminFeedback() {
           </div>
         </div>
 
-        {/* Kepuasan Positif */}
         <div className="p-5 rounded-3xl bg-white border border-emerald-100 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Tingkat Kepuasan</span>
@@ -139,7 +129,6 @@ export default function AdminFeedback() {
           </div>
         </div>
 
-        {/* Teknisi Teladan */}
         <div className="p-5 rounded-3xl bg-white border border-blue-100 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Teknisi Terbaik</span>
@@ -161,7 +150,6 @@ export default function AdminFeedback() {
           </div>
         </div>
 
-        {/* Kepatuhan SOP */}
         <div className="p-5 rounded-3xl bg-white border border-sky-100 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-sky-600">Standar Pelayanan</span>
@@ -179,7 +167,6 @@ export default function AdminFeedback() {
 
       </div>
 
-      {/* Search & Filter */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -220,7 +207,6 @@ export default function AdminFeedback() {
         </div>
       </div>
 
-      {/* Feedbacks Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {loading ? (
           <div className="col-span-full py-12 text-center text-slate-500 bg-white rounded-3xl border border-slate-200">
@@ -247,7 +233,6 @@ export default function AdminFeedback() {
               className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm hover:border-blue-200 transition-all flex flex-col justify-between space-y-4"
             >
               <div>
-                {/* Header: Rating & Date */}
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div>
                     <div className="flex items-center gap-1 mb-1">
@@ -274,12 +259,10 @@ export default function AdminFeedback() {
                   </div>
                 </div>
 
-                {/* Comment */}
                 <p className="text-xs sm:text-sm text-slate-700 leading-relaxed italic bg-slate-50/70 p-3.5 rounded-2xl border border-slate-100">
                   "{item.komentar || 'Pelayanan memuaskan, AC dingin dan bersih sesuai SOP.'}"
                 </p>
 
-                {/* Tags */}
                 {item.tags && item.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-3">
                     {item.tags.map((t, idx) => (
@@ -294,7 +277,6 @@ export default function AdminFeedback() {
                 )}
               </div>
 
-              {/* Footer: Technician Info */}
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                 <div className="flex items-center gap-1.5">
                   <Wrench className="w-3.5 h-3.5 text-blue-600" />
@@ -310,7 +292,6 @@ export default function AdminFeedback() {
         )}
       </div>
 
-      {/* PAGINATION TOOLBAR */}
       {!loading && filteredFeedbacks.length > 0 && (
         <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 font-medium">
           <div>

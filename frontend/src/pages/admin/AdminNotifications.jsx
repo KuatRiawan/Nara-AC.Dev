@@ -15,9 +15,8 @@ export default function AdminNotifications({ isDrawer = false, onClose, onRefres
   const [filter, setFilter] = useState('all'); // 'all' | 'unread'
   const [markingAll, setMarkingAll] = useState(false);
 
-  // Fetch notifications
-  const fetchNotifications = useCallback(async () => {
-    setLoading(true);
+  const fetchNotifications = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
       const url = filter === 'unread' ? '/admin/notifications?unread=true&limit=50' : '/admin/notifications?limit=50';
       const res = await api.get(url);
@@ -25,17 +24,45 @@ export default function AdminNotifications({ isDrawer = false, onClose, onRefres
       const list = Array.isArray(raw) ? raw : (raw?.data && Array.isArray(raw.data) ? raw.data : []);
       setNotifications(list);
     } catch (err) {
-      showError('Gagal memuat notifikasi: ' + (err.response?.data?.error?.message || err.message));
+      if (!isSilent) {
+        showError('Gagal memuat notifikasi: ' + (err.response?.data?.error?.message || err.message));
+      }
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   }, [filter, showError]);
 
   useEffect(() => {
-    fetchNotifications();
+    fetchNotifications(false);
+    const interval = setInterval(() => {
+      fetchNotifications(true);
+    }, 5000);
+
+    const handleSync = () => {
+      fetchNotifications(true);
+    };
+
+    window.addEventListener('focus', handleSync);
+    window.addEventListener('nara-booking-created', handleSync);
+    window.addEventListener('nara-booking-updated', handleSync);
+    window.addEventListener('nara-notification-updated', handleSync);
+    const handleStorage = (e) => {
+      if (e.key === 'nara_booking_sync_timestamp' || e.key === 'nara_notification_sync') {
+        handleSync();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleSync);
+      window.removeEventListener('nara-booking-created', handleSync);
+      window.removeEventListener('nara-booking-updated', handleSync);
+      window.removeEventListener('nara-notification-updated', handleSync);
+      window.removeEventListener('storage', handleStorage);
+    };
   }, [fetchNotifications]);
 
-  // Mark single notification as read
   const markAsRead = useCallback(async (id, e) => {
     if (e) e.stopPropagation();
     try {
@@ -47,7 +74,6 @@ export default function AdminNotifications({ isDrawer = false, onClose, onRefres
     }
   }, [showError, onRefreshCount]);
 
-  // Mark all notifications as read
   const markAllAsRead = useCallback(async () => {
     setMarkingAll(true);
     try {
@@ -62,25 +88,64 @@ export default function AdminNotifications({ isDrawer = false, onClose, onRefres
     }
   }, [showSuccess, showError, onRefreshCount]);
 
-  // Handle click on notification card
+  const resolveTargetUrl = (item) => {
+    let target = item.tautan;
+    const bId = item.booking_id || item.reference_id;
+    const itemType = (item.type || '').toLowerCase();
+    const itemTitle = (item.title || '').toLowerCase();
+    const itemMessage = item.message || '';
+
+    // Check if it relates to a booking
+    if (itemType === 'booking' || itemTitle.includes('booking') || itemTitle.includes('jadwal') || itemTitle.includes('teknisi') || itemTitle.includes('selesai') || bId) {
+      if (bId) {
+        return `/admin/bookings?bookingId=${bId}`;
+      }
+      const match = (itemMessage + ' ' + itemTitle).match(/\b(AC-[A-Z0-9]+|NARA-AC-[A-Z0-9]+)\b/i);
+      if (match) {
+        return `/admin/bookings?kode=${match[1]}`;
+      }
+      return target || '/admin/bookings';
+    }
+
+    // Check if it relates to a warranty claim
+    if (itemType === 'claim' || itemTitle.includes('klaim')) {
+      const cId = item.reference_id;
+      return cId ? `/admin/claims?claimId=${cId}` : (target || '/admin/claims');
+    }
+
+    // Check if it relates to an invoice / payment
+    if (itemType === 'invoice' || itemTitle.includes('invoice') || itemTitle.includes('bayar')) {
+      if (bId) {
+        return `/admin/invoices?bookingId=${bId}`;
+      }
+      return target || '/admin/invoices';
+    }
+
+    // Check if it relates to inventory
+    if (itemType === 'inventory' || itemTitle.includes('stok') || itemTitle.includes('inventory')) {
+      return '/admin/inventory';
+    }
+
+    return target || null;
+  };
+
   const handleNotificationClick = (item) => {
     if (!item.is_read) {
       markAsRead(item.id);
     }
-    if (item.tautan) {
-      navigate(item.tautan);
+    const targetUrl = resolveTargetUrl(item);
+    if (targetUrl) {
+      navigate(targetUrl);
       if (onClose) {
         onClose();
       }
     }
   };
 
-  // Unread items count
   const unreadCount = useMemo(() => {
     return notifications.filter(n => !n.is_read).length;
   }, [notifications]);
 
-  // Format relative time helper in Indonesian
   const formatTimeAgo = (dateStr) => {
     if (!dateStr) return '-';
     try {
@@ -100,7 +165,6 @@ export default function AdminNotifications({ isDrawer = false, onClose, onRefres
     }
   };
 
-  // Get icon by notification type & title
   const getNotificationIcon = (n) => {
     const type = n.type?.toLowerCase() || '';
     const title = n.title?.toLowerCase() || '';
@@ -154,7 +218,6 @@ export default function AdminNotifications({ isDrawer = false, onClose, onRefres
         : "flex-1 p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 bg-slate-50/50 relative min-w-0 font-sans"
     )}>
       
-      {/* Standalone Header (only visible on direct page view, not in drawer) */}
       {!isDrawer && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -187,7 +250,6 @@ export default function AdminNotifications({ isDrawer = false, onClose, onRefres
         </div>
       )}
 
-      {/* Filter Tabs & Quick Action Bar */}
       <div className="flex items-center justify-between gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-200/80">
         <div className="flex items-center gap-1">
           <button
@@ -235,7 +297,6 @@ export default function AdminNotifications({ isDrawer = false, onClose, onRefres
         )}
       </div>
 
-      {/* Notifications List */}
       <div className="space-y-2.5">
         {loading ? (
           <div className="p-12 text-center text-slate-500 bg-white rounded-3xl border border-slate-200/80 flex flex-col items-center justify-center">
@@ -258,7 +319,7 @@ export default function AdminNotifications({ isDrawer = false, onClose, onRefres
           </div>
         ) : (
           notifications.map((n) => {
-            const hasLink = Boolean(n.tautan);
+            const hasLink = Boolean(resolveTargetUrl(n));
             return (
               <div
                 key={n.id}
@@ -271,10 +332,8 @@ export default function AdminNotifications({ isDrawer = false, onClose, onRefres
                     : "bg-white border-slate-200/70 hover:bg-slate-50/70 hover:border-slate-300"
                 )}
               >
-                {/* Visual Icon */}
                 {getNotificationIcon(n)}
 
-                {/* Content */}
                 <div className="flex-1 min-w-0 pr-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-1.5 flex-wrap">
@@ -295,7 +354,6 @@ export default function AdminNotifications({ isDrawer = false, onClose, onRefres
                     {n.message}
                   </p>
 
-                  {/* Optional action link */}
                   {hasLink && (
                     <div className="mt-2.5 flex items-center gap-1 text-xs font-bold text-blue-600 group-hover:text-blue-700">
                       <span>Buka detail</span>
@@ -304,7 +362,6 @@ export default function AdminNotifications({ isDrawer = false, onClose, onRefres
                   )}
                 </div>
 
-                {/* Mark as read button (for unread items) */}
                 {!n.is_read && (
                   <button
                     type="button"

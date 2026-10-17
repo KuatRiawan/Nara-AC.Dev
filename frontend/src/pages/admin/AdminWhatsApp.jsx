@@ -16,10 +16,8 @@ export default function AdminWhatsApp() {
   const { error: showError, success: showSuccess } = useToast();
   const { whatsappNumber } = useBusinessProfile();
   
-  // Navigation tabs: 'conversations' | 'gateway'
   const [activeTab, setActiveTab] = useState('gateway');
 
-  // Conversations state
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -27,7 +25,6 @@ export default function AdminWhatsApp() {
   const [dispatchingReminders, setDispatchingReminders] = useState(false);
   const [reminderResult, setReminderResult] = useState(null);
 
-  // Gateway configuration state
   const [gatewayConfig, setGatewayConfig] = useState({
     provider: 'fonnte',
     api_url: 'https://api.fonnte.com/send',
@@ -44,7 +41,6 @@ export default function AdminWhatsApp() {
   const [showToken, setShowToken] = useState(false);
   const [copiedWebhook, setCopiedWebhook] = useState(false);
 
-  // Test send state
   const [testForm, setTestForm] = useState({
     phone: '',
     message: '[NARA AC TEST] Koneksi API WhatsApp Gateway berhasil terhubung dengan Dashboard Admin CV. Nara Teknindotama.'
@@ -52,7 +48,6 @@ export default function AdminWhatsApp() {
   const [testingConnection, setTestingConnection] = useState(false);
   const [testResult, setTestResult] = useState(null);
 
-  // Fetch Conversations
   const fetchConversations = useCallback(async () => {
     setLoading(true);
     try {
@@ -66,7 +61,6 @@ export default function AdminWhatsApp() {
     }
   }, [showError]);
 
-  // Fetch Gateway Configuration
   const fetchGatewayConfig = useCallback(async () => {
     setLoadingGateway(true);
     try {
@@ -90,7 +84,6 @@ export default function AdminWhatsApp() {
     fetchGatewayConfig();
   }, [fetchConversations, fetchGatewayConfig]);
 
-  // Handle provider selection change
   const handleProviderChange = (newProvider) => {
     let url = gatewayConfig.api_url;
     if (newProvider === 'fonnte') {
@@ -105,7 +98,6 @@ export default function AdminWhatsApp() {
     });
   };
 
-  // Save Gateway Configuration
   const handleSaveGateway = async (e) => {
     e.preventDefault();
     setSavingGateway(true);
@@ -122,7 +114,6 @@ export default function AdminWhatsApp() {
     }
   };
 
-  // Run Test Message Connection
   const handleTestSend = async (e) => {
     e.preventDefault();
     if (!testForm.phone) {
@@ -147,7 +138,6 @@ export default function AdminWhatsApp() {
         message: res.message || res.data?.message || 'Pesan tes berhasil dikirim.',
         details: res.details || res.data?.details
       });
-      // Gateway is now confirmed connected!
       setGatewayConfig(prev => ({ ...prev, enabled: true }));
       showSuccess(res.message || res.data?.message || 'Koneksi API WhatsApp berhasil terhubung!');
     } catch (err) {
@@ -162,7 +152,6 @@ export default function AdminWhatsApp() {
     }
   };
 
-  // Copy Webhook URL
   const handleCopyWebhook = () => {
     const webhookUrl = `${window.location.origin.replace(':5173', ':5000')}/api/v1/whatsapp/webhook`;
     navigator.clipboard.writeText(webhookUrl);
@@ -171,7 +160,6 @@ export default function AdminWhatsApp() {
     setTimeout(() => setCopiedWebhook(false), 2500);
   };
 
-  // KPIs
   const kpis = useMemo(() => {
     let escalated = 0;
     conversations.forEach(c => {
@@ -184,7 +172,6 @@ export default function AdminWhatsApp() {
     };
   }, [conversations]);
 
-  // Filtered
   const filteredConversations = useMemo(() => {
     const q = search.trim().toLowerCase();
     return conversations.filter(c => {
@@ -199,7 +186,6 @@ export default function AdminWhatsApp() {
     });
   }, [conversations, search, filterMode]);
 
-  // Dispatch Reminders (BR-47)
   const handleDispatchReminders = async () => {
     setDispatchingReminders(true);
     setReminderResult(null);
@@ -220,7 +206,6 @@ export default function AdminWhatsApp() {
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 bg-slate-50/50 min-w-0">
       
-      {/* Title & Top Navigation Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -236,46 +221,41 @@ export default function AdminWhatsApp() {
           </p>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="flex items-center gap-2 p-1 bg-white rounded-2xl border border-slate-200/80 shadow-2xs self-start sm:self-auto">
+        <div className="w-full sm:w-auto grid grid-cols-2 sm:flex items-center gap-1.5 p-1 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
           <button
             onClick={() => setActiveTab('conversations')}
             className={cn(
-              "px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
+              "px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center",
               activeTab === 'conversations'
                 ? "bg-blue-600 text-white shadow-xs"
                 : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
             )}
           >
-            <MessageSquare className="w-4 h-4" />
-            <span>Log Chat &amp; Eskalasi</span>
+            <MessageSquare className="w-4 h-4 shrink-0" />
+            <span className="truncate">Log Chat &amp; Eskalasi</span>
           </button>
           <button
             onClick={() => setActiveTab('gateway')}
             className={cn(
-              "px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
+              "px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center",
               activeTab === 'gateway'
                 ? "bg-blue-600 text-white shadow-xs"
                 : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
             )}
           >
-            <Settings className="w-4 h-4" />
-            <span>Koneksi API &amp; Gateway</span>
+            <Settings className="w-4 h-4 shrink-0" />
+            <span className="truncate">Koneksi Gateway</span>
             {isGatewayConnected ? (
-              <span className="w-2 h-2 rounded-full bg-emerald-500 ml-0.5" title="Gateway Terhubung" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500 ml-0.5 shrink-0" title="Gateway Terhubung" />
             ) : (
-              <span className="w-2 h-2 rounded-full bg-amber-400 ml-0.5" title="Perlu Pengaturan Token" />
+              <span className="w-2 h-2 rounded-full bg-amber-400 ml-0.5 shrink-0" title="Perlu Pengaturan Token" />
             )}
           </button>
         </div>
       </div>
 
-      {/* ============================================================== */}
-      {/* TAB 1: LOG PERCAKAPAN & ESKALASI CS                            */}
-      {/* ============================================================== */}
       {activeTab === 'conversations' && (
         <div className="space-y-6">
-          {/* Top Actions for Conversations */}
           <div className="flex items-center justify-between gap-4 flex-wrap bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs">
             <div className="flex items-center gap-3">
               <div className={cn(
@@ -315,7 +295,6 @@ export default function AdminWhatsApp() {
             </div>
           </div>
 
-          {/* Reminder Result Banner */}
           {reminderResult && (
             <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 flex items-start gap-3 text-xs animate-in fade-in">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
@@ -331,9 +310,7 @@ export default function AdminWhatsApp() {
             </div>
           )}
 
-          {/* KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Total Percakapan */}
             <div className="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
               <div className="flex justify-between items-start mb-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Percakapan Tercatat</span>
@@ -347,7 +324,6 @@ export default function AdminWhatsApp() {
               </div>
             </div>
 
-            {/* Eskalasi Admin Manusia */}
             <div className="p-5 rounded-3xl bg-white border border-rose-200 shadow-sm flex flex-col justify-between">
               <div className="flex justify-between items-start mb-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-rose-700">Eskalasi Admin Manusia</span>
@@ -361,7 +337,6 @@ export default function AdminWhatsApp() {
               </div>
             </div>
 
-            {/* AI CS Handled */}
             <div className="p-5 rounded-3xl bg-white border border-emerald-200 shadow-sm flex flex-col justify-between">
               <div className="flex justify-between items-start mb-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">Dikelola Otomatis AI</span>
@@ -376,7 +351,6 @@ export default function AdminWhatsApp() {
             </div>
           </div>
 
-          {/* Filter & Search Bar */}
           <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="relative w-full sm:w-80">
               <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -423,9 +397,66 @@ export default function AdminWhatsApp() {
             </div>
           </div>
 
-          {/* Conversations List */}
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
+            {/* Mobile & Tablet Card View */}
+            <div className="block lg:hidden p-4">
+              {filteredConversations.length === 0 ? (
+                <div className="py-12 text-center text-slate-400 font-medium text-xs">
+                  {loading ? 'Memuat data percakapan...' : 'Tidak ada percakapan WhatsApp yang cocok dengan filter.'}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  {filteredConversations.map((c) => {
+                    const isEscalated = c.escalated_to_admin;
+                    return (
+                      <div key={c.id || c.sender} className="bg-white rounded-2xl border border-slate-200/80 p-4 space-y-3 shadow-2xs hover:shadow-sm transition-all flex flex-col justify-between">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-mono font-bold text-slate-900 text-xs">
+                              {c.phone_number || c.sender}
+                            </span>
+                            {isEscalated ? (
+                              <Badge variant="destructive" className="font-bold text-2xs uppercase">
+                                Eskalasi ke Admin
+                              </Badge>
+                            ) : (
+                              <Badge variant="success" className="font-bold text-2xs uppercase">
+                                Ditangani AI
+                              </Badge>
+                            )}
+                          </div>
+
+                          <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-700 leading-relaxed line-clamp-3">
+                            "{c.last_message || c.message || '-'}"
+                          </div>
+
+                          <div className="flex items-center gap-1.5 text-2xs text-slate-400">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            <span>{c.last_interaction_at || c.created_at ? new Date(c.last_interaction_at || c.created_at).toLocaleString('id-ID') : '-'}</span>
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-100 flex justify-end">
+                          <a
+                            href={buildWhatsAppUrl(c.phone_number || c.sender, 'Halo, ini Tim Admin Nara AC merespons pesan WhatsApp Anda.')}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs border border-emerald-200 transition-colors"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Buka Chat WA</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 uppercase tracking-wider font-bold">
                   <tr>
@@ -490,13 +521,9 @@ export default function AdminWhatsApp() {
         </div>
       )}
 
-      {/* ============================================================== */}
-      {/* TAB 2: KONEKSI API & GATEWAY WHATSAPP (TOOLS LENGKAP)           */}
-      {/* ============================================================== */}
       {activeTab === 'gateway' && (
         <div className="grid gap-6 lg:grid-cols-7">
           
-          {/* Main Config Form (Span 4) */}
           <div className="lg:col-span-4 space-y-6">
             <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
               <div className="p-6 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
@@ -519,7 +546,6 @@ export default function AdminWhatsApp() {
               </div>
 
               <form onSubmit={handleSaveGateway} className="p-6 space-y-5">
-                {/* 1. Pilih Provider */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-2">
                     Penyedia Layanan (Provider Gateway)
@@ -552,7 +578,6 @@ export default function AdminWhatsApp() {
                   </div>
                 </div>
 
-                {/* 2. Endpoint API URL */}
                 <div>
                   <label htmlFor="wa-api-url" className="block text-xs font-bold text-slate-700 mb-1">
                     API Endpoint URL *
@@ -571,7 +596,6 @@ export default function AdminWhatsApp() {
                   </p>
                 </div>
 
-                {/* 3. API Token / Secret Key */}
                 <div>
                   <label htmlFor="wa-api-token" className="block text-xs font-bold text-slate-700 mb-1">
                     API Token / Secret Key *
@@ -598,7 +622,6 @@ export default function AdminWhatsApp() {
                   </p>
                 </div>
 
-                {/* 4. Nomor WhatsApp Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="wa-sender-number" className="block text-xs font-bold text-slate-700 mb-1">
@@ -630,7 +653,6 @@ export default function AdminWhatsApp() {
                   </div>
                 </div>
 
-                {/* 5. Otomasi Toggles */}
                 <div className="pt-2 border-t border-slate-100 space-y-3">
                   <p className="text-xs font-bold text-slate-800">Otomasi Alur WhatsApp Sistem:</p>
 
@@ -640,6 +662,8 @@ export default function AdminWhatsApp() {
                       <span className="text-[11px] text-slate-500">Kirim salinan invoice saat pembayaran diverifikasi admin.</span>
                     </div>
                     <input
+                      id="checkbox-auto-invoice"
+                      name="auto_invoice"
                       type="checkbox"
                       checked={gatewayConfig.auto_invoice}
                       onChange={(e) => setGatewayConfig({ ...gatewayConfig, auto_invoice: e.target.checked })}
@@ -653,6 +677,8 @@ export default function AdminWhatsApp() {
                       <span className="text-[11px] text-slate-500">Kirim jadwal kunjungan ke pelanggan H-1 sebelum teknisi tiba.</span>
                     </div>
                     <input
+                      id="checkbox-auto-reminder-h1"
+                      name="auto_reminder_h1"
                       type="checkbox"
                       checked={gatewayConfig.auto_reminder_h1}
                       onChange={(e) => setGatewayConfig({ ...gatewayConfig, auto_reminder_h1: e.target.checked })}
@@ -666,6 +692,8 @@ export default function AdminWhatsApp() {
                       <span className="text-[11px] text-slate-500">Merespons ketersediaan jadwal &amp; katalog servis otomatis.</span>
                     </div>
                     <input
+                      id="checkbox-ai-bot-enabled"
+                      name="ai_bot_enabled"
                       type="checkbox"
                       checked={gatewayConfig.ai_bot_enabled}
                       onChange={(e) => setGatewayConfig({ ...gatewayConfig, ai_bot_enabled: e.target.checked })}
@@ -674,7 +702,6 @@ export default function AdminWhatsApp() {
                   </label>
                 </div>
 
-                {/* Save Button */}
                 <div className="pt-2 flex justify-end">
                   <Button
                     type="submit"
@@ -689,10 +716,8 @@ export default function AdminWhatsApp() {
             </div>
           </div>
 
-          {/* Right Col: Webhook & Test Message Tool (Span 3) */}
           <div className="lg:col-span-3 space-y-6">
             
-            {/* Tool 1: Live Diagnostic Test Send Message */}
             <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
               <div className="p-5 border-b border-slate-100 bg-emerald-50/60 flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
@@ -750,7 +775,6 @@ export default function AdminWhatsApp() {
                   </p>
                 )}
 
-                {/* Test Result Feedback */}
                 {testResult && (
                   <div className={cn(
                     "p-3.5 rounded-2xl border text-xs space-y-1 animate-in fade-in",
@@ -777,7 +801,6 @@ export default function AdminWhatsApp() {
               </form>
             </div>
 
-            {/* Tool 2: Webhook Endpoint Integration Info */}
             <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
               <div className="p-5 border-b border-slate-100 bg-sky-50/60 flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center">
@@ -794,7 +817,7 @@ export default function AdminWhatsApp() {
                   Salin tautan webhook ini ke menu <strong>Webhook Settings</strong> pada dashboard provider WhatsApp Anda (Fonnte / Wablas):
                 </p>
 
-                <div className="p-3 rounded-2xl bg-slate-900 text-sky-300 font-mono text-[11px] break-all flex items-center justify-between gap-2 border border-slate-800">
+                <div className="p-3 rounded-2xl bg-blue-950 text-sky-200 font-mono text-[11px] break-all flex items-center justify-between gap-2 border border-slate-800">
                   <span>{`${window.location.origin.replace(':5173', ':5000')}/api/v1/whatsapp/webhook`}</span>
                   <button
                     type="button"

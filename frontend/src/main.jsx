@@ -17,3 +17,16 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </ErrorBoundary>
   </React.StrictMode>,
 )
+
+// Register Service Worker for offline support
+if ('serviceWorker' in navigator) {
+  const registerSW = () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  };
+  if (document.readyState === 'complete') {
+    registerSW();
+  } else {
+    window.addEventListener('load', registerSW);
+  }
+}
+

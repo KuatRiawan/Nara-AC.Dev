@@ -50,8 +50,8 @@ const listSchema = Joi.object({
 });
 
 const idParam = Joi.object({ id: Joi.number().integer().positive().required().label('ID') });
+const KODE_REGEX = /^(NARA-AC[A-Za-z0-9-]+|AC-[A-Za-z0-9-]+|BK-[A-Za-z0-9-]+)$/i;
 
-// ---- Publik ----
 router.get('/services', validate(Joi.object({
   aktif: Joi.boolean().default(true),
 }), 'query'), wrap(async (req, res) => {
@@ -66,23 +66,39 @@ router.get('/availability', publicLimiter, validate(Joi.object({
   tanggal: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).required().label('Tanggal'),
   layanan_id: Joi.number().integer().positive().required().label('Layanan'),
   jumlah_unit: Joi.number().integer().min(1).max(20).default(1).label('Jumlah Unit'),
+  durasi_menit: Joi.number().integer().min(15).max(720).optional().label('Total Durasi Menit'),
 }), 'query'), wrap(async (req, res) => {
   const q = req.valid.query;
   if (Number.isNaN(Date.parse(q.tanggal))) throw E.validation('Tanggal tidak valid.', { tanggal: 'Tanggal tidak valid.' });
-  res.json(await svc.getAvailability(q.tanggal, q.layanan_id, q.jumlah_unit || 1));
+  res.json(await svc.getAvailability(q.tanggal, q.layanan_id, q.jumlah_unit || 1, new Date(), q.durasi_menit || null));
 }));
 
 router.get('/public/bookings/:kode', publicLimiter, validate(Joi.object({
-  kode: Joi.string().pattern(/^(NARA-AC[A-Za-z0-9-]+|AC-[A-Za-z0-9-]+|BK-[A-Za-z0-9-]+)$/i).required().label('Kode Booking'),
+  kode: Joi.string().pattern(KODE_REGEX).required().label('Kode Booking'),
 }), 'params'), wrap(async (req, res) => {
   res.json(await svc.publicStatusByCode(req.params.kode));
+}));
+
+router.post('/public/bookings/:kode/verify-phone', publicLimiter, validate(Joi.object({
+  kontak: Joi.string().trim().min(8).max(25).required().label('Nomor WhatsApp Pemesan'),
+})), wrap(async (req, res) => {
+  if (!KODE_REGEX.test(req.params.kode)) throw E.notFound('Kode booking tidak ditemukan.');
+  const booking = await svc.verifyPublicBookingOwnership(req.params.kode, req.body.kontak, { allowCancelled: true, minDigits: 8 });
+  res.json({
+    success: true,
+    verified: true,
+    kode_booking: booking.kode_booking,
+    kontak_terverifikasi: booking.kontak,
+    customer_nama: booking.customer_nama,
+    alamat: booking.alamat,
+  });
 }));
 
 router.patch('/public/bookings/:kode/reschedule', publicLimiter, validate(Joi.object({
   jadwal_mulai: Joi.string().trim().required().label('Jadwal Baru'),
   kontak: Joi.string().pattern(/^\d{6,20}$/).required().label('6-20 digit kontak'),
 })), wrap(async (req, res) => {
-  if (!/^(NARA-AC[A-Za-z0-9-]+|AC-[A-Za-z0-9-]+|BK-[A-Za-z0-9-]+)$/i.test(req.params.kode)) throw E.notFound('Kode booking tidak ditemukan.');
+  if (!KODE_REGEX.test(req.params.kode)) throw E.notFound('Kode booking tidak ditemukan.');
   const booking = await svc.verifyPublicBooking(req.params.kode, req.body.kontak);
   res.json(await svc.reschedule(booking.id, req.body.jadwal_mulai, { label: 'customer' }));
 }));
@@ -91,22 +107,20 @@ router.patch('/public/bookings/:kode/cancel', publicLimiter, validate(Joi.object
   kontak: Joi.string().pattern(/^\d{6,20}$/).required().label('6-20 digit kontak'),
   alasan: Joi.string().trim().max(300).allow(''),
 })), wrap(async (req, res) => {
-  if (!/^(NARA-AC[A-Za-z0-9-]+|AC-[A-Za-z0-9-]+|BK-[A-Za-z0-9-]+)$/i.test(req.params.kode)) throw E.notFound('Kode booking tidak ditemukan.');
+  if (!KODE_REGEX.test(req.params.kode)) throw E.notFound('Kode booking tidak ditemukan.');
   const booking = await svc.verifyPublicBooking(req.params.kode, req.body.kontak);
   res.json(await svc.cancelBooking(booking.id, { label: 'customer' }, req.body.alasan || 'Dibatalkan oleh pelanggan'));
 }));
 
-// Konfirmasi pekerjaan selesai oleh customer secara mandiri via kode tiket (BR-14)
 router.post('/public/bookings/:kode/confirm-done', publicLimiter, validate(Joi.object({
   kontak: Joi.string().pattern(/^\d{6,20}$/).required().label('6-20 digit kontak'),
   catatan: Joi.string().trim().max(300).allow('').optional(),
 })), wrap(async (req, res) => {
-  if (!/^(NARA-AC[A-Za-z0-9-]+|AC-[A-Za-z0-9-]+|BK-[A-Za-z0-9-]+)$/i.test(req.params.kode)) throw E.notFound('Kode booking tidak ditemukan.');
+  if (!KODE_REGEX.test(req.params.kode)) throw E.notFound('Kode booking tidak ditemukan.');
   const booking = await svc.verifyPublicBooking(req.params.kode, req.body.kontak);
   if (booking.status !== 'done') throw E.business('Hanya pekerjaan yang telah berstatus selesai yang dapat dikonfirmasi.');
 
-  const { query: dbQuery } = require('../db/pool');
-  await dbQuery(
+  await query(
     `UPDATE bookings
      SET konfirmasi_pelanggan = TRUE,
          waktu_konfirmasi_pelanggan = COALESCE(waktu_konfirmasi_pelanggan, NOW()),
@@ -114,7 +128,7 @@ router.post('/public/bookings/:kode/confirm-done', publicLimiter, validate(Joi.o
      WHERE id = $1`,
     [booking.id]
   );
-  await dbQuery(
+  await query(
     `INSERT INTO status_log (booking_id, status_lama, status_baru, diubah_oleh, catatan)
      VALUES ($1, 'done', 'done', 'customer', $2)`,
     [booking.id, req.body.catatan || 'Pelanggan telah memverifikasi dan mengonfirmasi pekerjaan selesai']
@@ -124,32 +138,46 @@ router.post('/public/bookings/:kode/confirm-done', publicLimiter, validate(Joi.o
     success: true,
     message: 'Konfirmasi pekerjaan selesai berhasil dicatat. Terima kasih!',
     kode_booking: booking.kode_booking,
-    status: 'done'
+    status: 'done',
+    konfirmasi_pelanggan: true,
   });
 }));
 
 router.get('/public/bookings/:kode/invoice', publicLimiter, optionalAuth, validate(Joi.object({
-  kode: Joi.string().pattern(/^(NARA-AC[A-Za-z0-9-]+|AC-[A-Za-z0-9-]+|BK-[A-Za-z0-9-]+)$/i).required().label('Kode Booking'),
+  kode: Joi.string().pattern(KODE_REGEX).required().label('Kode Booking'),
 }), 'params'), wrap(async (req, res) => {
   const booking = await svc.publicStatusByCode(req.params.kode);
   const invoice = svc.calculateInvoice(booking);
-  
-  // Ownership verification check
+
   let isVerified = false;
+  let verifiedCustomer = null;
   if (req.user && (req.user.role === 'admin' || req.user.role === 'technician')) {
     isVerified = true;
-  } else if (req.user && req.user.role === 'customer' && req.user.customerId === booking.customer_id) {
+  } else if (req.user && req.user.role === 'customer' && (req.user.customerId === booking.customer_id || req.user.customer_id === booking.customer_id)) {
     isVerified = true;
   } else if (req.query?.kontak) {
     try {
-      await svc.verifyPublicBooking(req.params.kode, req.query.kontak);
+      verifiedCustomer = await svc.verifyPublicBookingOwnership(req.params.kode, req.query.kontak, { allowCancelled: true, minDigits: 8 });
       isVerified = true;
     } catch {
       isVerified = false;
     }
   }
 
+  if (isVerified && !verifiedCustomer) {
+    const raw = (await query(
+      `SELECT b.kontak, b.alamat, c.nama AS customer_nama FROM bookings b JOIN customers c ON c.id = b.customer_id WHERE b.id = $1`,
+      [booking.id]
+    )).rows[0];
+    verifiedCustomer = raw || null;
+  }
+
   invoice.is_verified_ownership = isVerified;
+  if (isVerified && verifiedCustomer) {
+    invoice.customer_nama_unmasked = verifiedCustomer.customer_nama;
+    invoice.kontak_terdaftar_unmasked = verifiedCustomer.kontak;
+    invoice.alamat_unmasked = verifiedCustomer.alamat;
+  }
   res.json(invoice);
 }));
 
@@ -164,28 +192,27 @@ router.post('/bookings/:id/feedback', publicLimiter, optionalAuth, validate(idPa
   res.status(201).json(out);
 }));
 
-// ---- Pembuatan booking: publik (pelanggan) atau admin ----
 router.post('/bookings', publicLimiter, optionalAuth, validate(bookingSchema), wrap(async (req, res) => {
   if (req.user && req.user.role === 'technician') throw E.forbidden('Teknisi tidak dapat membuat booking.');
-  const actor = { 
-    label: req.user 
-      ? (req.user.role === 'admin' ? `admin:${req.user.nama}` : 'customer') 
-      : 'customer' 
+  const actor = {
+    label: req.user
+      ? (req.user.role === 'admin' ? `admin:${req.user.nama}` : 'customer')
+      : 'customer',
+    role: req.user?.role || 'customer',
+    userId: req.user?.id || null,
+    customerId: req.user?.customer_id || req.user?.customerId || null,
   };
   const b = await svc.createBooking(req.body, actor);
   if (req.body.teknisi_id && req.user && req.user.role === 'admin') {
     try {
       await svc.assignTechnician(b.id, req.body.teknisi_id, actor);
     } catch (e) {
-      // jika assign gagal karena bentrok, booking tetap terbuat tapi belum ditugaskan
       console.warn('Auto assign technician failed:', e.message);
     }
   }
-  // Return full booking data for invoice display and frontend consistency
   res.status(201).json(b);
 }));
 
-// ---- Terautentikasi ----
 router.get('/bookings', requireAuth(['admin', 'technician']), validate(listSchema, 'query'), wrap(async (req, res) => {
   res.json(await svc.listBookings(req.valid.query, req.user));
 }));
@@ -242,7 +269,6 @@ router.get('/feedback', requireAuth(['admin']), validate(Joi.object({
   res.json({ data: rows, meta: { total: Number(total), page, limit } });
 }));
 
-// Update payment status for a booking (UX-003)
 router.patch('/bookings/:id/payment-status', requireAuth(['admin']), validate(idParam, 'params'),
   validate(Joi.object({
     status_pembayaran: Joi.string().valid('pending', 'paid').required().label('Status Pembayaran'),
@@ -250,11 +276,9 @@ router.patch('/bookings/:id/payment-status', requireAuth(['admin']), validate(id
     const bookingId = Number(req.params.id);
     const { status_pembayaran } = req.body;
 
-    // Verify booking exists
     const existing = (await query('SELECT id, status_pembayaran FROM bookings WHERE id=$1', [bookingId])).rows[0];
     if (!existing) throw E.notFound('Booking tidak ditemukan.');
 
-    // Update payment status & sync verification status (BR-37)
     await query(
       `UPDATE bookings
        SET status_pembayaran = $1,
@@ -273,7 +297,6 @@ router.patch('/bookings/:id/payment-status', requireAuth(['admin']), validate(id
     });
   }));
 
-// BR-04: Pengajuan perubahan biaya jasa oleh teknisi/admin (wajib persetujuan bersama pelanggan & admin)
 router.post('/bookings/:id/service-fee-proposal', requireAuth(['admin', 'technician']), validate(idParam, 'params'),
   validate(Joi.object({
     biaya_tambahan_jasa: Joi.number().min(0).max(50000000).required().label('Biaya Tambahan Jasa'),
@@ -283,7 +306,6 @@ router.post('/bookings/:id/service-fee-proposal', requireAuth(['admin', 'technic
     res.json(result);
   }));
 
-// BR-04: Persetujuan perubahan biaya jasa oleh pelanggan atau admin
 router.patch('/bookings/:id/service-fee-approval', optionalAuth, validate(idParam, 'params'),
   validate(Joi.object({
     disetujui: Joi.boolean().required().label('Status Persetujuan'),

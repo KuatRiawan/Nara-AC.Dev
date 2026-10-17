@@ -1,13 +1,14 @@
-const { query, withTx, withTransaction } = require('../db/pool');
+const { query, withTransaction } = require('../db/pool');
 const { E } = require('../errors');
 const { notify } = require('./common');
 
 const VALID_NOTIFICATION_TYPES = new Set(['booking', 'inventory', 'system', 'feedback', 'reminder']);
 
-async function createNotification({ target_role, target_id, judul, pesan, tipe, booking_id, tautan, dedup_key }) {
+async function createNotification({ target_role, target_id, judul, pesan, tipe, booking_id, tautan, dedup_key }, dbOrClient = null) {
   try {
     const safeType = VALID_NOTIFICATION_TYPES.has(tipe) ? tipe : 'booking';
-    await notify({ query }, {
+    const db = dbOrClient && typeof dbOrClient.query === 'function' ? dbOrClient : { query };
+    await notify(db, {
       role: target_role,
       id: target_id,
       title: judul,
@@ -17,15 +18,9 @@ async function createNotification({ target_role, target_id, judul, pesan, tipe, 
       tautan,
       dedup: dedup_key,
     });
-  } catch (err) {
-    // Non-blocking notification
-  }
+  } catch (_) {}
 }
 
-/**
- * Menghitung durasi garansi (hari) berdasarkan konfigurasi katalog layanan atau nama layanan (BR-23)
- * - 14, 30, atau 45 hari sesuai service_catalog.garansi_hari
- */
 function getWarrantyDurationDays(serviceName = '', catalogGaransiHari = null) {
   const configured = Number(catalogGaransiHari);
   if ([14, 30, 45].includes(configured)) {
@@ -41,9 +36,16 @@ function getWarrantyDurationDays(serviceName = '', catalogGaransiHari = null) {
   return 14;
 }
 
-/**
- * Mendapatkan status & detail garansi untuk sebuah booking (BR-23, BR-24, SEC-003)
- */
+function normalizeClaimRow(row) {
+  if (!row) return row;
+  return {
+    ...row,
+    booking_kode: row.kode_booking || row.booking_kode || null,
+    kontak: row.kontak_customer || row.kontak || null,
+    teknisi_nama: row.nama_teknisi_pemeriksa || row.teknisi_nama || null,
+  };
+}
+
 async function getWarrantyInfo(bookingId, { user = null, kontak = null, kode_booking = null } = {}) {
   const bRes = await query(`
     SELECT b.*, s.nama_layanan, s.harga AS harga_layanan, s.garansi_hari AS catalog_garansi_hari,
@@ -57,7 +59,6 @@ async function getWarrantyInfo(bookingId, { user = null, kontak = null, kode_boo
   const booking = bRes.rows[0];
   if (!booking) throw E.notFound('Booking tidak ditemukan.');
 
-  // SEC-003: Jika user yang login adalah customer lain, tolak akses silang pelanggan (IDOR)
   if (user && user.role === 'customer') {
     const userCustomerId = user.customer_id || user.customerId;
     if (userCustomerId && Number(userCustomerId) !== Number(booking.customer_id)) {
@@ -70,7 +71,7 @@ async function getWarrantyInfo(bookingId, { user = null, kontak = null, kode_boo
 
   const durasiHari = getWarrantyDurationDays(booking.nama_layanan, booking.catalog_garansi_hari);
   const tanggalSelesai = booking.selesai_aktual || (booking.status === 'done' ? booking.updated_at : null);
-  
+
   let garansiMulai = null;
   let garansiSelesai = null;
   let isGaransiAktif = false;
@@ -84,11 +85,15 @@ async function getWarrantyInfo(bookingId, { user = null, kontak = null, kode_boo
     sisaHari = isGaransiAktif ? Math.ceil((garansiSelesai.getTime() - now.getTime()) / 86400000) : 0;
   }
 
-  // Cek review/feedback yang ada (BR-25)
   const fbRes = await query('SELECT * FROM feedback WHERE booking_id = $1', [bookingId]);
   const feedback = fbRes.rows[0] || null;
+  const hasQualifyingReview = Boolean(
+    feedback &&
+    Number(feedback.booking_id) === Number(bookingId) &&
+    Number(feedback.rating) >= 1 &&
+    Number(feedback.rating) <= 5
+  );
 
-  // Cek klaim aktif dan riwayat klaim (BR-30, BR-31)
   const claimsRes = await query(`
     SELECT c.*, t.nama AS nama_teknisi_pemeriksa
     FROM warranty_claims c
@@ -97,11 +102,12 @@ async function getWarrantyInfo(bookingId, { user = null, kontak = null, kode_boo
     ORDER BY c.created_at DESC
   `, [bookingId]);
 
-  const allClaims = claimsRes.rows;
+  const allClaims = claimsRes.rows.map(normalizeClaimRow);
   const activeClaim = allClaims.find((c) => ['diajukan', 'dijadwalkan', 'diperiksa'].includes(c.status)) || null;
 
   return {
     booking_id: booking.id,
+    ac_unit_id: booking.ac_unit_id || null,
     kode_booking: booking.kode_booking,
     nama_layanan: booking.nama_layanan,
     status_booking: booking.status,
@@ -111,22 +117,23 @@ async function getWarrantyInfo(bookingId, { user = null, kontak = null, kode_boo
     is_garansi_aktif: isGaransiAktif,
     sisa_hari_garansi: sisaHari,
     feedback,
+    has_qualifying_review: hasQualifyingReview,
+    requires_review_before_claim: !hasQualifyingReview,
+    has_active_claim: Boolean(activeClaim),
     active_claim: activeClaim,
+    eligible_for_claim: Boolean(booking.status === 'done' && isGaransiAktif && !activeClaim),
     total_klaim: allClaims.length,
     riwayat_klaim: allClaims,
   };
 }
 
-/**
- * Mengajukan klaim garansi baru (BR-24, BR-25, BR-28, BR-30, BR-31)
- */
-async function submitClaim({ booking_id, keluhan, rating, review_komentar, user, kontak }) {
-  if (!keluhan || keluhan.trim().length < 5) {
+async function submitClaim({ booking_id, keluhan, alasan, rating, review_komentar, user, kontak, file = null, foto_bukti_url = null }) {
+  keluhan = keluhan || alasan;
+  if (!keluhan || String(keluhan).trim().length < 5) {
     throw E.badRequest('Keluhan wajib diisi minimal 5 karakter.');
   }
 
-  return withTransaction(async (client) => {
-    // 1. Ambil data booking
+  const result = await withTransaction(async (client) => {
     const bRes = await client.query(`
       SELECT b.*, s.nama_layanan, s.garansi_hari AS catalog_garansi_hari, c.id AS customer_id
       FROM bookings b
@@ -138,17 +145,27 @@ async function submitClaim({ booking_id, keluhan, rating, review_komentar, user,
     const booking = bRes.rows[0];
     if (!booking) throw E.notFound('Booking tidak ditemukan.');
 
-    // Verifikasi kepemilikan jika user adalah customer atau guest dengan kontak
-    if (user && user.role === 'customer' && user.customer_id && booking.customer_id !== user.customer_id) {
-      throw E.forbidden('Anda tidak berhak mengajukan klaim untuk booking ini.');
-    } else if (!user) {
-      if (!kontak || !kontak.trim()) {
+    const userCustomerId = user ? (user.customer_id || user.customerId) : null;
+    if (user && user.role === 'customer') {
+      if (!userCustomerId || Number(booking.customer_id) !== Number(userCustomerId)) {
+        throw E.forbidden('Anda tidak berhak mengajukan klaim untuk booking ini.');
+      }
+    } else if (!user || (user.role !== 'admin' && user.role !== 'technician')) {
+      const rawKontak = String(kontak || '').trim();
+      if (!rawKontak) {
         throw E.unauthorized('Silakan login atau masukkan nomor WhatsApp pemesan untuk verifikasi klaim.');
       }
-      const cleanKontak = kontak.replace(/\D/g, '');
-      const cleanBookingKontak = (booking.kontak || '').replace(/\D/g, '');
-      if (cleanKontak.length < 8 || cleanBookingKontak.length < 8 || (!cleanBookingKontak.endsWith(cleanKontak.slice(-8)) && !cleanKontak.endsWith(cleanBookingKontak.slice(-8)))) {
-        throw E.forbidden('Nomor WhatsApp verifikasi tidak cocok dengan data booking (minimal 8 digit).');
+      if (rawKontak.includes('*') || rawKontak.includes('•')) {
+        throw E.forbidden('Masukkan nomor WhatsApp lengkap (minimal 8 digit, bukan nomor yang disamarkan).');
+      }
+      const cleanKontak = rawKontak.replace(/\D/g, '');
+      const cleanBookingKontak = String(booking.kontak || '').replace(/\D/g, '');
+      if (
+        cleanKontak.length < 8 ||
+        cleanBookingKontak.length < 8 ||
+        cleanBookingKontak.slice(-8) !== cleanKontak.slice(-8)
+      ) {
+        throw E.forbidden('Nomor WhatsApp verifikasi tidak cocok dengan data booking (minimal 8 digit terakhir harus sesuai).');
       }
     }
 
@@ -156,7 +173,6 @@ async function submitClaim({ booking_id, keluhan, rating, review_komentar, user,
       throw E.badRequest('Klaim garansi hanya dapat diajukan untuk pekerjaan yang telah selesai.');
     }
 
-    // 2. BR-23 & BR-24: Verifikasi masa berlaku garansi
     const durasiHari = getWarrantyDurationDays(booking.nama_layanan, booking.catalog_garansi_hari);
     const tanggalSelesai = new Date(booking.selesai_aktual || booking.updated_at);
     const garansiSelesai = new Date(tanggalSelesai.getTime() + durasiHari * 86400000);
@@ -168,7 +184,6 @@ async function submitClaim({ booking_id, keluhan, rating, review_komentar, user,
       );
     }
 
-    // 3. BR-30: Hanya satu klaim garansi aktif pada satu waktu
     const activeClaim = (await client.query(`
       SELECT id, kode_klaim, status FROM warranty_claims 
       WHERE booking_id = $1 AND status IN ('diajukan', 'dijadwalkan', 'diperiksa')
@@ -180,84 +195,99 @@ async function submitClaim({ booking_id, keluhan, rating, review_komentar, user,
       );
     }
 
-    // 4. BR-31: Klaim berikutnya dapat diajukan untuk masalah yang berbeda
     const prevClaims = (await client.query(`
       SELECT keluhan FROM warranty_claims WHERE booking_id = $1
     `, [booking_id])).rows;
 
-    const normalizedNew = keluhan.trim().toLowerCase();
-    if (prevClaims.some((c) => c.keluhan.trim().toLowerCase() === normalizedNew)) {
+    const normalizedNew = String(keluhan).trim().toLowerCase();
+    if (prevClaims.some((c) => String(c.keluhan || '').trim().toLowerCase() === normalizedNew)) {
       throw E.badRequest(
         'Klaim berikutnya wajib untuk masalah / keluhan yang berbeda dari klaim sebelumnya (BR-31).'
       );
     }
 
-    // 5. BR-25: Klaim wajib menyertakan review berupa rating dan komentar
-    let feedback = (await client.query('SELECT * FROM feedback WHERE booking_id = $1', [booking_id])).rows[0];
+    const fbRes = await client.query('SELECT * FROM feedback WHERE booking_id = $1', [booking_id]);
+    let feedback = fbRes.rows.find((f) => Number(f.booking_id) === Number(booking_id)) || null;
 
     if (!feedback) {
-      if (!rating || !review_komentar) {
+      if (rating === undefined || rating === null || !review_komentar) {
         throw E.badRequest(
-          'Klaim garansi wajib menyertakan review berupa rating (1-5) dan komentar pengalaman servis (BR-25).'
+          'Klaim garansi wajib menyertakan review berupa rating (1-5) dan komentar pengalaman servis untuk layanan ini terlebih dahulu (BR-25).'
         );
       }
       const numRating = Number(rating);
-      if (numRating < 1 || numRating > 5) {
+      if (Number.isNaN(numRating) || numRating < 1 || numRating > 5) {
         throw E.badRequest('Rating harus antara 1 sampai 5 bintang.');
       }
-      if (review_komentar.trim().length < 3) {
+      if (String(review_komentar).trim().length < 3) {
         throw E.badRequest('Komentar review minimal 3 karakter.');
       }
 
       const fbInsert = await client.query(`
         INSERT INTO feedback (booking_id, rating, komentar, sentimen, waktu)
         VALUES ($1, $2, $3, $4, now()) RETURNING *
-      `, [booking_id, numRating, review_komentar.trim(), numRating <= 2 ? 'negative' : 'positive']);
+      `, [booking_id, numRating, String(review_komentar).trim(), numRating <= 2 ? 'negative' : 'positive']);
       feedback = fbInsert.rows[0];
+
+      await client.query(`
+        UPDATE bookings
+        SET konfirmasi_pelanggan = TRUE,
+            waktu_konfirmasi_pelanggan = COALESCE(waktu_konfirmasi_pelanggan, NOW()),
+            updated_at = NOW()
+        WHERE id = $1
+      `, [booking_id]);
     }
 
-    // 6. Buat Klaim Baru (BR-28: Pemeriksaan klaim gratis)
     const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
     const kodeKlaim = `CLM-${Date.now().toString(36).toUpperCase()}-${randomSuffix}`;
+    const resolvedPhotoUrl = file && file.storedName
+      ? `/api/v1/files/${file.storedName}`
+      : (foto_bukti_url ? String(foto_bukti_url).trim() : null);
 
     const claimInsert = await client.query(`
       INSERT INTO warranty_claims (
         kode_klaim, booking_id, customer_id, ac_unit_id, keluhan, rating, review_komentar,
-        status, is_gratis, biaya_tambahan
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'diajukan', true, 0)
+        foto_bukti_url, status, is_gratis, biaya_tambahan
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'diajukan', true, 0)
       RETURNING *
     `, [
       kodeKlaim,
       booking_id,
       booking.customer_id,
       booking.ac_unit_id || null,
-      keluhan.trim(),
+      String(keluhan).trim(),
       feedback ? feedback.rating : Number(rating),
-      feedback ? feedback.komentar : review_komentar.trim(),
+      feedback ? (feedback.komentar || String(review_komentar || '').trim() || 'Review layanan terverifikasi') : String(review_komentar).trim(),
+      resolvedPhotoUrl,
     ]);
-
     const claim = claimInsert.rows[0];
 
-    // Notifikasi ke Admin
-    await createNotification({
-      target_role: 'admin',
-      target_id: null,
-      judul: 'Klaim Garansi Diajukan',
-      pesan: `Pelanggan mengajukan klaim garansi ${kodeKlaim} untuk tiket ${booking.kode_booking}: "${keluhan.trim()}"`,
-      tipe: 'warning',
-      booking_id,
-      tautan: `/admin/claims`,
-      dedup_key: `claim_submitted_${claim.id}`,
-    });
-
-    return claim;
+    return {
+      claim: normalizeClaimRow({
+        ...claim,
+        kode_booking: booking.kode_booking,
+        nama_layanan: booking.nama_layanan,
+      }),
+      booking,
+      kodeKlaim,
+    };
   });
+
+  await createNotification({
+    target_role: 'admin',
+    target_id: null,
+    judul: 'Klaim Garansi Diajukan',
+    pesan: `Pelanggan mengajukan klaim garansi ${result.kodeKlaim} untuk tiket ${result.booking.kode_booking}: "${String(keluhan).trim()}"`,
+    tipe: 'booking',
+    booking_id,
+    tautan: `/admin/claims?claimId=${result.claim.id}`,
+    dedup_key: `claim_submitted_${result.claim.id}`,
+  });
+
+  return result.claim;
 }
 
-/**
- * Admin menentukan jadwal pemeriksaan dan teknisi pemeriksa (BR-26, BR-27)
- */
-async function scheduleInspection(claimId, { jadwal_pemeriksaan, teknisi_pemeriksa_id }, adminUser) {
+async function scheduleInspection(claimId, { jadwal_pemeriksaan, teknisi_pemeriksa_id }, _adminUser) {
   if (!jadwal_pemeriksaan) {
     throw E.badRequest('Jadwal pemeriksaan wajib ditentukan oleh admin (BR-27).');
   }
@@ -278,25 +308,21 @@ async function scheduleInspection(claimId, { jadwal_pemeriksaan, teknisi_pemerik
     WHERE id = $3 RETURNING *
   `, [jadwal_pemeriksaan, teknisi_pemeriksa_id, claimId])).rows[0];
 
-  // Notifikasi teknisi
   await createNotification({
     target_role: 'technician',
     target_id: teknisi_pemeriksa_id,
     judul: 'Tugas Pemeriksaan Klaim Garansi',
     pesan: `Anda ditugaskan memeriksa klaim garansi ${claim.kode_klaim} pada ${new Date(jadwal_pemeriksaan).toLocaleString('id-ID')}.`,
-    tipe: 'info',
+    tipe: 'booking',
     booking_id: claim.booking_id,
     tautan: `/technician/jobs`,
     dedup_key: `claim_tech_scheduled_${claimId}`,
   });
 
-  return updated;
+  return normalizeClaimRow(updated);
 }
 
-/**
- * Teknisi mengisi laporan pemeriksaan klaim (BR-26)
- */
-async function reportInspection(claimId, { catatan_pemeriksaan }, technicianUser) {
+async function reportInspection(claimId, { catatan_pemeriksaan }, _technicianUser) {
   if (!catatan_pemeriksaan || catatan_pemeriksaan.trim().length < 5) {
     throw E.badRequest('Catatan hasil pemeriksaan wajib diisi minimal 5 karakter.');
   }
@@ -314,25 +340,21 @@ async function reportInspection(claimId, { catatan_pemeriksaan }, technicianUser
     WHERE id = $2 RETURNING *
   `, [catatan_pemeriksaan.trim(), claimId])).rows[0];
 
-  // Notifikasi admin bahwa laporan pemeriksaan sudah siap dinilai
   await createNotification({
     target_role: 'admin',
     target_id: null,
     judul: 'Hasil Pemeriksaan Klaim Siap Dinilai',
     pesan: `Laporan pemeriksaan klaim ${claim.kode_klaim} telah diisi oleh teknisi. Silakan tentukan kelayakan klaim.`,
-    tipe: 'info',
+    tipe: 'booking',
     booking_id: claim.booking_id,
-    tautan: `/admin/claims`,
+    tautan: `/admin/claims?claimId=${claimId}`,
     dedup_key: `claim_inspected_${claimId}`,
   });
 
-  return updated;
+  return normalizeClaimRow(updated);
 }
 
-/**
- * Admin menentukan kelayakan klaim (disetujui / ditolak) (BR-26, BR-28, BR-29, BR-33)
- */
-async function decideClaim(claimId, { keputusan, alasan_penolakan, biaya_tambahan = 0 }, adminUser) {
+async function decideClaim(claimId, { keputusan, alasan_penolakan, biaya_tambahan = 0 }, _adminUser) {
   if (!['disetujui', 'ditolak'].includes(keputusan)) {
     throw E.badRequest('Keputusan harus berupa "disetujui" atau "ditolak".');
   }
@@ -344,20 +366,18 @@ async function decideClaim(claimId, { keputusan, alasan_penolakan, biaya_tambaha
     throw E.badRequest('Klaim sudah selesai diproses.');
   }
 
-  // BR-33: Jika ditolak, wajib sertakan alasan (segel rusak, pembongkaran pihak lain, kesalahan penggunaan, dll)
   if (keputusan === 'ditolak' && (!alasan_penolakan || alasan_penolakan.trim().length < 5)) {
     throw E.badRequest('Alasan penolakan klaim wajib dijelaskan minimal 5 karakter (BR-33).');
   }
 
-  // BR-28: Kunjungan pemeriksaan tetap gratis (is_gratis = true)
-  // BR-29: Biaya tambahan (spare part / jasa di luar garansi) dicatat terpisah
+  const effectiveBiayaTambahan = keputusan === 'ditolak' ? 0 : (Number(biaya_tambahan) || 0);
+
   const updated = (await query(`
     UPDATE warranty_claims
     SET status = $1, alasan_penolakan = $2, biaya_tambahan = $3, is_gratis = true, updated_at = now()
     WHERE id = $4 RETURNING *
-  `, [keputusan, keputusan === 'ditolak' ? alasan_penolakan.trim() : null, Number(biaya_tambahan) || 0, claimId])).rows[0];
+  `, [keputusan, keputusan === 'ditolak' ? alasan_penolakan.trim() : null, effectiveBiayaTambahan, claimId])).rows[0];
 
-  // Notifikasi customer
   if (claim.customer_id) {
     await createNotification({
       target_role: 'customer',
@@ -365,21 +385,18 @@ async function decideClaim(claimId, { keputusan, alasan_penolakan, biaya_tambaha
       judul: `Klaim Garansi ${keputusan.toUpperCase()}`,
       pesan: keputusan === 'disetujui'
         ? `Klaim garansi Anda (${claim.kode_klaim}) telah disetujui. Teknisi kami akan segera menangani unit AC Anda.`
-        : `Klaim garansi Anda (${claim.kode_klaim}) ditolak: "${alasan_penolakan}". Anda dapat mengajukan perbaikan berbayar (BR-32).`,
-      tipe: keputusan === 'disetujui' ? 'success' : 'warning',
+        : `Klaim garansi Anda (${claim.kode_klaim}) ditolak: "${alasan_penolakan}". Tidak ada biaya tambahan otomatis yang ditagihkan. Anda dapat mengajukan perbaikan berbayar jika diinginkan (BR-32).`,
+      tipe: 'booking',
       booking_id: claim.booking_id,
-      tautan: `/status/${claim.booking_id}`,
+      tautan: `/customer/history`,
       dedup_key: `claim_decided_${claimId}`,
     });
   }
 
-  return updated;
+  return normalizeClaimRow(updated);
 }
 
-/**
- * BR-32: Klaim yang ditolak dapat ditindaklanjuti dengan booking servis berbayar
- */
-async function convertToPaidBooking(claimId, { layanan_id, jadwal_mulai }, user) {
+async function convertToPaidBooking(claimId, { layanan_id, jadwal_mulai }, _user) {
   return withTransaction(async (client) => {
     const claim = (await client.query('SELECT * FROM warranty_claims WHERE id = $1 FOR UPDATE', [claimId])).rows[0];
     if (!claim) throw E.notFound('Klaim tidak ditemukan.');
@@ -392,10 +409,8 @@ async function convertToPaidBooking(claimId, { layanan_id, jadwal_mulai }, user)
       throw E.conflict('Booking servis berbayar untuk klaim ini sudah dibuat sebelumnya.');
     }
 
-    // Ambil data booking awal untuk copy alamat & kontak
     const origBooking = (await client.query('SELECT * FROM bookings WHERE id = $1', [claim.booking_id])).rows[0];
 
-    // Buat booking servis baru
     const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
     const kodeBooking = `NARA-AC${Date.now().toString(36).toUpperCase()}-${randomSuffix}`;
     const targetLayananId = layanan_id || origBooking.layanan_id;
@@ -404,7 +419,7 @@ async function convertToPaidBooking(claimId, { layanan_id, jadwal_mulai }, user)
       INSERT INTO bookings (
         kode_booking, customer_id, ac_unit_id, layanan_id, jadwal_mulai, jadwal_selesai,
         alamat, kontak, keluhan, status, status_pembayaran, jumlah_unit
-      ) VALUES ($1, $2, $3, $4, $5, $5::timestamptz + interval '90 minutes', $6, $7, $8, 'scheduled', 'pending', 1)
+      ) VALUES ($1, $2, $3, $4, $5, $5::timestamptz + interval '60 minutes', $6, $7, $8, 'scheduled', 'pending', 1)
       RETURNING *
     `, [
       kodeBooking,
@@ -419,7 +434,6 @@ async function convertToPaidBooking(claimId, { layanan_id, jadwal_mulai }, user)
 
     const newBooking = newBookingRes.rows[0];
 
-    // Hubungkan booking baru ke claim
     await client.query('UPDATE warranty_claims SET booking_berbayar_id = $1, updated_at = now() WHERE id = $2', [
       newBooking.id, claimId,
     ]);
@@ -431,9 +445,6 @@ async function convertToPaidBooking(claimId, { layanan_id, jadwal_mulai }, user)
   });
 }
 
-/**
- * Daftar semua klaim dengan paginasi & filter
- */
 async function listClaims({ status, customer_id, page = 1, limit = 20 }) {
   const offset = (page - 1) * limit;
   const params = [];
@@ -453,8 +464,11 @@ async function listClaims({ status, customer_id, page = 1, limit = 20 }) {
 
   params.push(limit, offset);
   const dataQuery = `
-    SELECT c.*, b.kode_booking, s.nama_layanan, cust.nama AS nama_customer, cust.kontak AS kontak_customer,
-           t.nama AS nama_teknisi_pemeriksa, u.brand AS unit_brand, u.model AS unit_model, u.lokasi AS unit_lokasi
+    SELECT c.*, b.kode_booking, b.kode_booking AS booking_kode,
+           s.nama_layanan,
+           cust.nama AS nama_customer, cust.kontak AS kontak_customer, cust.kontak AS kontak,
+           t.nama AS nama_teknisi_pemeriksa, t.nama AS teknisi_nama,
+           u.brand AS unit_brand, u.model AS unit_model, u.lokasi AS unit_lokasi
     FROM warranty_claims c
     JOIN bookings b ON b.id = c.booking_id
     JOIN service_catalog s ON s.id = b.layanan_id
@@ -478,7 +492,7 @@ async function listClaims({ status, customer_id, page = 1, limit = 20 }) {
   ]);
 
   return {
-    data: dataRes.rows,
+    data: dataRes.rows.map(normalizeClaimRow),
     meta: {
       total: countRes.rows[0]?.total || 0,
       page: Number(page),

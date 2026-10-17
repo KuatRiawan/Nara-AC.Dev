@@ -13,18 +13,15 @@ export default function AdminTechnicians() {
   const { error: showError, success: showSuccess } = useToast();
   const location = useLocation();
 
-  // List State
   const [technicians, setTechnicians] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // all | active | inactive
 
-  // Detail Modal State
   const [selectedTech, setSelectedTech] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [activeTab, setActiveTab] = useState('schedule'); // schedule | jobs | performance
 
-  // Availability Form State inside Detail
   const [availForm, setAvailForm] = useState({ 
     tanggal: new Date().toISOString().split('T')[0], 
     status: 'available', 
@@ -32,7 +29,6 @@ export default function AdminTechnicians() {
   });
   const [submittingAvail, setSubmittingAvail] = useState(false);
 
-  // Add Technician Modal State
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState({ 
     nama: '', 
@@ -44,11 +40,9 @@ export default function AdminTechnicians() {
   });
   const [submittingAdd, setSubmittingAdd] = useState(false);
 
-  // Confirmation Modal State (replaces window.confirm for destructive actions)
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
   const closeConfirmModal = () => setConfirmModal(prev => ({ ...prev, isOpen: false, onConfirm: null }));
 
-  // Edit Technician Modal State
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({ 
     id: null, 
@@ -60,14 +54,12 @@ export default function AdminTechnicians() {
   });
   const [submittingEdit, setSubmittingEdit] = useState(false);
 
-  // Close modals on route change
   useEffect(() => {
     setShowAddModal(false);
     setShowEditModal(false);
     setSelectedTech(null);
   }, [location.pathname]);
 
-  // WhatsApp Link Helper
   const getWhatsAppLink = (rawPhone, techName) => {
     if (!rawPhone) return null;
     let clean = String(rawPhone).replace(/\D/g, '');
@@ -77,7 +69,6 @@ export default function AdminTechnicians() {
     return `https://wa.me/${clean}?text=${text}`;
   };
 
-  // Fetch Technicians List
   const fetchTechnicians = useCallback(async () => {
     setLoading(true);
     try {
@@ -99,7 +90,6 @@ export default function AdminTechnicians() {
     fetchTechnicians();
   }, [fetchTechnicians]);
 
-  // Fetch Full Detail & Workload
   const viewTechnician = async (id) => {
     setLoadingDetail(true);
     try {
@@ -119,7 +109,6 @@ export default function AdminTechnicians() {
     }
   };
 
-  // Refresh current technician detail
   const refreshCurrentTech = async () => {
     if (!selectedTech?.id) return;
     try {
@@ -131,7 +120,6 @@ export default function AdminTechnicians() {
     }
   };
 
-  // Handle Add Technician
   const handleAddTech = async (e) => {
     e.preventDefault();
     if (!addForm.nama.trim() || !addForm.kontak.trim()) {
@@ -162,7 +150,6 @@ export default function AdminTechnicians() {
     }
   };
 
-  // Open Edit Modal
   const openEditModal = (t) => {
     setEditForm({
       id: t.id,
@@ -175,7 +162,6 @@ export default function AdminTechnicians() {
     setShowEditModal(true);
   };
 
-  // Handle Edit Technician
   const handleEditTech = async (e) => {
     e.preventDefault();
     setSubmittingEdit(true);
@@ -202,7 +188,6 @@ export default function AdminTechnicians() {
     }
   };
 
-  // Handle Toggle Active/Inactive Quick
   const handleToggleAktif = (t) => {
     const newStatus = !t.aktif;
     const confirmMsg = newStatus 
@@ -230,7 +215,6 @@ export default function AdminTechnicians() {
     });
   };
 
-  // Handle Delete Technician
   const handleDeleteTech = (t) => {
     setConfirmModal({
       isOpen: true,
@@ -253,7 +237,6 @@ export default function AdminTechnicians() {
     });
   };
 
-  // Handle Save Availability
   const handleSetAvailability = async (e) => {
     e.preventDefault();
     if (!availForm.tanggal) {
@@ -278,7 +261,6 @@ export default function AdminTechnicians() {
     }
   };
 
-  // Filtered List
   const filteredTechnicians = useMemo(() => {
     return technicians.filter(t => {
       if (filterStatus === 'active') return t.aktif !== false;
@@ -287,7 +269,6 @@ export default function AdminTechnicians() {
     });
   }, [technicians, filterStatus]);
 
-  // KPI Metrics Calculation
   const metrics = useMemo(() => {
     const total = technicians.length;
     const active = technicians.filter(t => t.aktif !== false).length;
@@ -297,7 +278,6 @@ export default function AdminTechnicians() {
 
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 bg-slate-50/50 relative min-w-0 font-sans">
-      {/* HEADER: Standard Clean Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Manajemen Teknisi Lapangan</h1>
@@ -321,7 +301,6 @@ export default function AdminTechnicians() {
         </div>
       </div>
 
-      {/* KPI METRIC CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
@@ -357,13 +336,13 @@ export default function AdminTechnicians() {
         </div>
       </div>
 
-      {/* FILTER & SEARCH TOOLBAR */}
       <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
-          {/* Search Input */}
           <div className="relative flex-1">
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
+              id="admin-search-technicians"
+              name="admin_search_technicians"
               type="text"
               placeholder="Cari nama teknisi atau nomor telepon..."
               aria-label="Cari teknisi"
@@ -381,7 +360,6 @@ export default function AdminTechnicians() {
             )}
           </div>
 
-          {/* Status Filter */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl">
               <button
@@ -417,7 +395,6 @@ export default function AdminTechnicians() {
         </div>
       </div>
 
-      {/* TECHNICIANS GRID */}
       <div className="space-y-4">
         {loading ? (
           <div className="bg-white rounded-2xl border border-slate-200/90 p-16 text-center space-y-3 shadow-sm">
@@ -459,7 +436,6 @@ export default function AdminTechnicians() {
                     isAktif ? "border-slate-200/80 hover:border-blue-300" : "border-slate-200 bg-slate-50/40 opacity-80"
                   )}
                 >
-                  {/* Card Header & Profile */}
                   <div className="p-5 space-y-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
@@ -479,7 +455,6 @@ export default function AdminTechnicians() {
                         </div>
                       </div>
 
-                      {/* Status Badge */}
                       <Badge 
                         variant="outline" 
                         className={cn(
@@ -493,7 +468,6 @@ export default function AdminTechnicians() {
                       </Badge>
                     </div>
 
-                    {/* Contact & Info */}
                     <div className="space-y-2 pt-1 border-t border-slate-100 text-xs">
                       <div className="flex items-center justify-between text-slate-600">
                         <span className="flex items-center gap-2 font-medium">
@@ -521,7 +495,6 @@ export default function AdminTechnicians() {
                     </div>
                   </div>
 
-                  {/* Card Actions Footer */}
                   <div className="p-4 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between gap-2">
                     <button
                       onClick={() => openEditModal(t)}
@@ -559,12 +532,10 @@ export default function AdminTechnicians() {
         )}
       </div>
 
-      {/* MODAL 360° DETAIL TEKNISI */}
       {selectedTech && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/65 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[92vh]">
-            {/* Modal Header */}
-            <div className="p-6 bg-slate-900 text-white flex justify-between items-start shrink-0">
+            <div className="p-6 bg-gradient-to-r from-blue-700 to-sky-600 text-white flex justify-between items-start shrink-0">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center font-black text-xl text-white shadow-inner">
                   {selectedTech.nama ? selectedTech.nama.slice(0, 2).toUpperCase() : 'TK'}
@@ -621,7 +592,6 @@ export default function AdminTechnicians() {
               </div>
             </div>
 
-            {/* Quick Metrics Bar */}
             <div className="bg-blue-50/60 border-b border-blue-100 p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center shrink-0">
               <div className="bg-white p-2.5 rounded-xl border border-blue-100 shadow-2xs">
                 <span className="text-xs uppercase tracking-wider text-slate-500 font-bold block">Total Servis</span>
@@ -644,7 +614,6 @@ export default function AdminTechnicians() {
               </div>
             </div>
 
-            {/* Navigation Tabs */}
             <div className="flex border-b border-slate-200 bg-slate-50/50 px-6 shrink-0 gap-6">
               <button
                 onClick={() => setActiveTab('schedule')}
@@ -691,12 +660,9 @@ export default function AdminTechnicians() {
               </button>
             </div>
 
-            {/* Modal Body with Active Tab */}
             <div className="p-6 overflow-y-auto space-y-6 flex-1">
-              {/* TAB 1: KETERSEDIAAN & JADWAL */}
               {activeTab === 'schedule' && (
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                  {/* Form Atur Ketersediaan */}
                   <div className="md:col-span-5 bg-slate-50/70 p-5 rounded-2xl border border-slate-200/90 space-y-4">
                     <div>
                       <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
@@ -756,14 +722,13 @@ export default function AdminTechnicians() {
                       <Button
                         type="submit"
                         disabled={submittingAvail}
-                        className="w-full text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl py-2.5 mt-2 cursor-pointer"
+                        className="w-full text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2.5 mt-2 cursor-pointer"
                       >
                         {submittingAvail ? 'Menyimpan...' : 'Simpan Status Tanggal'}
                       </Button>
                     </form>
                   </div>
 
-                  {/* Kalender / List Ketersediaan 30 Hari */}
                   <div className="md:col-span-7 space-y-3">
                     <div className="flex items-center justify-between">
                       <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
@@ -810,10 +775,8 @@ export default function AdminTechnicians() {
                 </div>
               )}
 
-              {/* TAB 2: TUGAS HARI INI & BERJALAN */}
               {activeTab === 'jobs' && (
                 <div className="space-y-6">
-                  {/* Tugas Hari Ini */}
                   <div className="space-y-3">
                     <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
                       <Clock className="w-4 h-4 text-blue-600" />
@@ -854,7 +817,6 @@ export default function AdminTechnicians() {
                     )}
                   </div>
 
-                  {/* Tugas Sedang Berjalan (On Process / Delayed) */}
                   <div className="space-y-3">
                     <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
                       <Activity className="w-4 h-4 text-amber-600" />
@@ -889,10 +851,8 @@ export default function AdminTechnicians() {
                 </div>
               )}
 
-              {/* TAB 3: EVALUASI KINERJA & RIWAYAT SELESAI */}
               {activeTab === 'performance' && (
                 <div className="space-y-6">
-                  {/* Performance Bento */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
                       <span className="text-xs uppercase tracking-wider text-slate-500 font-bold block">Rata-Rata Waktu Servis</span>
@@ -921,7 +881,6 @@ export default function AdminTechnicians() {
                     </div>
                   </div>
 
-                  {/* Riwayat 10 Pekerjaan Terakhir Selesai */}
                   <div className="space-y-3">
                     <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -952,7 +911,6 @@ export default function AdminTechnicians() {
               )}
             </div>
 
-            {/* Modal Footer */}
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between shrink-0">
               <Button
                 variant="outline"
@@ -979,11 +937,10 @@ export default function AdminTechnicians() {
         </div>
       )}
 
-      {/* MODAL TAMBAH TEKNISI */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]">
-            <div className="p-6 bg-slate-900 text-white flex items-center justify-between shrink-0">
+            <div className="p-6 bg-gradient-to-r from-blue-700 to-sky-600 text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <Wrench className="w-5 h-5 text-blue-400" />
                 <h3 className="font-bold text-lg text-white">Tambah Teknisi Baru</h3>
@@ -1100,11 +1057,10 @@ export default function AdminTechnicians() {
         </div>
       )}
 
-      {/* MODAL EDIT DATA TEKNISI */}
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]">
-            <div className="p-6 bg-slate-900 text-white flex items-center justify-between shrink-0">
+            <div className="p-6 bg-gradient-to-r from-blue-700 to-sky-600 text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <Edit2 className="w-5 h-5 text-blue-400" />
                 <h3 className="font-bold text-lg text-white">Edit Profil Teknisi</h3>
@@ -1196,7 +1152,6 @@ export default function AdminTechnicians() {
         </div>
       )}
 
-      {/* Confirmation Modal (replaces window.confirm) */}
       <ConfirmationModal
         isOpen={confirmModal.isOpen}
         title={confirmModal.title}

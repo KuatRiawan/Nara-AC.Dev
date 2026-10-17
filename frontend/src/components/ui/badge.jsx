@@ -1,7 +1,6 @@
 import { cn } from "../../lib/utils"
 
 function Badge({ className, variant = "default", ...props }) {
-  // Map 'danger' to 'destructive' for backward compatibility
   const normalizedVariant = variant === 'danger' ? 'destructive' : variant;
   
   const variants = {

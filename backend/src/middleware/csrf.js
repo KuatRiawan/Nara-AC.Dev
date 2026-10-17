@@ -3,14 +3,8 @@ const { parseToken } = require('./auth');
 
 const config = require('../config');
 
-// In-memory fallback map for legacy/transition tokens
 const legacyTokens = new Map();
 
-/**
- * Generate a CSRF token for the current session.
- * Uses an HMAC-signed stateless token tied to the user ID and config.jwtSecret.
- * Operates deterministically across server restarts and multiple load-balanced instances.
- */
 function generateCsrfToken(userId) {
   const salt = crypto.randomBytes(8).toString('hex');
   const expiresAt = Date.now() + (15 * 60 * 1000); // 15 minutes
@@ -19,21 +13,15 @@ function generateCsrfToken(userId) {
   return `${expiresAt}.${salt}.${sig}`;
 }
 
-/**
- * Validate CSRF token.
- * Verifies signature, expiration time, and ownership by userId using constant-time comparison.
- */
 function validateCsrfToken(userId, token) {
   if (!token || typeof token !== 'string') return false;
 
-  // New HMAC token format: expiresAt.salt.sig
   if (token.includes('.')) {
     const parts = token.split('.');
     if (parts.length !== 3) return false;
     const [expiresAtStr, salt, sig] = parts;
     const expiresAt = Number(expiresAtStr);
     if (!Number.isFinite(expiresAt) || Date.now() > expiresAt) return false;
-    // Reject excessive future timestamp (clock skew > 5 min beyond default window)
     if (expiresAt > Date.now() + (25 * 60 * 1000)) return false;
 
     const data = `${userId}:${expiresAtStr}:${salt}`;
@@ -48,7 +36,6 @@ function validateCsrfToken(userId, token) {
     }
   }
 
-  // Fallback for legacy random tokens stored in memory
   const key = `${userId}:${token}`;
   const expiresAt = legacyTokens.get(key);
   if (!expiresAt) return false;
@@ -59,18 +46,18 @@ function validateCsrfToken(userId, token) {
   return true;
 }
 
-/**
- * Middleware to validate CSRF token for state-changing requests
- * Expects token in X-CSRF-Token header or csrfToken body field.
- * Dapat berjalan secara global — akan mem-parse JWT sendiri jika req.user belum di-set.
- */
 function csrfProtection(req, res, next) {
-  // Only validate for state-changing methods
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
     return next();
   }
 
-  // Determine user ID: from req.user (set by requireAuth) or parse from token
+  // Exempt safe, idempotent notification read operations
+  const isNotificationRead = req.path && req.path.includes('/notifications') &&
+    (req.path.endsWith('/read') || req.path.endsWith('/read-all'));
+  if (isNotificationRead) {
+    return next();
+  }
+
   let userId = req.user?.id;
   if (!userId) {
     const payload = parseToken(req);
@@ -79,12 +66,10 @@ function csrfProtection(req, res, next) {
     }
   }
 
-  // No authenticated user — let requireAuth handle this downstream
   if (!userId) {
     return next();
   }
 
-  // Get token from header or body
   const token = req.headers['x-csrf-token'] || req.body?.csrfToken || req.body?._csrf;
 
   if (!token) {
@@ -108,9 +93,6 @@ function csrfProtection(req, res, next) {
   next();
 }
 
-/**
- * Generate CSRF token endpoint handler
- */
 function csrfTokenHandler(req, res) {
   const user = req.user;
   if (!user || !user.id) {
@@ -126,9 +108,6 @@ function csrfTokenHandler(req, res) {
   res.json({ csrfToken: token });
 }
 
-/**
- * Clear CSRF tokens for user (on logout)
- */
 function clearCsrfTokens(userId) {
   for (const [key] of legacyTokens.entries()) {
     if (key.startsWith(`${userId}:`)) {

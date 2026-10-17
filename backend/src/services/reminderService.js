@@ -6,11 +6,6 @@ const {
   wibParts, wibDateString, addDaysWibString, startOfWibDay, formatWib, DAY_MS,
 } = require('../utils/time');
 
-/**
- * Kanal pengiriman. 'in_app' = pencatatan notifikasi in-app (tampil di aplikasi: halaman status pelanggan,
- * halaman pekerjaan teknisi, dan dasbor admin). Hanya 'in_app' yang selalu tersedia.
- * 'telegram' aktif HANYA jika TELEGRAM_BOT_TOKEN terpasang dan penerima punya chat id.
- */
 async function telegramSend(chatId, text) {
   const url = `https://api.telegram.org/bot${config.telegramBotToken}/sendMessage`;
   const ctrl = new AbortController();
@@ -24,9 +19,6 @@ async function telegramSend(chatId, text) {
   } finally { clearTimeout(timer); }
 }
 
-/**
- * Pengiriman pesan WhatsApp resmi CV. Nara Teknindotama (BR-18, BR-47).
- */
 async function whatsappSend(phone, text) {
   const cleanPhone = String(phone || '').replace(/\D/g, '');
   if (!cleanPhone || cleanPhone.length < 8) {
@@ -37,7 +29,6 @@ async function whatsappSend(phone, text) {
   let apiToken = config.whatsappApiToken;
   let provider = 'fonnte';
 
-  // Periksa konfigurasi dinamis yang disimpan admin di dashboard
   try {
     const row = (await query("SELECT value FROM settings WHERE key='whatsapp_gateway_config'")).rows[0];
     if (row && row.value && row.value.enabled && row.value.api_token) {
@@ -46,10 +37,8 @@ async function whatsappSend(phone, text) {
       provider = row.value.provider || 'fonnte';
     }
   } catch (_e) {
-    // Abaikan jika DB query gagal, gunakan config fallback
   }
 
-  // Jika integrasi gateway WhatsApp aktif (Fonnte, Wablas, Twilio, atau custom webhook)
   if (apiUrl && apiToken) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 10000);
@@ -101,7 +90,6 @@ const defaultChannels = {
   whatsapp: whatsappSend, // BR-47: Kanal utama untuk pelanggan
 };
 let channels = { ...defaultChannels };
-/** Untuk pengujian: ganti implementasi kanal. */
 function setChannels(overrides) { channels = { ...defaultChannels, ...overrides }; }
 function resetChannels() { channels = { ...defaultChannels }; }
 
@@ -124,7 +112,6 @@ function sleep(ms) {
 }
 
 async function dispatch(row) {
-  // BR-47: Pelanggan wajib menerima pengingat melalui WhatsApp
   let channel = 'in_app';
   let recipient = row.penerima;
   if (row.target === 'pelanggan') {
@@ -135,7 +122,6 @@ async function dispatch(row) {
   }
   const attempts = row.percobaan + 1;
   
-  // Implement exponential backoff retry (BE-022, BR-43, BR-47)
   if (attempts > 1 && attempts <= MAX_RETRY_ATTEMPTS) {
     const delayMs = RETRY_DELAYS_MS[attempts - 2];
     await sleep(delayMs);
@@ -155,7 +141,6 @@ async function dispatch(row) {
       `UPDATE reminder_log SET kanal=$2, status='failed', percobaan=$3, error=$4 WHERE id=$1`,
       [row.id, channel, attempts, errMsg],
     );
-    // Only mark as permanently failed if we've exhausted all retries
     if (attempts >= MAX_RETRY_ATTEMPTS) {
       return 'failed';
     }
@@ -168,9 +153,6 @@ const PENDING_SELECT = `
   JOIN bookings b ON b.id = r.booking_id
   LEFT JOIN technicians t ON t.id = b.teknisi_id`;
 
-/**
- * Job H-1: membuat baris reminder untuk booking `scheduled` besok (WIB) lalu mengirim yang pending via WhatsApp (BR-47).
- */
 async function runReminders({ force = false, now = new Date() } = {}) {
   const ops = await getOps();
   const p = wibParts(now);
@@ -209,9 +191,6 @@ async function runReminders({ force = false, now = new Date() } = {}) {
   return { dilewati: false, untuk_tanggal: tomorrow, booking_dipindai: bookings.length, dibuat: created, terkirim: sent, gagal: failed };
 }
 
-/**
- * Mengirim pengingat perawatan berkala AC unit via WhatsApp (BR-16, BR-18, BR-47).
- */
 async function runMaintenanceReminders({ days = 7, force = false } = {}) {
   const dashboard = require('./dashboardService');
   const dueUnits = await dashboard.maintenanceDue({ days, limit: 100 });
@@ -221,7 +200,6 @@ async function runMaintenanceReminders({ days = 7, force = false } = {}) {
 
   for (const u of dueUnits) {
     if (!u.kontak) continue;
-    // Cari booking terakhir untuk unit ini
     const lastB = (await query("SELECT id FROM bookings WHERE ac_unit_id=$1 AND status='done' ORDER BY COALESCE(selesai_aktual, jadwal_mulai) DESC LIMIT 1", [u.id])).rows[0];
     if (!lastB) continue;
 
@@ -276,7 +254,6 @@ async function listReminders({ tanggal, status, target, booking_id: bookingId, l
      FROM reminder_log r JOIN bookings b ON b.id=r.booking_id
      ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY r.created_at DESC, r.id DESC LIMIT ${Math.min(limit, 500)}`, params,
   )).rows;
-  // Privasi: nomor pelanggan dimasking pada daftar
   return rows.map((r) => ({
     ...r,
     penerima: r.target === 'pelanggan' ? `${r.penerima.slice(0, 4)}****${r.penerima.slice(-2)}` : r.penerima,

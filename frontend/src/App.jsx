@@ -1,6 +1,30 @@
-import { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import OfflineBanner from './components/ui/OfflineBanner';
+
+function DynamicMetaRobots() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const path = location.pathname;
+    const privatePaths = ['/admin', '/technician', '/customer', '/login', '/staff'];
+    const isPrivate = privatePaths.some((p) => path.startsWith(p));
+    let meta = document.querySelector('meta[name="robots"]');
+    if (isPrivate) {
+      if (!meta) {
+        meta = document.createElement('meta');
+        meta.name = 'robots';
+        document.head.appendChild(meta);
+      }
+      meta.content = 'noindex, nofollow';
+    } else if (meta) {
+      meta.remove();
+    }
+  }, [location.pathname]);
+
+  return null;
+}
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const BookingPage = lazy(() => import('./pages/BookingPage'));
@@ -15,6 +39,7 @@ const TechnicianJobDetail = lazy(() => import('./pages/TechnicianJobDetail'));
 const CustomerPortal = lazy(() => import('./pages/customer/CustomerPortal'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const TermsConditionsPage = lazy(() => import('./pages/TermsConditionsPage'));
+const OfflinePage = lazy(() => import('./pages/OfflinePage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 function PageLoader() {
@@ -31,6 +56,8 @@ function PageLoader() {
 function App() {
   return (
     <Router>
+      <DynamicMetaRobots />
+      <OfflineBanner />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
@@ -58,6 +85,7 @@ function App() {
           <Route path="/technician/jobs/:id" element={<TechnicianJobDetail />} />
           <Route path="/customer" element={<Navigate to="/customer/dashboard" replace />} />
           <Route path="/customer/*" element={<CustomerPortal />} />
+          <Route path="/offline" element={<OfflinePage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>

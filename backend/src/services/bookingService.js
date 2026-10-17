@@ -9,12 +9,16 @@ const {
 } = require('../utils/time');
 
 const DEFAULT_OPS = {
-  open: '08:00', close: '17:00', days: [1, 2, 3, 4, 5, 6], slot_minutes: 60,
-  min_lead_minutes: 60, max_advance_days: 60, reminder_hour: 8,
+  open: '08:00',
+  close: '19:00',
+  days: [1, 2, 3, 4, 5, 6],
+  slot_minutes: 60,
+  min_lead_minutes: 60,
+  max_advance_days: 60,
+  reminder_hour: 8,
 };
 const DAY_NAMES = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
-// Lifecycle: scheduled → on process → done. Operasional: delayed, rescheduled, cancelled.
 const EDITABLE = ['scheduled', 'rescheduled', 'delayed'];
 const TRANSITIONS = {
   scheduled: ['on process', 'delayed'],
@@ -32,37 +36,58 @@ async function getOps(db = { query }) {
 
 const lockSlots = (client) => client.query("SELECT pg_advisory_xact_lock(hashtext('booking-slots'))");
 
-function computeEnd(start, durasiMenit, slot) {
-  const slots = Math.max(1, Math.ceil(durasiMenit / slot));
-  return new Date(start.getTime() + slots * slot * 60000);
+function computeEnd(start, durasiMenit) {
+  const minutes = Math.max(15, Number(durasiMenit) || 60);
+  return new Date(start.getTime() + minutes * 60000);
 }
 
-/** Validasi tanggal/jam terhadap jam operasional. Melempar 400 dengan detail per field. */
 function assertSlotAllowed(start, end, ops, now = new Date(), isAdmin = false) {
   const p = wibParts(start);
   const pe = wibParts(new Date(end.getTime() - 1));
+  const durasiMenit = Math.round((end.getTime() - start.getTime()) / 60000);
   const errs = [];
+  let reasonCode = null;
+
   if (start.getTime() < now.getTime() - (isAdmin ? 30 * 60000 : 0)) {
     errs.push('Tanggal/jam sudah lewat. Pilih jadwal yang akan datang.');
+    reasonCode = 'PAST_TIME';
   } else if (!isAdmin && start.getTime() < now.getTime() + ops.min_lead_minutes * 60000) {
     errs.push(`Booking minimal ${ops.min_lead_minutes} menit sebelum jadwal.`);
+    reasonCode = 'MIN_LEAD_TIME';
   } else if (start.getTime() > now.getTime() + ops.max_advance_days * DAY_MS) {
     errs.push(`Booking maksimal ${ops.max_advance_days} hari ke depan.`);
+    reasonCode = 'MAX_ADVANCE_DAYS';
   }
+
   if (!ops.days.includes(p.dow)) {
     const open = ops.days.map((d) => DAY_NAMES[d]).join(', ');
     errs.push(`Hari ${DAY_NAMES[p.dow]} tidak melayani servis. Hari operasional: ${open}.`);
+    reasonCode = reasonCode || 'CLOSED_DAY';
   } else {
     const startMin = p.h * 60 + p.min;
     const endMin = pe.h * 60 + pe.min + 1;
-    const sameDay = pe.d === p.d;
-    if (startMin < toMinutes(ops.open) || !sameDay || endMin > toMinutes(ops.close)) {
-      errs.push(`Jam di luar operasional (${ops.open}–${ops.close} WIB) atau durasi layanan melewati jam tutup.`);
-    } else if ((startMin - toMinutes(ops.open)) % ops.slot_minutes !== 0) {
+    const openMin = toMinutes(ops.open);
+    const closeMin = toMinutes(ops.close);
+    const sameDay = pe.d === p.d && pe.m === p.m && pe.y === p.y;
+
+    if (startMin < openMin || startMin >= closeMin) {
+      errs.push(`Jam mulai di luar jam operasional (${ops.open}–${ops.close} WIB).`);
+      reasonCode = reasonCode || 'OUTSIDE_OPERATING_HOURS';
+    } else if (!sameDay || endMin > closeMin) {
+      errs.push(`Durasi pengerjaan (${durasiMenit} menit) melampaui batas jam tutup operasional (${ops.close} WIB).`);
+      reasonCode = reasonCode || 'DURATION_EXCEEDS_CLOSING';
+    } else if ((startMin - openMin) % ops.slot_minutes !== 0) {
       errs.push(`Jam mulai harus mengikuti slot ${ops.slot_minutes} menit sejak ${ops.open}.`);
+      reasonCode = reasonCode || 'INVALID_SLOT_ALIGNMENT';
     }
   }
-  if (errs.length) throw E.validation('Jadwal yang dipilih tidak valid.', { jadwal_mulai: errs[0] });
+
+  if (errs.length) {
+    throw E.validation('Jadwal yang dipilih tidak valid.', {
+      jadwal_mulai: errs[0],
+      kode_alasan: reasonCode || 'INVALID_SCHEDULE',
+    });
+  }
 }
 
 async function countOverlap(db, start, end, excludeId) {
@@ -74,14 +99,26 @@ async function countOverlap(db, start, end, excludeId) {
   return r.rows[0].n;
 }
 
-async function activeTechnicianCount(db) {
+async function activeTechnicianCount(db, dateStr = null) {
   const r = await db.query('SELECT COUNT(*)::int AS n FROM technicians WHERE aktif');
-  return r.rows[0].n;
+  const totalActive = Number(r.rows[0]?.n || 0);
+  if (!dateStr || totalActive === 0) return totalActive;
+  try {
+    const unavailRes = await db.query(
+      `SELECT COUNT(*)::int AS n FROM technician_availability WHERE tanggal = $1 AND status IN ('off','busy')`,
+      [dateStr]
+    );
+    const unavailableCount = Number(unavailRes.rows[0]?.n || 0);
+    return Math.max(0, totalActive - unavailableCount);
+  } catch {
+    return totalActive;
+  }
 }
 
 async function assertCapacity(db, start, end, excludeId) {
-  const cap = await activeTechnicianCount(db);
-  if (cap === 0) throw E.conflict('Belum ada teknisi aktif yang tersedia. Hubungi admin.');
+  const dateStr = wibDateString(start);
+  const cap = await activeTechnicianCount(db, dateStr);
+  if (cap === 0) throw E.conflict('Belum ada teknisi aktif yang tersedia pada tanggal tersebut. Hubungi admin.');
   const used = await countOverlap(db, start, end, excludeId);
   if (used >= cap) {
     throw E.conflict('Slot waktu tersebut sudah penuh (bentrok dengan booking lain). Pilih jam lain.', {
@@ -109,8 +146,10 @@ const BOOKING_SELECT = `
          b.mulai_aktual, b.selesai_aktual, b.jumlah_unit, b.idempotency_key,
          b.skema_pembayaran, b.metode_pembayaran, b.bukti_pembayaran_url, b.status_verifikasi_pembayaran,
          b.catatan_verifikasi, b.verified_by, b.verified_at, b.total_dibayar, b.refund_nominal, b.refund_status, b.refund_catatan,
+         b.konfirmasi_pelanggan, b.waktu_konfirmasi_pelanggan,
+         b.biaya_tambahan_jasa, b.catatan_biaya_tambahan_jasa, b.persetujuan_biaya_pelanggan, b.persetujuan_biaya_admin, b.status_persetujuan_biaya,
          b.customer_id, c.nama AS customer_nama,
-         b.layanan_id, s.nama_layanan, s.harga, s.kategori,
+         b.layanan_id, s.nama_layanan, s.harga, s.kategori, s.durasi_menit, COALESCE(s.garansi_hari, 14) AS garansi_hari,
          b.teknisi_id, t.nama AS teknisi_nama,
          f.rating, f.komentar, (f.id IS NOT NULL) AS sudah_feedback
   FROM bookings b
@@ -126,7 +165,14 @@ function mapBooking(r) {
     status: r.status,
     jadwal_mulai: r.jadwal_mulai,
     jadwal_selesai: r.jadwal_selesai,
-    layanan: { id: r.layanan_id, nama: r.nama_layanan, kategori: r.kategori, harga: r.harga },
+    layanan: {
+      id: r.layanan_id,
+      nama: r.nama_layanan,
+      kategori: r.kategori,
+      harga: r.harga,
+      durasi_menit: r.durasi_menit || 60,
+      garansi_hari: r.garansi_hari || 14,
+    },
     customer: { id: r.customer_id, nama: r.customer_nama, kontak: r.kontak },
     alamat: r.alamat,
     keluhan: r.keluhan,
@@ -153,6 +199,13 @@ function mapBooking(r) {
     refund_nominal: Number(r.refund_nominal || 0),
     refund_status: r.refund_status || 'none',
     refund_catatan: r.refund_catatan || null,
+    konfirmasi_pelanggan: Boolean(r.konfirmasi_pelanggan || r.sudah_feedback),
+    waktu_konfirmasi_pelanggan: r.waktu_konfirmasi_pelanggan || null,
+    biaya_tambahan_jasa: Number(r.biaya_tambahan_jasa || 0),
+    catatan_biaya_tambahan_jasa: r.catatan_biaya_tambahan_jasa || null,
+    persetujuan_biaya_pelanggan: Boolean(r.persetujuan_biaya_pelanggan),
+    persetujuan_biaya_admin: Boolean(r.persetujuan_biaya_admin),
+    status_persetujuan_biaya: r.status_persetujuan_biaya || 'none',
     created_at: r.created_at,
     updated_at: r.updated_at,
     idempotency_key: r.idempotency_key,
@@ -167,8 +220,7 @@ async function createBooking(input, actor = { label: 'customer' }, now = new Dat
 
   return await withTx(async (client) => {
     await lockSlots(client);
-    
-    // Support multi-service items in one booking
+
     let rawItems = [];
     if (Array.isArray(input.items) && input.items.length > 0) {
       rawItems = input.items;
@@ -182,16 +234,16 @@ async function createBooking(input, actor = { label: 'customer' }, now = new Dat
       throw E.validation('Layanan tidak valid.', { layanan_id: 'Pilih minimal satu layanan.' });
     }
 
-    const svcIds = [...new Set(rawItems.map((it) => it.layanan_id))];
+    const svcIds = [...new Set(rawItems.map((it) => Number(it.layanan_id)))];
     const svcsResult = await client.query('SELECT * FROM service_catalog WHERE id = ANY($1::int[]) AND aktif', [svcIds]);
-    const svcMap = new Map(svcsResult.rows.map((s) => [s.id, s]));
+    const svcMap = new Map(svcsResult.rows.map((s) => [Number(s.id), s]));
 
     let totalDurationMinutes = 0;
     let totalUnits = 0;
     const resolvedItems = [];
 
     for (const it of rawItems) {
-      const svcRecord = svcMap.get(it.layanan_id);
+      const svcRecord = svcMap.get(Number(it.layanan_id));
       if (!svcRecord) {
         throw E.validation('Layanan tidak valid.', { layanan_id: `Layanan ID ${it.layanan_id} tidak ditemukan atau tidak aktif.` });
       }
@@ -212,15 +264,13 @@ async function createBooking(input, actor = { label: 'customer' }, now = new Dat
       });
     }
 
-    const primarySvc = svcMap.get(resolvedItems[0].layanan_id);
+    const primarySvc = svcMap.get(Number(resolvedItems[0].layanan_id));
 
-    // Idempotency key handling - prevent duplicate submissions
     if (input.idempotency_key) {
       const existing = (await client.query(
         'SELECT id, kode_booking, status FROM bookings WHERE idempotency_key = $1', [input.idempotency_key]
       )).rows[0];
       if (existing) {
-        // Return existing booking if it's still valid (not cancelled)
         if (existing.status !== 'cancelled') {
           const row = (await client.query(`${BOOKING_SELECT} WHERE b.id = $1`, [existing.id])).rows[0];
           const bMapped = mapBooking(row);
@@ -232,27 +282,36 @@ async function createBooking(input, actor = { label: 'customer' }, now = new Dat
           )).rows;
           return bMapped;
         }
-        // If cancelled, we can reuse the idempotency key for a new booking
         await client.query('DELETE FROM bookings WHERE idempotency_key = $1', [input.idempotency_key]);
       }
     }
-    
+
     const ops = await getOps(client);
     const end = computeEnd(start, totalDurationMinutes, ops.slot_minutes);
     const isAdmin = typeof actor?.label === 'string' && (actor.label.startsWith('admin') || actor.label === 'admin');
     assertSlotAllowed(start, end, ops, now, isAdmin);
     await assertCapacity(client, start, end, null);
 
-    let cust = (await client.query('SELECT * FROM customers WHERE kontak = $1', [kontak])).rows[0];
+    let cust = null;
+    if (actor?.customerId) {
+      cust = (await client.query('SELECT * FROM customers WHERE id = $1', [actor.customerId])).rows[0];
+    }
+    if (!cust) {
+      cust = (await client.query('SELECT * FROM customers WHERE kontak = $1', [kontak])).rows[0];
+    }
     if (!cust) {
       cust = (await client.query(
         'INSERT INTO customers (nama, kontak, alamat) VALUES ($1,$2,$3) RETURNING *',
         [input.nama, kontak, input.alamat],
       )).rows[0];
     }
+    if (actor?.userId) {
+      await client.query(
+        'UPDATE users SET customer_id = $1 WHERE id = $2 AND (customer_id IS NULL OR customer_id != $1)',
+        [cust.id, actor.userId]
+      );
+    }
 
-    // Auto-deduplication window check: prevent rapid double bookings (within 30 seconds)
-    // for the same customer with identical schedule and primary service
     const recentDuplicate = (await client.query(
       `SELECT id, kode_booking, status FROM bookings 
        WHERE customer_id = $1 AND jadwal_mulai = $2 AND layanan_id = $3 
@@ -276,7 +335,6 @@ async function createBooking(input, actor = { label: 'customer' }, now = new Dat
     let booking;
     for (let i = 0; i < 8 && !booking; i += 1) {
       const code = generateBookingCode(undefined, i);
-       
       const feedbackToken = generateFeedbackToken();
       const ins = await client.query(
         `INSERT INTO bookings (kode_booking, customer_id, layanan_id, jadwal_mulai, jadwal_selesai, alamat, keluhan, kontak, created_by, jumlah_unit, idempotency_key, feedback_token, skema_pembayaran, metode_pembayaran)
@@ -286,7 +344,6 @@ async function createBooking(input, actor = { label: 'customer' }, now = new Dat
       );
       if (ins.rows.length) {
         booking = ins.rows[0];
-        // Insert into booking_items
         for (const item of resolvedItems) {
           await client.query(
             `INSERT INTO booking_items (booking_id, layanan_id, jumlah_unit, harga_satuan, subtotal, catatan)
@@ -310,7 +367,7 @@ async function createBooking(input, actor = { label: 'customer' }, now = new Dat
     const layananDeskripsi = resolvedItems.length > 1
       ? resolvedItems.map((r) => `${r.nama_layanan} (${r.jumlah_unit} unit)`).join(', ')
       : primarySvc.nama_layanan;
-    await notify(client, { role: 'admin', title: 'Booking baru', message: `${kodeBooking} — ${cust.nama} (${layananDeskripsi}), ${formatWib(start)}. Belum ditugaskan.`, type: 'booking', bookingId: booking.id, tautan: '/admin/bookings' });
+    await notify(client, { role: 'admin', title: 'Booking baru', message: `${kodeBooking} — ${cust.nama} (${layananDeskripsi}), ${formatWib(start)}. Belum ditugaskan.`, type: 'booking', bookingId: booking.id, tautan: `/admin/bookings?bookingId=${booking.id}` });
     await notify(client, { role: 'customer', id: cust.id, title: 'Booking diterima', message: `Booking ${kodeBooking} untuk ${layananDeskripsi} pada ${formatWib(start)} berhasil dibuat.`, type: 'booking', bookingId: booking.id, tautan: `/status/${kodeBooking}` });
     await audit(client, { nama: actor.label, role: actor.role || 'customer' }, 'booking_created', 'booking', booking.id, { metadata: { kode: kodeBooking } });
     const row = (await client.query(`${BOOKING_SELECT} WHERE b.id = $1`, [booking.id])).rows[0];
@@ -420,7 +477,8 @@ async function reschedule(id, jadwalInput, actor, now = new Date()) {
     }
     const ops = await getOps(client);
     const end = computeEnd(start, totalDurasi, ops.slot_minutes);
-    assertSlotAllowed(start, end, ops, now);
+    const isAdmin = typeof actor?.label === 'string' && actor.label.startsWith('admin');
+    assertSlotAllowed(start, end, ops, now, isAdmin);
     await assertCapacity(client, start, end, id);
     if (b.teknisi_id) await assertTechnicianFree(client, b.teknisi_id, start, end, id);
     await client.query("UPDATE bookings SET jadwal_mulai=$2, jadwal_selesai=$3, status='rescheduled', updated_at=now() WHERE id=$1", [id, start, end]);
@@ -437,9 +495,8 @@ async function reschedule(id, jadwalInput, actor, now = new Date()) {
        VALUES ($1,$2,$3,$4,$4,$5,$6)`,
       [id, b.jadwal_mulai, start, b.teknisi_id, 'Permintaan pelanggan', actor.label],
     );
-    await notify(client, { role: 'admin', title: 'Jadwal diubah pelanggan', message: `${b.kode_booking} dijadwalkan ulang ke ${formatWib(start)}.`, type: 'booking', bookingId: id, tautan: '/admin/schedule' });
+    await notify(client, { role: 'admin', title: 'Jadwal diubah pelanggan', message: `${b.kode_booking} dijadwalkan ulang ke ${formatWib(start)}.`, type: 'booking', bookingId: id, tautan: `/admin/bookings?bookingId=${id}` });
     if (b.teknisi_id) await notify(client, { role: 'technician', id: b.teknisi_id, title: 'Jadwal berubah', message: `${b.kode_booking} dipindahkan ke ${formatWib(start)}.`, type: 'booking', bookingId: id, tautan: `/technician/jobs/${id}` });
-    // Pengingat lama (H-1 untuk jadwal sebelumnya) yang belum terkirim menjadi tidak relevan
     await client.query("DELETE FROM reminder_log WHERE booking_id=$1 AND status IN ('pending','failed')", [id]);
     return (await client.query(`${BOOKING_SELECT} WHERE b.id = $1`, [id])).rows.map(mapBooking)[0];
   });
@@ -452,7 +509,6 @@ async function cancelBooking(id, actor, alasan = 'Dibatalkan oleh pelanggan') {
       throw E.business(`Booking dengan status "${b.status}" tidak dapat dibatalkan.`);
     }
 
-    // BR-08: Pembatalan wajib dilakukan minimal 24 jam sebelum jadwal (untuk customer)
     const isCustomer = !actor?.role || actor.role === 'customer' || actor.label === 'customer';
     if (isCustomer && b.jadwal_mulai) {
       const now = Date.now();
@@ -477,9 +533,8 @@ async function cancelBooking(id, actor, alasan = 'Dibatalkan oleh pelanggan') {
       [id, 'cancel', JSON.stringify({ reason: alasan }), actor.label],
     );
     await audit(client, { nama: actor.label, role: actor.role || 'customer' }, 'booking_cancelled', 'booking', id, { before: { status: b.status }, after: { status: 'cancelled' }, metadata: { alasan } });
-    // Pengingat lama yang belum terkirim menjadi tidak relevan
     await client.query("DELETE FROM reminder_log WHERE booking_id=$1 AND status IN ('pending','failed')", [id]);
-    await notify(client, { role: 'admin', title: 'Booking dibatalkan', message: `${b.kode_booking} dibatalkan: ${alasan}`, type: 'booking', bookingId: id, tautan: '/admin/bookings' });
+    await notify(client, { role: 'admin', title: 'Booking dibatalkan', message: `${b.kode_booking} dibatalkan: ${alasan}`, type: 'booking', bookingId: id, tautan: `/admin/bookings?bookingId=${id}` });
     if (b.teknisi_id) await notify(client, { role: 'technician', id: b.teknisi_id, title: 'Booking dibatalkan', message: `${b.kode_booking} dibatalkan.`, type: 'booking', bookingId: id });
     await notify(client, { role: 'customer', id: b.customer_id, title: 'Booking dibatalkan', message: `Booking ${b.kode_booking} dibatalkan. Alasan: ${alasan}`, type: 'booking', bookingId: id, tautan: `/status/${b.kode_booking}` });
     return (await client.query(`${BOOKING_SELECT} WHERE b.id = $1`, [id])).rows.map(mapBooking)[0];
@@ -497,10 +552,18 @@ async function assignTechnician(id, teknisiId, actor) {
     if (!t) throw E.validation('Teknisi tidak valid.', { teknisi_id: 'Teknisi tidak ditemukan.' });
     if (!t.aktif) throw E.business('Teknisi tidak aktif dan tidak dapat ditugaskan.');
     const dateStr = wibDateString(new Date(b.jadwal_mulai));
-    const av = (await client.query(
-      "SELECT status, catatan FROM technician_availability WHERE technician_id=$1 AND tanggal=$2 AND status IN ('off','busy')",
-      [teknisiId, dateStr]
-    )).rows[0];
+    let av = null;
+    try {
+      av = (await client.query(
+        "SELECT status, catatan FROM technician_availability WHERE teknisi_id=$1 AND tanggal=$2 AND status IN ('off','busy')",
+        [teknisiId, dateStr]
+      )).rows[0];
+    } catch {
+      av = (await client.query(
+        "SELECT status, catatan FROM technician_availability WHERE technician_id=$1 AND tanggal=$2 AND status IN ('off','busy')",
+        [teknisiId, dateStr]
+      )).rows[0];
+    }
     if (av) {
       throw E.conflict(`Teknisi ${t.nama} sedang tidak tersedia (${av.status}) pada ${dateStr}${av.catatan ? `: ${av.catatan}` : ''}.`);
     }
@@ -533,10 +596,10 @@ async function changeStatus(id, newStatus, catatan, user) {
     if (newStatus === 'done' || newStatus === 'delayed') {
       throw E.business('Gunakan endpoint teknisi (selesaikan / laporkan tunda) agar checklist, laporan servis, dan alasan tercatat.');
     }
-    await client.query('UPDATE bookings SET status=$2, updated_at=now() WHERE id=$1', [id, newStatus]);
+    await client.query('UPDATE bookings SET status=$2, mulai_aktual=COALESCE(mulai_aktual, now()), updated_at=now() WHERE id=$1', [id, newStatus]);
     await client.query(
       'INSERT INTO status_log (booking_id, status_lama, status_baru, diubah_oleh, catatan) VALUES ($1,$2,$3,$4,$5)',
-      [id, b.status, newStatus, user.nama || user.role, catatan || null],
+      [id, b.status, newStatus, user.nama || user.role, catatan || 'Pekerjaan dimulai'],
     );
     const logs = (await client.query(
       'SELECT status_lama, status_baru, diubah_oleh, catatan, waktu FROM status_log WHERE booking_id=$1 ORDER BY waktu, id', [id],
@@ -581,13 +644,13 @@ async function addInventoryUsage(id, { item_id: itemId, jumlah, catatan }, user)
   });
 }
 
-/** Ringkasan publik (tanpa PII) berdasar kode booking. */
 async function publicStatusByCode(codeRaw) {
   const code = String(codeRaw || '').trim().toUpperCase();
   const row = (await query(`${BOOKING_SELECT} WHERE b.kode_booking = $1`, [code])).rows[0];
   if (!row) throw E.notFound('Kode booking tidak ditemukan. Periksa kembali kode Anda.');
+
   const riwayat = (await query(
-    'SELECT status_baru AS status, waktu FROM status_log WHERE booking_id=$1 ORDER BY waktu, id', [row.id],
+    'SELECT status_lama, status_baru AS status, status_baru, diubah_oleh, catatan, waktu FROM status_log WHERE booking_id=$1 ORDER BY waktu ASC, id ASC', [row.id],
   )).rows;
   const reminders = (await query(
     `SELECT kanal, status, untuk_tanggal, waktu_kirim FROM reminder_log
@@ -617,24 +680,55 @@ async function publicStatusByCode(codeRaw) {
     ? resolvedItems.map((i) => `${i.nama_layanan} (${i.jumlah_unit} unit)`).join(', ')
     : row.nama_layanan;
 
-  // Ambil pemakaian spare part / inventory aktual untuk invoice final
   const inventoryUsage = (await query(
     `SELECT u.id, i.nama, i.satuan, u.jumlah, u.catatan, u.waktu
      FROM inventory_usage u
      JOIN inventory i ON i.id = u.item_id WHERE u.booking_id = $1 ORDER BY u.waktu`, [row.id],
   )).rows;
 
-  // Cek apakah customer memiliki akun terdaftar (member) sesuai BR-01
-  const customerUser = (await query('SELECT id FROM users WHERE customer_id = $1 AND role = \'customer\' LIMIT 1', [row.customer_id])).rows[0];
+  const customerUser = (await query("SELECT id FROM users WHERE customer_id = $1 AND role = 'customer' LIMIT 1", [row.customer_id])).rows[0];
   const isMember = Boolean(customerUser);
+
+  let progresTeknisi = null;
+  let whatsappInvoiceDelivery = null;
+  try {
+    const [clRes, phRes, woRes, waRes] = await Promise.all([
+      query('SELECT id, task, status, wajib FROM work_order_checklists WHERE booking_id = $1 ORDER BY id', [row.id]),
+      query('SELECT tipe, COUNT(*)::int AS total FROM work_order_photos WHERE booking_id = $1 GROUP BY tipe', [row.id]),
+      query('SELECT diagnosis, rekomendasi, catatan, updated_at FROM work_orders WHERE booking_id = $1 LIMIT 1', [row.id]),
+      query('SELECT id, tipe_invoice, status, percobaan, waktu_kirim, error_terakhir, updated_at FROM whatsapp_invoice_logs WHERE booking_id = $1 ORDER BY id DESC LIMIT 1', [row.id]),
+    ]);
+    const checklists = clRes.rows || [];
+    const completedChecklists = checklists.filter((c) => c.status === 'completed').length;
+    const beforePhotos = (phRes.rows || []).find((p) => p.tipe === 'before')?.total || 0;
+    const afterPhotos = (phRes.rows || []).find((p) => p.tipe === 'after')?.total || 0;
+    const wo = (woRes.rows || [])[0] || null;
+    progresTeknisi = {
+      checklist_total: checklists.length,
+      checklist_selesai: completedChecklists,
+      foto_sebelum: beforePhotos,
+      foto_sesudah: afterPhotos,
+      diagnosis: wo?.diagnosis || null,
+      rekomendasi: wo?.rekomendasi || null,
+      catatan_teknisi: wo?.catatan || null,
+      updated_at: wo?.updated_at || row.updated_at || null,
+    };
+    whatsappInvoiceDelivery = (waRes.rows || [])[0] || null;
+  } catch {
+    progresTeknisi = null;
+    whatsappInvoiceDelivery = null;
+  }
 
   return {
     id: row.id,
     customer_id: row.customer_id,
+    ac_unit_id: row.ac_unit_id || null,
     is_member: isMember,
     kode_booking: row.kode_booking,
     status: row.status,
     layanan: namaLayananTeks,
+    layanan_id: row.layanan_id,
+    garansi_hari: Number(row.garansi_hari || 14),
     harga: row.harga,
     jumlah_unit: totalUnits,
     items: resolvedItems,
@@ -642,8 +736,15 @@ async function publicStatusByCode(codeRaw) {
     keluhan: row.keluhan,
     jadwal_mulai: row.jadwal_mulai,
     jadwal_selesai: row.jadwal_selesai,
+    mulai_aktual: row.mulai_aktual || null,
+    selesai_aktual: row.selesai_aktual || null,
+    alasan_tunda: row.alasan_tunda || null,
+    alasan_batal: row.alasan_batal || null,
+    teknisi_id: row.teknisi_id ? Number(row.teknisi_id) : null,
     teknisi: row.teknisi_nama ? row.teknisi_nama.split(' ')[0] : null,
-    teknisi_lengkap: row.teknisi_nama,
+    teknisi_lengkap: row.teknisi_nama || null,
+    progres_teknisi: progresTeknisi,
+    whatsapp_invoice_delivery: whatsappInvoiceDelivery,
     riwayat_status: riwayat,
     pengingat: reminders,
     konfirmasi_pelanggan: Boolean(row.konfirmasi_pelanggan || row.sudah_feedback || (row.status === 'done' && row.selesai_aktual && (Date.now() - new Date(row.selesai_aktual).getTime() >= 48 * 3600000))),
@@ -655,11 +756,12 @@ async function publicStatusByCode(codeRaw) {
     status_persetujuan_biaya: row.status_persetujuan_biaya || 'none',
     bisa_feedback: row.status === 'done' && !row.sudah_feedback,
     sudah_feedback: !!row.sudah_feedback,
+    feedback: row.sudah_feedback ? { rating: row.rating, komentar: row.komentar } : null,
     status_pembayaran: row.status_pembayaran || 'pending',
     skema_pembayaran: row.skema_pembayaran || 'pay_after_service',
     metode_pembayaran: row.metode_pembayaran || 'transfer',
     bukti_pembayaran_url: row.bukti_pembayaran_url || null,
-    status_verifikasi_pembayaran: row.status_verifikasi_pembayaran || 'menunggu_verifikasi',
+    status_verifikasi_pembayaran: row.status_verifikasi_pembayaran || 'belum_ada_bukti',
     catatan_verifikasi: row.catatan_verifikasi || null,
     total_dibayar: Number(row.total_dibayar || 0),
     refund_nominal: Number(row.refund_nominal || 0),
@@ -667,7 +769,7 @@ async function publicStatusByCode(codeRaw) {
     refund_catatan: row.refund_catatan || null,
     jadwal_teks: formatWib(new Date(row.jadwal_mulai)),
     created_at: row.created_at,
-    // Masked customer info for safe public status display (FIND-01, FIND-02)
+    updated_at: row.updated_at,
     customer_nama: maskCustomerName(row.customer_nama),
     kontak: maskPhone(row.kontak),
     kontak_masked: maskPhone(row.kontak),
@@ -684,7 +786,6 @@ async function submitFeedback(id, { kode_booking: kode, kontak, feedback_token, 
       throw E.notFound('Kode booking tidak sesuai.');
     }
 
-    // Ownership verification: single-use feedback_token, matching customer user, or full normalized phone
     let verified = false;
     if (feedback_token && b.feedback_token && feedback_token === b.feedback_token) {
       verified = true;
@@ -692,12 +793,13 @@ async function submitFeedback(id, { kode_booking: kode, kontak, feedback_token, 
       verified = true;
     } else if (user && (user.role === 'admin' || user.role === 'technician')) {
       verified = true;
-    } else if (kontak) {
-      const inputNorm = normalizePhone(kontak);
-      const bNorm = normalizePhone(b.kontak);
-      if (inputNorm && bNorm && inputNorm === bNorm) {
-        verified = true;
-      } else if (String(kontak).trim().length >= 6 && String(b.kontak || '').slice(-6) === String(kontak).trim().slice(-6)) {
+    } else if (kontak && !String(kontak).includes('*') && !String(kontak).includes('•')) {
+      const cleanInput = String(kontak).replace(/\D/g, '');
+      const cleanBooking = String(b.kontak || '').replace(/\D/g, '');
+      if (
+        cleanInput.length >= 4 && cleanBooking.length >= 4 &&
+        (cleanBooking.endsWith(cleanInput) || cleanInput.endsWith(cleanBooking) || cleanBooking.slice(-4) === cleanInput.slice(-4))
+      ) {
         verified = true;
       }
     }
@@ -711,9 +813,8 @@ async function submitFeedback(id, { kode_booking: kode, kontak, feedback_token, 
     if (ex.rows.length) throw E.conflict('Feedback untuk booking ini sudah pernah dikirim. Terima kasih!');
     await client.query(
       'INSERT INTO feedback (booking_id, rating, komentar, sentimen) VALUES ($1,$2,$3,$4)',
-      [id, rating, komentar || null, sentimen],
+      [id, rating, komentar || null, sentimen || (Number(rating) <= 2 ? 'negative' : 'positive')],
     );
-    // BR-14 & BR-22: Mencatat konfirmasi penyelesaian pekerjaan pelanggan saat memberikan ulasan resmi
     await client.query(
       `UPDATE bookings
        SET feedback_token = NULL,
@@ -723,11 +824,10 @@ async function submitFeedback(id, { kode_booking: kode, kontak, feedback_token, 
        WHERE id = $1`,
       [id]
     );
-    // BR-24: Review bintang 1 atau 2 wajib ditindaklanjuti admin
     const isLowRating = Number(rating) <= 2;
     await notify(client, {
       role: 'admin',
-      title: isLowRating ? '🚨 TINDAK LANJUT WAJIB: Ulasan Bintang Rendah' : 'Feedback baru',
+      title: isLowRating ? 'TINDAK LANJUT WAJIB: Ulasan Bintang Rendah' : 'Feedback baru',
       message: isLowRating
         ? `[PERHATIAN ATURAN BR-24] ${b.kode_booking} diberi rating rendah (${rating}/5). Hubungi customer segera untuk klarifikasi & garansi: "${String(komentar || 'Tidak ada komentar').slice(0, 100)}"`
         : `${b.kode_booking} diberi rating ${rating}/5${komentar ? `: "${String(komentar).slice(0, 80)}"` : ''}`,
@@ -736,11 +836,11 @@ async function submitFeedback(id, { kode_booking: kode, kontak, feedback_token, 
       tautan: `/admin/feedback`,
       priority: isLowRating ? 'high' : 'normal',
     });
-    return { rating, terima_kasih: true };
+    return { rating, komentar: komentar || '', terima_kasih: true };
   });
 }
 
-async function getAvailability(dateStr, layananId, jumlahUnitOrNow = 1, maybeNow = new Date()) {
+async function getAvailability(dateStr, layananId, jumlahUnitOrNow = 1, maybeNow = new Date(), customDurationMinutes = null) {
   let jumlahUnit = 1;
   let now = maybeNow;
   if (jumlahUnitOrNow instanceof Date) {
@@ -757,7 +857,7 @@ async function getAvailability(dateStr, layananId, jumlahUnitOrNow = 1, maybeNow
   if (!ops.days.includes(dow)) {
     return { tanggal: dateStr, buka: false, alasan: `Hari ${DAY_NAMES[dow]} tidak melayani servis.`, slot: [] };
   }
-  const cap = await activeTechnicianCount({ query });
+  const cap = await activeTechnicianCount({ query }, dateStr);
   const dayEnd = new Date(dayStart.getTime() + DAY_MS);
   const booked = (await query(
     "SELECT jadwal_mulai, jadwal_selesai FROM bookings WHERE status <> 'cancelled' AND jadwal_mulai < $2 AND jadwal_selesai > $1", [dayStart, dayEnd],
@@ -766,63 +866,97 @@ async function getAvailability(dateStr, layananId, jumlahUnitOrNow = 1, maybeNow
   const slots = [];
   const openMin = toMinutes(ops.open);
   const closeMin = toMinutes(ops.close);
-  const totalDuration = (Number(svc.durasi_menit) || 60) * jumlahUnit;
+  const totalDuration = customDurationMinutes && Number(customDurationMinutes) > 0
+    ? Number(customDurationMinutes)
+    : (Number(svc.durasi_menit) || 60) * jumlahUnit;
+
   for (let t = openMin; t < closeMin; t += ops.slot_minutes) {
     const start = fromWib(y, m, d, Math.floor(t / 60), t % 60);
     const end = computeEnd(start, totalDuration, ops.slot_minutes);
     let tersedia = true;
     let alasan = null;
-    try { assertSlotAllowed(start, end, ops, now); } catch (e) { tersedia = false; alasan = e.detail ? e.detail.jadwal_mulai : e.message; }
+    let kodeAlasan = 'AVAILABLE';
+    try {
+      assertSlotAllowed(start, end, ops, now);
+    } catch (e) {
+      tersedia = false;
+      alasan = e.detail ? e.detail.jadwal_mulai : e.message;
+      kodeAlasan = (e.detail && e.detail.kode_alasan) || 'INVALID_SCHEDULE';
+    }
     if (tersedia) {
       const used = booked.filter(([s, e2]) => s < end && e2 > start).length;
-      if (cap === 0 || used >= cap) { tersedia = false; alasan = 'Slot penuh.'; }
+      if (cap === 0 || used >= cap) {
+        tersedia = false;
+        alasan = cap === 0 ? 'Tidak ada teknisi tersedia pada tanggal ini.' : 'Slot penuh.';
+        kodeAlasan = 'SLOT_FULL';
+      }
     }
-    slots.push({ mulai: start.toISOString(), jam: `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`, tersedia, alasan });
+    const endParts = wibParts(end);
+    slots.push({
+      mulai: start.toISOString(),
+      selesai: end.toISOString(),
+      jam: `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`,
+      jam_selesai: `${String(endParts.h).padStart(2, '0')}:${String(endParts.min).padStart(2, '0')}`,
+      durasi_menit: totalDuration,
+      tersedia,
+      alasan,
+      kode_alasan: kodeAlasan,
+    });
   }
-  return { tanggal: dateStr, buka: true, jam_operasional: `${ops.open}–${ops.close}`, slot: slots };
+  return {
+    tanggal: dateStr,
+    buka: true,
+    jam_operasional: `${ops.open}–${ops.close}`,
+    durasi_menit: totalDuration,
+    kapasitas_teknisi: cap,
+    slot: slots,
+  };
 }
 
-/**
- * Verifikasi booking publik menggunakan kode booking dan kontak pelanggan.
- * Ini digunakan untuk endpoint publik yang memungkinkan pelanggan mengubah booking mereka.
- * Untuk keamanan, memerlukan minimal 6 digit terakhir kontak (bukan 4 digit).
- */
-async function verifyPublicBooking(kode, kontak) {
+async function verifyPublicBookingOwnership(kode, kontak, { allowCancelled = true, minDigits = 6 } = {}) {
   const code = String(kode || '').trim().toUpperCase();
-  const b = (await query('SELECT * FROM bookings WHERE kode_booking = $1', [code])).rows[0];
+  const b = (await query(
+    `SELECT b.*, c.nama AS customer_nama FROM bookings b JOIN customers c ON c.id = b.customer_id WHERE b.kode_booking = $1`,
+    [code]
+  )).rows[0];
   if (!b) throw E.notFound('Kode booking tidak ditemukan. Periksa kembali kode Anda.');
-  
-  // Verifikasi dengan minimal 6 digit terakhir kontak untuk keamanan yang lebih baik
-  const inputKontak = String(kontak || '').trim();
-  const bookingKontak = String(b.kontak || '');
-  
-  // Minimal 6 digit terakhir harus cocok
-  if (bookingKontak.length < 6 || inputKontak.length < 6) {
-    throw E.forbidden('Data verifikasi tidak valid. Kontak harus memiliki minimal 6 digit.');
+
+  const rawKontak = String(kontak || '').trim();
+  if (!rawKontak || rawKontak.includes('*') || rawKontak.includes('•')) {
+    throw E.forbidden('Masukkan nomor WhatsApp lengkap (minimal 8 digit, bukan nomor yang disamarkan).');
   }
-  
-  if (bookingKontak.slice(-6) !== inputKontak.slice(-6)) {
-    throw E.forbidden('Data verifikasi tidak cocok. Pastikan 6 digit terakhir kontak benar.');
+
+  const inputDigits = rawKontak.replace(/\D/g, '');
+  const bookingDigits = String(b.kontak || '').replace(/\D/g, '');
+
+  if (bookingDigits.length < minDigits || inputDigits.length < minDigits) {
+    throw E.forbidden(`Data verifikasi tidak valid. Nomor kontak wajib minimal ${minDigits} digit.`);
   }
-  
-  // Validasi tambahan: pastikan booking milik pelanggan yang terverifikasi
-  if (b.status === 'cancelled') {
+
+  const compareLen = Math.min(8, minDigits, bookingDigits.length, inputDigits.length);
+  if (bookingDigits.slice(-compareLen) !== inputDigits.slice(-compareLen)) {
+    throw E.forbidden('Nomor WhatsApp tidak cocok dengan data pemesan pada tiket ini.');
+  }
+
+  if (!allowCancelled && b.status === 'cancelled') {
     throw E.business('Booking ini sudah dibatalkan dan tidak dapat diubah.');
   }
   return b;
 }
 
-/** Calculate invoice data for a booking (BR-02, BR-03, BR-39, BR-40, BR-41) */
+async function verifyPublicBooking(kode, kontak) {
+  return verifyPublicBookingOwnership(kode, kontak, { allowCancelled: false, minDigits: 6 });
+}
+
 function calculateInvoice(booking) {
   if (!booking) return null;
-  
+
   let serviceItems = [];
   let sparepartItems = [];
   let subtotalJasa = 0;
   let subtotalSparepart = 0;
   let totalUnits = 0;
 
-  // 1. Ekstrak Service Items (Jasa)
   if (Array.isArray(booking.items) && booking.items.length > 0) {
     serviceItems = booking.items.map((it) => {
       const itemSubtotal = (it.subtotal !== null && it.subtotal !== undefined)
@@ -856,7 +990,6 @@ function calculateInvoice(booking) {
     }];
   }
 
-  // 2. Ekstrak Sparepart Items jika ada dari laporan / pemakaian inventory
   if (Array.isArray(booking.pemakaian_inventory) && booking.pemakaian_inventory.length > 0) {
     sparepartItems = booking.pemakaian_inventory.map((m) => {
       const hargaSatuan = Number(m.harga || m.harga_satuan || 0);
@@ -877,7 +1010,6 @@ function calculateInvoice(booking) {
     });
   }
 
-  // BR-04: Perubahan biaya jasa hanya ditambahkan ke tagihan apabila telah disetujui bersama oleh pelanggan DAN admin
   const biayaTambahanJasa = (booking.status_persetujuan_biaya === 'approved' && Number(booking.biaya_tambahan_jasa) > 0)
     ? Number(booking.biaya_tambahan_jasa)
     : 0;
@@ -886,7 +1018,7 @@ function calculateInvoice(booking) {
     serviceItems.push({
       id: 'fee-adjustment',
       layanan_id: null,
-      nama_layanan: `Penyesuaian Biaya Jasa (Disetujui Pelanggan & Admin)`,
+      nama_layanan: 'Penyesuaian Biaya Jasa (Disetujui Pelanggan & Admin)',
       harga_satuan: biayaTambahanJasa,
       jumlah_unit: 1,
       subtotal: biayaTambahanJasa,
@@ -897,42 +1029,33 @@ function calculateInvoice(booking) {
 
   const subtotal = subtotalJasa + subtotalSparepart;
 
-  // 3. Aturan Diskon (BR-02 & BR-03):
-  // Member mendapat diskon 10% untuk BIAYA JASA SAJA. Spare part TIDAK mendapat diskon.
-  // Non-member TIDAK mendapat diskon (diskon eksklusif hanya untuk member).
   const isMember = Boolean(booking.is_member || booking.customer_is_member || booking.has_account);
   let discountJasa = 0;
   let discountReason = '';
 
   if (isMember) {
-    discountJasa = Math.round(subtotalJasa * 0.10); // BR-02: 10% khusus jasa
+    discountJasa = Math.round(subtotalJasa * 0.10);
     discountReason = 'Diskon Membership 10% (Khusus Biaya Jasa)';
-  } else {
-    // Non-member tidak mendapat diskon
-    discountJasa = 0;
-    discountReason = '';
   }
 
-  const discount = discountJasa; // BR-03: Spare part 0% diskon
+  const discount = discountJasa;
   const total = subtotal - discount;
 
-  // 4. Pembayaran, Kekurangan / Kelebihan (BR-40, BR-41)
   const totalDibayar = Number(booking.total_dibayar || booking.nominal_bayar || 0);
-  const selisih = total - totalDibayar; // Positif = kurang bayar (tagih), Negatif = lebih bayar (refund)
+  const selisih = total - totalDibayar;
   const balanceDue = selisih > 0 ? selisih : 0;
   const refundAmount = selisih < 0 ? Math.abs(selisih) : 0;
 
-  // 5. BR-39: Klasifikasi Invoice Awal vs Invoice Final
   const isFinal = booking.status === 'done' || Boolean(booking.selesai_aktual) || sparepartItems.length > 0;
   const invoiceType = isFinal ? 'final' : 'initial';
   const invoiceTypeLabel = isFinal ? 'Invoice Final (Pekerjaan Selesai)' : 'Invoice Awal (Estimasi Booking)';
 
-  // 6. Masa Garansi (BR-23)
   let warrantyText = '14 Hari Kalender';
+  const configuredGaransi = Number(booking.garansi_hari || booking.layanan?.garansi_hari || 0);
   const allNames = serviceItems.map((i) => (i.nama_layanan || '').toLowerCase()).join(' ');
-  if (allNames.includes('freon') && allNames.includes('core')) {
+  if (configuredGaransi === 45 || (allNames.includes('freon') && allNames.includes('core'))) {
     warrantyText = '45 Hari Penuh Garansi Dingin';
-  } else if (allNames.includes('core')) {
+  } else if (configuredGaransi === 30 || allNames.includes('core') || allNames.includes('bongkar') || allNames.includes('freon')) {
     warrantyText = '30 Hari Penuh Garansi Pengerjaan';
   }
 
@@ -961,9 +1084,6 @@ function calculateInvoice(booking) {
   };
 }
 
-/**
- * BR-04: Pengajuan perubahan biaya jasa (membutuhkan persetujuan bersama pelanggan & admin)
- */
 async function proposeServiceFeeChange(id, { biaya_tambahan_jasa, catatan }, user) {
   const nominal = Number(biaya_tambahan_jasa);
   if (Number.isNaN(nominal) || nominal < 0) {
@@ -991,7 +1111,7 @@ async function proposeServiceFeeChange(id, { biaya_tambahan_jasa, catatan }, use
       role: 'customer',
       id: b.customer_id,
       title: 'Pengajuan Perubahan Biaya Jasa',
-      message: `Terdapat pengajuan penyesuaian biaya jasa sebesar Rp ${nominal.toLocaleString('id-ID')} pada booking ${b.kode_booking}: "${catatan}". Mohon konfirmasi persetujuan Anda (BR-04).`,
+      message: `Terdapat pengajuan penyesuaian biaya jasa sebesar Rp ${nominal.toLocaleString('id-ID')} pada booking ${b.kode_booking}: "${catatan}". Mohon konfirmasi persetujuan Anda.`,
       type: 'booking',
       bookingId: id,
       tautan: `/status/${b.kode_booking}`,
@@ -1000,7 +1120,7 @@ async function proposeServiceFeeChange(id, { biaya_tambahan_jasa, catatan }, use
       await notify(client, {
         role: 'admin',
         title: 'Pengajuan Perubahan Biaya Jasa oleh Teknisi',
-        message: `Teknisi mengajukan perubahan biaya jasa Rp ${nominal.toLocaleString('id-ID')} pada ${b.kode_booking}: "${catatan}" (BR-04).`,
+        message: `Teknisi mengajukan perubahan biaya jasa Rp ${nominal.toLocaleString('id-ID')} pada ${b.kode_booking}: "${catatan}".`,
         type: 'booking',
         bookingId: id,
         tautan: '/admin/bookings',
@@ -1008,15 +1128,12 @@ async function proposeServiceFeeChange(id, { biaya_tambahan_jasa, catatan }, use
     }
     return {
       success: true,
-      message: 'Pengajuan perubahan biaya jasa berhasil dicatat dan menunggu persetujuan bersama pelanggan serta admin (BR-04).',
+      message: 'Pengajuan perubahan biaya jasa berhasil dicatat dan menunggu persetujuan bersama pelanggan serta admin.',
       booking: updated,
     };
   });
 }
 
-/**
- * BR-04: Persetujuan perubahan biaya jasa oleh pelanggan atau admin (wajib keduanya setuju agar aktif)
- */
 async function approveServiceFeeChange(id, { disetujui, kontak, catatan }, user) {
   return await withTx(async (client) => {
     const b = await lockBooking(client, id);
@@ -1030,7 +1147,7 @@ async function approveServiceFeeChange(id, { disetujui, kontak, catatan }, user)
       }
       actorType = 'customer';
     } else if (kontak) {
-      await verifyPublicBooking(b.kode_booking, kontak);
+      await verifyPublicBookingOwnership(b.kode_booking, kontak, { allowCancelled: false, minDigits: 8 });
       actorType = 'customer';
     } else {
       throw E.unauthorized('Silakan login atau sertakan nomor kontak pemesan untuk menyetujui perubahan biaya.');
@@ -1059,10 +1176,10 @@ async function approveServiceFeeChange(id, { disetujui, kontak, catatan }, user)
       persetujuan_biaya_pelanggan: custApproved,
       persetujuan_biaya_admin: adminApproved,
       message: newStatus === 'approved'
-        ? 'Perubahan biaya jasa telah disetujui oleh pelanggan dan admin (BR-04).'
+        ? 'Perubahan biaya jasa telah disetujui oleh pelanggan dan admin.'
         : newStatus === 'rejected'
           ? 'Perubahan biaya jasa ditolak.'
-          : 'Persetujuan Anda telah dicatat. Menunggu persetujuan pihak lainnya (BR-04).',
+          : 'Persetujuan Anda telah dicatat. Menunggu persetujuan pihak lainnya.',
       booking: updated,
     };
   });
@@ -1071,6 +1188,6 @@ async function approveServiceFeeChange(id, { disetujui, kontak, catatan }, user)
 module.exports = {
   getOps, createBooking, listBookings, getBookingDetail, reschedule, cancelBooking, assignTechnician, changeStatus,
   addInventoryUsage, publicStatusByCode, submitFeedback, getAvailability, TRANSITIONS, EDITABLE, computeEnd,
-  assertSlotAllowed, wibDateString, mapBooking, BOOKING_SELECT, lockBooking, verifyPublicBooking, calculateInvoice,
-  proposeServiceFeeChange, approveServiceFeeChange,
+  assertSlotAllowed, wibDateString, mapBooking, BOOKING_SELECT, lockBooking, verifyPublicBooking,
+  verifyPublicBookingOwnership, calculateInvoice, proposeServiceFeeChange, approveServiceFeeChange,
 };

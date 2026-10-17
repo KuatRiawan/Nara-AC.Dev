@@ -15,7 +15,6 @@ export default function AdminCustomers() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // List State
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -23,22 +22,18 @@ export default function AdminCustomers() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
-  // Detail View State
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [activeTab, setActiveTab] = useState('units'); // units | history | feedback
 
-  // Modals State
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [customerFormData, setCustomerFormData] = useState({ nama: '', kontak: '', alamat: '' });
   const [submittingCustomer, setSubmittingCustomer] = useState(false);
 
-  // Confirmation Modal State (replaces confirm() for destructive actions)
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
   const closeConfirmModal = () => setConfirmModal(prev => ({ ...prev, isOpen: false, onConfirm: null }));
 
-  // AC Unit Modals State
   const [showAddACModal, setShowAddACModal] = useState(false);
   const [editingACUnit, setEditingACUnit] = useState(null);
   const [acFormData, setAcFormData] = useState({
@@ -53,7 +48,6 @@ export default function AdminCustomers() {
   });
   const [submittingAC, setSubmittingAC] = useState(false);
 
-  // WhatsApp Helper
   const getWhatsAppLink = (rawPhone, customerName) => {
     if (!rawPhone) return null;
     let clean = String(rawPhone).replace(/\D/g, '');
@@ -63,7 +57,32 @@ export default function AdminCustomers() {
     return `https://wa.me/${clean}?text=${text}`;
   };
 
-  // Helper to extract clean address components for smart display
+  const getRfmBadge = (segment) => {
+    if (!segment) return null;
+    const s = String(segment).toLowerCase();
+    if (s.includes('champion')) {
+      return { label: segment, bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+    }
+    if (s.includes('loyal')) {
+      return { label: segment, bg: 'bg-blue-50 text-blue-700 border-blue-200' };
+    }
+    if (s.includes('potential') || s.includes('promising')) {
+      return { label: segment, bg: 'bg-sky-50 text-sky-700 border-sky-200' };
+    }
+    if (s.includes('risk') || s.includes('hibernat') || s.includes('sleep') || s.includes('attention')) {
+      return { label: segment, bg: 'bg-amber-50 text-amber-700 border-amber-200' };
+    }
+    if (s.includes('lost') || s.includes('churn')) {
+      return { label: segment, bg: 'bg-rose-50 text-rose-700 border-rose-200' };
+    }
+    return { label: segment, bg: 'bg-slate-50 text-slate-700 border-slate-200' };
+  };
+
+  const formatRupiah = (num) => {
+    if (!num && num !== 0) return 'Rp 0';
+    return 'Rp ' + Number(num).toLocaleString('id-ID');
+  };
+
   const formatAddressDisplay = (rawAddress) => {
     if (!rawAddress) return { mainText: '-', district: null, city: null, patokan: null };
     
@@ -75,21 +94,18 @@ export default function AdminCustomers() {
       addr = addr.replace(/\(Patokan:[^)]+\)/i, '').trim();
     }
 
-    // Extract Kota/Kabupaten
     let city = null;
     const cityMatch = addr.match(/(Kota Adm\.[^,]+|Kota[^,]+|Kab\.[^,]+|Kabupaten[^,]+)/i);
     if (cityMatch) {
       city = cityMatch[1].trim();
     }
 
-    // Extract Kecamatan
     let district = null;
     const districtMatch = addr.match(/Kec\.\s*([^,]+)/i);
     if (districtMatch) {
       district = districtMatch[1].trim();
     }
 
-    // Main street / detail
     let mainText = addr;
     if (cityMatch || districtMatch) {
       const parts = addr.split(',');
@@ -101,7 +117,6 @@ export default function AdminCustomers() {
     return { mainText, district, city, patokan, full: rawAddress };
   };
 
-  // Close modals when route changes
   useEffect(() => {
     setShowAddCustomerModal(false);
     setEditingCustomer(null);
@@ -110,7 +125,6 @@ export default function AdminCustomers() {
     setSelectedCustomer(null);
   }, [location.pathname]);
 
-  // Fetch Customers List
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
     try {
@@ -129,7 +143,6 @@ export default function AdminCustomers() {
     fetchCustomers();
   }, [fetchCustomers]);
 
-  // Fetch Full Detail Customer (including AC units and history)
   const viewCustomer = useCallback(async (id, initialTab = 'units') => {
     setLoadingDetail(true);
     try {
@@ -146,7 +159,6 @@ export default function AdminCustomers() {
     }
   }, [showError]);
 
-  // Handle URL query parameters for direct link (e.g., from AdminACUnits)
   useEffect(() => {
     const targetId = searchParams.get('viewId') || searchParams.get('id');
     const tabParam = searchParams.get('tab') || 'units';
@@ -155,7 +167,6 @@ export default function AdminCustomers() {
     }
   }, [searchParams, viewCustomer]);
 
-  // Refresh current customer detail
   const refreshCurrentCustomer = async () => {
     if (!selectedCustomer?.id) return;
     try {
@@ -167,7 +178,6 @@ export default function AdminCustomers() {
     }
   };
 
-  // Handle Create / Edit Customer
   const handleSaveCustomer = async (e) => {
     e.preventDefault();
     setSubmittingCustomer(true);
@@ -210,7 +220,6 @@ export default function AdminCustomers() {
     });
   };
 
-  // AC Unit Form Handlers
   const openAddACModal = () => {
     setAcFormData({
       brand: 'Daikin',
@@ -296,7 +305,6 @@ export default function AdminCustomers() {
     });
   };
 
-  // Filtered Customers
   const filteredCustomers = useMemo(() => {
     let list = [...customers];
     if (filterType === 'has_ac') {
@@ -307,19 +315,16 @@ export default function AdminCustomers() {
     return list;
   }, [customers, filterType]);
 
-  // Reset pagination when search or filterType changes
   useEffect(() => {
     setCurrentPage(1);
   }, [search, filterType]);
 
-  // Paginated customers
   const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / itemsPerPage));
   const paginatedCustomers = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredCustomers.slice(start, start + itemsPerPage);
   }, [filteredCustomers, currentPage, itemsPerPage]);
 
-  // Quick Metrics
   const metrics = useMemo(() => {
     const totalCust = customers.length;
     let totalAC = 0;
@@ -329,7 +334,6 @@ export default function AdminCustomers() {
     return { totalCust, totalAC };
   }, [customers]);
 
-  // Variables for selectedCustomer
   const acUnitsList = selectedCustomer?.ac_units || [];
   const historyList = selectedCustomer?.history || [];
   const feedbackList = selectedCustomer?.feedback || [];
@@ -339,7 +343,6 @@ export default function AdminCustomers() {
     <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 bg-slate-50/50 relative min-w-0 font-sans">
       {selectedCustomer ? (
         <div className="space-y-6 animate-in fade-in duration-200">
-          {/* Back Button */}
           <div>
             <button 
               onClick={() => {
@@ -355,7 +358,6 @@ export default function AdminCustomers() {
             </button>
           </div>
 
-          {/* CUSTOMER PROFILE HEADER CARD */}
           <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-5 sm:p-7">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-5">
               <div className="flex items-start sm:items-center gap-4">
@@ -365,11 +367,24 @@ export default function AdminCustomers() {
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                      {selectedCustomer.nama}
+                      {(selectedCustomer.nama || '').replace(/\s*\(CUST-\d+\)/i, '')}
                     </h1>
                     <Badge variant="outline" className="bg-slate-50 text-slate-700 font-mono text-xs font-bold">
-                      CUST-#{selectedCustomer.id}
+                      {selectedCustomer.kode_pelanggan || `CUST-${String(selectedCustomer.id).padStart(3, '0')}`}
                     </Badge>
+                    {selectedCustomer.segmen_rfm && (
+                      <span className={cn(
+                        "text-xs px-2.5 py-0.5 rounded-lg font-bold border",
+                        getRfmBadge(selectedCustomer.segmen_rfm)?.bg || "bg-blue-50 text-blue-700 border-blue-200"
+                      )}>
+                        {selectedCustomer.segmen_rfm} {selectedCustomer.skor_rfm ? `(Skor: ${selectedCustomer.skor_rfm})` : ''}
+                      </span>
+                    )}
+                    {Number(selectedCustomer.total_belanja || 0) > 0 && (
+                      <span className="text-xs px-2.5 py-0.5 rounded-lg font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                        Total Belanja: {formatRupiah(selectedCustomer.total_belanja)}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-y-2 gap-x-4 mt-2 text-xs sm:text-sm text-slate-600">
@@ -410,7 +425,6 @@ export default function AdminCustomers() {
                 </div>
               </div>
 
-              {/* Quick Actions */}
               <div className="flex items-center gap-2.5 w-full md:w-auto">
                 <Button
                   variant="outline"
@@ -425,7 +439,6 @@ export default function AdminCustomers() {
             </div>
           </div>
 
-        {/* INTEGRATED TAB NAVIGATION */}
         <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto scrollbar-none">
           <button
             onClick={() => setActiveTab('units')}
@@ -485,7 +498,6 @@ export default function AdminCustomers() {
           </button>
         </div>
 
-        {/* TAB 1: DAFTAR UNIT AC PELANGGAN (TERINTEGRASI) */}
         {activeTab === 'units' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -530,7 +542,6 @@ export default function AdminCustomers() {
                     className="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all p-5 flex flex-col justify-between relative overflow-hidden group"
                   >
                     <div>
-                      {/* Header Unit */}
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex items-center gap-2">
                           <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
@@ -549,7 +560,6 @@ export default function AdminCustomers() {
                         </Badge>
                       </div>
 
-                      {/* Detail Spesifikasi */}
                       <div className="space-y-2 text-xs bg-slate-50/70 p-3 rounded-xl border border-slate-100 my-3">
                         <div className="flex justify-between">
                           <span className="text-slate-500">Tipe AC:</span>
@@ -582,7 +592,6 @@ export default function AdminCustomers() {
                       )}
                     </div>
 
-                    {/* Actions */}
                     <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-500 font-mono">
                         UNIT-#{unit.id}
@@ -611,7 +620,6 @@ export default function AdminCustomers() {
           </div>
         )}
 
-        {/* TAB 2: RIWAYAT SERVIS & BOOKING */}
         {activeTab === 'history' && (
           <div className="space-y-4">
             <div>
@@ -627,9 +635,60 @@ export default function AdminCustomers() {
                   <p className="text-xs text-slate-500 mt-1">Pelanggan ini belum pernah menyelesaikan tiket booking servis.</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse whitespace-nowrap text-xs sm:text-sm">
-                    <thead>
+                <>
+                  {/* Mobile & Tablet Card View */}
+                  <div className="block md:hidden divide-y divide-slate-100 p-3 sm:p-4 bg-slate-50/50">
+                    {historyList.map(h => (
+                      <div key={h.id} className="bg-white rounded-xl p-3.5 border border-slate-200/80 mb-2.5 last:mb-0 space-y-2 shadow-2xs">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <span className="font-mono text-xs font-bold bg-slate-100 text-slate-800 px-2 py-0.5 rounded border border-slate-200">
+                              {h.kode_booking}
+                            </span>
+                            <div className="text-xs font-bold text-slate-900 mt-1">
+                              {h.jadwal_mulai ? new Date(h.jadwal_mulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                              <span className="text-[11px] font-normal text-slate-500 ml-1">
+                                {h.jadwal_mulai ? new Date(h.jadwal_mulai).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB' : ''}
+                              </span>
+                            </div>
+                          </div>
+                          <Badge className={cn(
+                            "text-[10px] font-black uppercase px-2 py-0.5",
+                            h.status === 'done' ? "bg-emerald-100 text-emerald-800 border-emerald-200" :
+                            h.status === 'on process' ? "bg-sky-100 text-sky-800 border-sky-200" :
+                            h.status === 'scheduled' ? "bg-amber-100 text-amber-800 border-amber-200" :
+                            "bg-slate-100 text-slate-700"
+                          )}>
+                            {h.status}
+                          </Badge>
+                        </div>
+
+                        <div className="bg-slate-50 rounded-lg p-2 text-xs space-y-1">
+                          <div className="font-semibold text-slate-800">{h.nama_layanan || 'Service AC'}</div>
+                          <div className="flex items-center justify-between text-slate-600 text-[11px]">
+                            <span>Unit: {h.brand ? `${h.brand} (${h.lokasi_unit || 'Unit'})` : '-'}</span>
+                            <span>Teknisi: {h.teknisi || 'Belum ada'}</span>
+                          </div>
+                        </div>
+
+                        <div className="pt-1 flex justify-end">
+                          <a
+                            href={`/status/${h.kode_booking}`}
+                            target="_blank" rel="noopener noreferrer"
+                            className="text-xs font-bold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200/60"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            <span>Lihat Status Live</span>
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop Table */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-left border-collapse whitespace-nowrap text-xs sm:text-sm">
+                      <thead>
                       <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider font-bold">
                         <th className="py-3.5 px-6">Waktu & Jadwal</th>
                         <th className="py-3.5 px-6">Kode Tiket</th>
@@ -702,12 +761,12 @@ export default function AdminCustomers() {
                     </tbody>
                   </table>
                 </div>
+                </>
               )}
             </div>
           </div>
         )}
 
-        {/* TAB 3: ULASAN & FEEDBACK */}
         {activeTab === 'feedback' && (
           <div className="space-y-4">
             <div>
@@ -758,7 +817,6 @@ export default function AdminCustomers() {
       </div>
     ) : (
       <>
-        {/* HEADER: Standard Clean Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Data Pelanggan & Unit AC</h1>
@@ -783,7 +841,6 @@ export default function AdminCustomers() {
           </div>
         </div>
 
-        {/* QUICK KPI METRIC CARDS */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between">
             <div>
@@ -819,11 +876,12 @@ export default function AdminCustomers() {
           </div>
         </div>
 
-        {/* SEARCH & FILTER TOOLBAR */}
         <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-4 sm:p-5 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
+              id="admin-search-customers"
+              name="admin_search_customers"
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -846,7 +904,7 @@ export default function AdminCustomers() {
               onClick={() => setFilterType('all')}
               className={cn(
                 "px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer",
-                filterType === 'all' ? "bg-slate-900 text-white shadow-2xs" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                filterType === 'all' ? "bg-gradient-to-r from-blue-700 to-sky-600 text-white shadow-2xs" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               )}
             >
               Semua
@@ -872,7 +930,6 @@ export default function AdminCustomers() {
           </div>
         </div>
 
-        {/* TABLE / CARDS CONTENT */}
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden">
         {loading ? (
           <div className="p-16 text-center">
@@ -899,8 +956,7 @@ export default function AdminCustomers() {
           </div>
         ) : (
           <>
-            {/* MOBILE CARDS VIEW (< md) */}
-            <div className="block md:hidden divide-y divide-gray-100">
+            <div className="block lg:hidden divide-y divide-gray-100">
               {paginatedCustomers.map(c => {
                 const waLink = getWhatsAppLink(c.kontak, c.nama);
                 const acCount = Number(c.total_unit ?? c.jumlah_unit ?? c.total_ac ?? 0);
@@ -912,7 +968,6 @@ export default function AdminCustomers() {
                     onClick={() => viewCustomer(c.id)}
                     className="p-4 space-y-3 hover:bg-blue-50/20 transition-colors cursor-pointer active:bg-blue-50/40"
                   >
-                    {/* Header: Customer Name & Actions */}
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-black text-sm shrink-0">
@@ -920,11 +975,21 @@ export default function AdminCustomers() {
                         </div>
                         <div className="min-w-0">
                           <h4 className="font-bold text-slate-900 text-sm truncate">
-                            {c.nama}
+                            {(c.nama || '').replace(/\s*\(CUST-\d+\)/i, '')}
                           </h4>
-                          <span className="font-mono text-xs text-slate-500 font-bold">
-                            CUST-#{c.id}
-                          </span>
+                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                            <span className="font-mono text-xs text-slate-500 font-bold">
+                              {c.kode_pelanggan || `CUST-${String(c.id).padStart(3, '0')}`}
+                            </span>
+                            {c.segmen_rfm && (
+                              <span className={cn(
+                                "text-[10px] px-1.5 py-0.2 rounded-md font-bold border",
+                                getRfmBadge(c.segmen_rfm)?.bg || "bg-slate-50 text-slate-700 border-slate-200"
+                              )}>
+                                {c.segmen_rfm}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -952,7 +1017,6 @@ export default function AdminCustomers() {
                       </div>
                     </div>
 
-                    {/* Contact & Units Badge */}
                     <div className="flex items-center justify-between gap-2 text-xs">
                       <div className="flex items-center gap-1.5 font-mono font-semibold text-slate-800">
                         <Phone className="w-3.5 h-3.5 text-slate-500" />
@@ -973,7 +1037,6 @@ export default function AdminCustomers() {
                       </div>
                     </div>
 
-                    {/* Alamat Terstruktur */}
                     <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-100/90 text-xs space-y-1.5">
                       <div className="flex items-start gap-1.5 text-slate-800 font-medium">
                         <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
@@ -998,7 +1061,6 @@ export default function AdminCustomers() {
                       </div>
                     </div>
 
-                    {/* Bottom Action */}
                     <div className="pt-1">
                       <Button
                         size="sm"
@@ -1014,8 +1076,7 @@ export default function AdminCustomers() {
               })}
             </div>
 
-            {/* DESKTOP TABLE VIEW (>= md) */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden lg:block overflow-x-auto">
               <table className="w-full text-left border-collapse whitespace-nowrap text-xs sm:text-sm">
                 <thead>
                   <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider font-bold">
@@ -1037,7 +1098,6 @@ export default function AdminCustomers() {
                         onClick={() => viewCustomer(c.id)}
                         className="hover:bg-blue-50/30 transition-colors cursor-pointer group"
                       >
-                        {/* Pelanggan */}
                         <td className="py-3.5 px-6">
                           <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-black text-sm shrink-0 group-hover:scale-105 transition-transform">
@@ -1045,16 +1105,25 @@ export default function AdminCustomers() {
                             </div>
                             <div>
                               <div className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition-colors">
-                                {c.nama}
+                                {(c.nama || '').replace(/\s*\(CUST-\d+\)/i, '')}
                               </div>
-                              <span className="font-mono text-xs text-slate-500 font-bold">
-                                ID: #{c.id}
-                              </span>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="font-mono text-xs text-slate-500 font-bold">
+                                  {c.kode_pelanggan || `CUST-${String(c.id).padStart(3, '0')}`}
+                                </span>
+                                {c.segmen_rfm && (
+                                  <span className={cn(
+                                    "text-[10px] px-1.5 py-0.2 rounded-md font-bold border",
+                                    getRfmBadge(c.segmen_rfm)?.bg || "bg-slate-50 text-slate-700 border-slate-200"
+                                  )}>
+                                    {c.segmen_rfm}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </td>
 
-                        {/* Kontak */}
                         <td className="py-3.5 px-6" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-2">
                             <span className="font-mono font-semibold text-slate-800">{c.kontak || '-'}</span>
@@ -1072,7 +1141,6 @@ export default function AdminCustomers() {
                           </div>
                         </td>
 
-                        {/* Alamat */}
                         <td className="py-3.5 px-6 text-slate-600 max-w-xs" title={c.alamat}>
                           {(() => {
                             const parsed = formatAddressDisplay(c.alamat);
@@ -1109,7 +1177,6 @@ export default function AdminCustomers() {
                         })()}
                       </td>
 
-                      {/* Unit AC Terdaftar */}
                       <td className="py-3.5 px-6">
                         {acCount > 0 ? (
                           <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 font-bold px-2.5 py-0.5 rounded-lg border border-blue-200 text-xs">
@@ -1123,7 +1190,6 @@ export default function AdminCustomers() {
                         )}
                       </td>
 
-                      {/* Aksi */}
                       <td className="py-3.5 px-6 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
                           <Button
@@ -1153,7 +1219,6 @@ export default function AdminCustomers() {
             </table>
           </div>
 
-          {/* PAGINATION TOOLBAR */}
           <div className="p-4 bg-slate-50/70 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 font-medium">
             <div>
               Menampilkan <strong className="text-slate-900">{filteredCustomers.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}</strong> - <strong className="text-slate-900">{Math.min(filteredCustomers.length, currentPage * itemsPerPage)}</strong> dari <strong className="text-slate-900">{filteredCustomers.length}</strong> pelanggan
@@ -1189,7 +1254,6 @@ export default function AdminCustomers() {
       </>
     )}
 
-      {/* MODAL TAMBAH / EDIT PELANGGAN */}
       {(showAddCustomerModal || editingCustomer) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-full max-w-xl max-h-[90vh] shadow-2xl overflow-hidden border border-slate-200 flex flex-col">
@@ -1270,7 +1334,6 @@ export default function AdminCustomers() {
         </div>
       )}
 
-      {/* MODAL TAMBAH / EDIT UNIT AC */}
       {(showAddACModal || editingACUnit) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden border border-slate-200">
@@ -1299,7 +1362,6 @@ export default function AdminCustomers() {
 
             <form onSubmit={handleSaveACUnit} className="p-5 space-y-4 text-xs sm:text-sm">
               <div className="grid grid-cols-2 gap-3">
-                {/* Brand AC */}
                 <div>
                   <label htmlFor="admin-customers-f1" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                     Merk / Brand:
@@ -1324,7 +1386,6 @@ export default function AdminCustomers() {
                   </select>
                 </div>
 
-                {/* Kapasitas PK */}
                 <div>
                   <label htmlFor="admin-customers-f2" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                     Kapasitas (PK):
@@ -1347,7 +1408,6 @@ export default function AdminCustomers() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                {/* Tipe AC */}
                 <div>
                   <label htmlFor="admin-customers-f3" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                     Tipe AC:
@@ -1366,7 +1426,6 @@ export default function AdminCustomers() {
                   </select>
                 </div>
 
-                {/* Model / Seri */}
                 <div>
                   <label htmlFor="admin-customers-f4" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                     Model / Seri:
@@ -1382,7 +1441,6 @@ export default function AdminCustomers() {
                 </div>
               </div>
 
-              {/* Lokasi Penempatan Unit */}
               <div>
                 <label htmlFor="admin-customers-f5" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                   Lokasi Penempatan Unit:
@@ -1398,7 +1456,6 @@ export default function AdminCustomers() {
                 />
               </div>
 
-              {/* Tanggal Pasang & Catatan */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="admin-customers-f6" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">

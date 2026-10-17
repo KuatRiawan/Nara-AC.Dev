@@ -1,6 +1,3 @@
-"""
-NARA AC (A26-CS054) — Governed Dataset Ingestion, Profiling, PII Tokenization & Time-Series ML Pipeline
-"""
 import hashlib
 import json
 import pickle
@@ -15,13 +12,11 @@ GOV_DIR = DATA_DIR / "governed"
 MODELS_DIR = BASE_DIR / "models"
 OUTPUT_DIR = BASE_DIR / "output"
 
-
 def _tokenize_pii(val, prefix="TOK"):
     if pd.isna(val) or not str(val).strip():
         return None
     digest = hashlib.sha256(("nara_ac_salt_2026:" + str(val).strip()).encode("utf-8")).hexdigest()[:12].upper()
     return f"{prefix}-{digest}"
-
 
 def calculate_wape(y_true, y_pred):
     y_true = np.asarray(y_true, dtype=float)
@@ -31,31 +26,7 @@ def calculate_wape(y_true, y_pred):
         return 0.0
     return float(np.sum(np.abs(y_true - y_pred)) / denom)
 
-
-class RidgeRegressorCompat:
-    """Deterministic L2-regularized linear regressor using closed-form normal equations."""
-    def __init__(self, alpha=1.0):
-        self.alpha = float(alpha)
-        self.coef_ = None
-        self.intercept_ = 0.0
-
-    def fit(self, X, y):
-        X = np.asarray(X, dtype=float)
-        y = np.asarray(y, dtype=float)
-        X_mean = np.mean(X, axis=0)
-        y_mean = float(np.mean(y))
-        X_centered = X - X_mean
-        y_centered = y - y_mean
-        n_features = X.shape[1]
-        A = X_centered.T @ X_centered + self.alpha * np.eye(n_features)
-        self.coef_ = np.linalg.solve(A, X_centered.T @ y_centered)
-        self.intercept_ = float(y_mean - X_mean @ self.coef_)
-        return self
-
-    def predict(self, X):
-        X = np.asarray(X, dtype=float)
-        return X @ self.coef_ + self.intercept_
-
+from ridge_compat import RidgeRegressorCompat
 
 def run_governed_pipeline(source_dir=None):
     for d in [DATA_DIR, GOV_DIR, MODELS_DIR, OUTPUT_DIR]:
@@ -67,13 +38,11 @@ def run_governed_pipeline(source_dir=None):
     ts_df = pd.read_csv(src / "dataset_timeseries_harian.csv")
     trx_df = pd.read_csv(src / "dataset_transaksi_servis_ac.csv")
 
-    # --- 8.1 Dataset Profiling & Cross-Table Validation ---
     rfm_ids = set(rfm_df["id_pelanggan"].dropna().unique())
     trx_cust_ids = set(trx_df["id_pelanggan"].dropna().unique())
     orphan_trx_customers = sorted(list(trx_cust_ids - rfm_ids))
     inactive_rfm_customers = sorted(list(rfm_ids - trx_cust_ids))
 
-    # Daily aggregation check between trx_df and ts_df
     trx_daily = trx_df.groupby("tanggal").agg(
         trx_orders=("id_transaksi", "count"),
         trx_units=("qty_unit", "sum"),
@@ -86,7 +55,6 @@ def run_governed_pipeline(source_dir=None):
     order_match_days = int(np.sum(ts_merged["jumlah_order_reguler"] == ts_merged["trx_orders"]))
     net_rev_match_days = int(np.sum(ts_merged["pendapatan_bersih_reguler"] == ts_merged["trx_net"]))
 
-    # Identify operational & data quality anomalies
     date_corrected_trx = int(np.sum(trx_df["flag_koreksi_tanggal"] == 1))
     zero_price_trx = int(np.sum(trx_df["total_tagihan_kotor"] == 0))
     b2b_negative_profit = b2b_df[b2b_df["profit_bersih_terkoreksi"] < 0][["id_proyek", "periode_bulan", "nama_proyek", "kategori_proyek", "profit_bersih_terkoreksi"]].to_dict(orient="records")
@@ -179,7 +147,6 @@ def run_governed_pipeline(source_dir=None):
     with open(OUTPUT_DIR / "dataset_profile_report.json", "w", encoding="utf-8") as f:
         json.dump(profile_report, f, indent=2, ensure_ascii=False)
 
-    # --- 8.2 Data Privacy & Governed PII Tokenization ---
     rfm_gov = rfm_df.copy()
     rfm_gov["kontak_token"] = rfm_gov["kontak"].apply(lambda x: _tokenize_pii(x, "PHONE"))
     rfm_gov["alamat_token"] = rfm_gov["alamat_rumah"].apply(lambda x: _tokenize_pii(x, "ADDR"))
@@ -195,11 +162,9 @@ def run_governed_pipeline(source_dir=None):
     b2b_df.to_csv(GOV_DIR / "dataset_proyek_b2b_resik_governed.csv", index=False)
     ts_df.to_csv(GOV_DIR / "dataset_timeseries_harian_governed.csv", index=False)
 
-    # --- 8.3 & 8.4 Time-Aware Train/Test Split & Forecasting without Leakage ---
     ts_sorted = ts_df.sort_values("tanggal").reset_index(drop=True)
     ts_sorted["tanggal_dt"] = pd.to_datetime(ts_sorted["tanggal"])
 
-    # Compute strictly lagged features using ONLY past information (up to t-1) to prevent any target leakage
     ts_sorted["past_mean_7d_orders"] = ts_sorted["jumlah_order_reguler"].shift(1).rolling(7, min_periods=1).mean().fillna(0.0)
     ts_sorted["past_mean_14d_orders"] = ts_sorted["jumlah_order_reguler"].shift(1).rolling(14, min_periods=1).mean().fillna(0.0)
     ts_sorted["past_sum_7d_rev"] = ts_sorted["pendapatan_bersih_reguler"].shift(1).rolling(7, min_periods=1).sum().fillna(0.0)
@@ -211,19 +176,13 @@ def run_governed_pipeline(source_dir=None):
         "hari_dalam_minggu", "is_weekend", "dow_sin", "dow_cos",
         "order_lag_1_hari", "order_lag_7_hari", "past_mean_7d_orders", "past_mean_14d_orders"
     ]
-    rev_features = [
-        "hari_dalam_minggu", "is_weekend", "dow_sin", "dow_cos",
-        "pendapatan_lag_1_hari", "pendapatan_lag_7_hari", "past_mean_7d_rev", "past_mean_7d_orders"
-    ]
 
-    # Time-aware split: Train = 2025-05-05 .. 2026-07-31 (453 days), Test = 2026-08-01 .. 2026-10-13 (74 days)
     train_mask = ts_sorted["tanggal"] <= "2026-07-31"
     test_mask = ts_sorted["tanggal"] >= "2026-08-01"
 
     train_df = ts_sorted[train_mask].copy()
     test_df = ts_sorted[test_mask].copy()
 
-    # 1. Daily Order Model vs Naive 7-Day Moving Average Baseline
     X_train_ord = train_df[order_features].values
     y_train_ord = train_df["jumlah_order_reguler"].values
     X_test_ord = test_df[order_features].values
@@ -241,7 +200,6 @@ def run_governed_pipeline(source_dir=None):
     base_ord_rmse = float(np.sqrt(np.mean((y_test_ord - y_base_ord) ** 2)))
     base_ord_wape = calculate_wape(y_test_ord, y_base_ord)
 
-    # 2. Weekly (7-Day Rolling) Order Demand Aggregation on Held-Out Test Set
     weekly_actual = pd.Series(y_test_ord).rolling(7).sum().dropna().values
     weekly_pred = pd.Series(y_pred_ord).rolling(7).sum().dropna().values
     weekly_base = pd.Series(y_base_ord).rolling(7).sum().dropna().values
@@ -251,7 +209,6 @@ def run_governed_pipeline(source_dir=None):
     weekly_wape = calculate_wape(weekly_actual, weekly_pred)
     weekly_base_wape = calculate_wape(weekly_actual, weekly_base)
 
-    # 3. Refit on full 527-day series to generate 14-day forward forecast (2026-10-14 to 2026-10-27)
     full_order_model = RidgeRegressorCompat(alpha=10.0).fit(ts_sorted[order_features].values, ts_sorted["jumlah_order_reguler"].values)
     history_orders = list(ts_sorted["jumlah_order_reguler"].values.astype(float))
     last_date = pd.to_datetime(ts_sorted["tanggal"].iloc[-1])
@@ -280,7 +237,6 @@ def run_governed_pipeline(source_dir=None):
             "batas_atas": round(pred_val + 1.28 * residual_std, 2),
         })
 
-    # Compute RFM & B2B Operational Summary for Admin Analytics
     repeat_intervals = rfm_df["rata_rata_jeda_order_hari"].dropna()
     b2b_monthly = b2b_df.groupby("periode_bulan").agg(
         nilai_proyek=("nilai_proyek", "sum"),
@@ -295,6 +251,13 @@ def run_governed_pipeline(source_dir=None):
         pendapatan_kotor=("pendapatan_kotor_reguler", "sum"),
         pendapatan_bersih=("pendapatan_bersih_reguler", "sum"),
     ).reset_index().to_dict(orient="records")
+
+    top_services_hist = trx_df.groupby("kategori_layanan").agg(
+        jumlah_transaksi=("id_transaksi", "count"),
+        total_unit=("qty_unit", "sum"),
+        pendapatan_kotor=("total_tagihan_kotor", "sum"),
+        pendapatan_bersih=("pendapatan_bersih", "sum"),
+    ).reset_index().sort_values("jumlah_transaksi", ascending=False).to_dict(orient="records")
 
     predictions_payload = {
         "target": "jumlah_order_reguler_harian",
@@ -321,36 +284,47 @@ def run_governed_pipeline(source_dir=None):
         "prediksi": forecast_days,
     }
 
+    customer_rfm_block = {
+        "total_customers": int(len(rfm_df)),
+        "registered_members": int((rfm_df["terdaftar_di_member"] == 1).sum()),
+        "b2b_customers": int((rfm_df["segmen_pelanggan"] == "Korporat / Instansi / Komersial").sum()),
+        "residential_customers": int((rfm_df["segmen_pelanggan"] == "Perorangan / Residensial").sum()),
+        "avg_repeat_interval_days": round(float(repeat_intervals.mean()), 1),
+        "median_repeat_interval_days": round(float(repeat_intervals.median()), 1),
+        "segments": rfm_df["segmen_retensi_rfm"].value_counts().to_dict(),
+        "top_champions": rfm_df[rfm_df["segmen_retensi_rfm"].str.contains("Champions", na=False)][
+            ["id_pelanggan", "segmen_pelanggan", "terdaftar_di_member", "frequency_total_order", "total_unit_dilayani", "monetary_total_bersih"]
+        ].head(10).to_dict(orient="records"),
+    }
+
+    b2b_block = {
+        "total_records": int(len(b2b_df)),
+        "period_range": "2025-07 s/d 2026-10",
+        "total_gross_value_idr": int(b2b_df["nilai_proyek"].sum()),
+        "total_project_cost_idr": int(b2b_df["biaya_proyek"].sum()),
+        "total_marketing_fee_idr": int(b2b_df["fee_marketing"].sum()),
+        "total_net_profit_idr": int(b2b_df["profit_bersih_terkoreksi"].sum()),
+        "monthly_breakdown": b2b_monthly,
+    }
+
+    reg_block = {
+        "total_transactions": int(len(trx_df)),
+        "total_units_serviced": int(trx_df["qty_unit"].sum()),
+        "total_gross_revenue_idr": int(trx_df["total_tagihan_kotor"].sum()),
+        "total_net_revenue_idr": int(trx_df["pendapatan_bersih"].sum()),
+        "top_services": top_services_hist,
+        "monthly_breakdown": reg_monthly,
+    }
+
     rfm_b2b_summary = {
         "generated_at": datetime.now().isoformat(),
-        "customer_rfm": {
-            "total_customers": int(len(rfm_df)),
-            "registered_members": int((rfm_df["terdaftar_di_member"] == 1).sum()),
-            "b2b_customers": int((rfm_df["segmen_pelanggan"] == "Korporat / Instansi / Komersial").sum()),
-            "residential_customers": int((rfm_df["segmen_pelanggan"] == "Perorangan / Residensial").sum()),
-            "avg_repeat_interval_days": round(float(repeat_intervals.mean()), 1),
-            "median_repeat_interval_days": round(float(repeat_intervals.median()), 1),
-            "segments": rfm_df["segmen_retensi_rfm"].value_counts().to_dict(),
-            "top_champions": rfm_df[rfm_df["segmen_retensi_rfm"].str.contains("Champions", na=False)][
-                ["id_pelanggan", "segmen_pelanggan", "terdaftar_di_member", "frequency_total_order", "total_unit_dilayani", "monetary_total_bersih"]
-            ].head(10).to_dict(orient="records"),
-        },
-        "b2b_resik_projects": {
-            "total_records": int(len(b2b_df)),
-            "period_range": "2025-07 s/d 2026-10",
-            "total_gross_value_idr": int(b2b_df["nilai_proyek"].sum()),
-            "total_project_cost_idr": int(b2b_df["biaya_proyek"].sum()),
-            "total_marketing_fee_idr": int(b2b_df["fee_marketing"].sum()),
-            "total_net_profit_idr": int(b2b_df["profit_bersih_terkoreksi"].sum()),
-            "monthly_breakdown": b2b_monthly,
-        },
-        "regular_operations": {
-            "total_transactions": int(len(trx_df)),
-            "total_units_serviced": int(trx_df["qty_unit"].sum()),
-            "total_gross_revenue_idr": int(trx_df["total_tagihan_kotor"].sum()),
-            "total_net_revenue_idr": int(trx_df["pendapatan_bersih"].sum()),
-            "monthly_breakdown": reg_monthly,
-        },
+        "customer_rfm": customer_rfm_block,
+        "rfm_summary": customer_rfm_block,
+        "b2b_resik_projects": b2b_block,
+        "b2b_summary": b2b_block,
+        "regular_operations": reg_block,
+        "timeseries_summary": reg_block,
+        "top_services_historical": top_services_hist,
     }
 
     with open(OUTPUT_DIR / "predictions.json", "w", encoding="utf-8") as f:
@@ -368,7 +342,6 @@ def run_governed_pipeline(source_dir=None):
         }, f)
 
     return profile_report, predictions_payload, rfm_b2b_summary
-
 
 if __name__ == "__main__":
     prof, pred, summ = run_governed_pipeline()

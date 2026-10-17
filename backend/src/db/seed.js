@@ -7,29 +7,23 @@ async function seed() {
   try {
     await client.query('BEGIN');
 
-    // 1. Settings
-    console.log('Seeding settings...');
     await client.query(`
       INSERT INTO settings (key, value) VALUES 
-      ('operating_hours', '{"open": "08:00", "close": "17:00", "days": [1,2,3,4,5], "slot_minutes": 60, "min_lead_minutes": 120, "max_advance_days": 30, "reminder_hour": -24}')
+      ('operating_hours', '{"open": "08:00", "close": "19:00", "days": [1,2,3,4,5,6], "slot_minutes": 60, "min_lead_minutes": 60, "max_advance_days": 60, "reminder_hour": 8}')
       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
     `);
 
-    // 2. Service Catalog
-    console.log('Seeding service catalog...');
     await client.query(`
-      INSERT INTO service_catalog (kode, nama_layanan, kategori, deskripsi, harga, durasi_menit)
+      INSERT INTO service_catalog (kode, nama_layanan, kategori, deskripsi, harga, durasi_menit, garansi_hari, interval_maintenance_hari)
       VALUES 
-      ('SRV-CUCI-01', 'Cuci AC Standard', 'cuci', 'Pembersihan filter, evaporator, dan cek tekanan freon', 75000, 60),
-      ('SRV-CUCI-CORE', 'Cuci AC Core (Deep Clean)', 'cuci', 'Bongkar total rotor fan & talang air, chemical wash, & sterilisasi', 120000, 90),
-      ('SRV-CUCI-FREON', 'Paket Core + Isi Freon', 'cuci', 'Deep clean bongkar total plus isi freon murni presisi pabrikan', 220000, 105),
-      ('SRV-BONGKAR-01', 'Bongkar Pasang AC', 'instalasi', 'Jasa bongkar dan pasang AC di lokasi baru', 350000, 120),
-      ('SRV-FREON-01', 'Isi Freon R32', 'perbaikan', 'Pengisian freon R32 sampai tekanan standar', 150000, 45)
+      ('SRV-CUCI-01', 'Cuci AC Standard', 'cuci', 'Pembersihan filter, evaporator, dan cek tekanan freon', 75000, 60, 14, 90),
+      ('SRV-CUCI-CORE', 'Cuci AC Core (Deep Clean)', 'cuci', 'Bongkar total rotor fan & talang air, chemical wash, & sterilisasi', 120000, 90, 30, 90),
+      ('SRV-CUCI-FREON', 'Paket Core + Isi Freon', 'cuci', 'Deep clean bongkar total plus isi freon murni presisi pabrikan', 220000, 105, 45, 120),
+      ('SRV-BONGKAR-01', 'Bongkar Pasang AC', 'instalasi', 'Jasa bongkar dan pasang AC di lokasi baru', 350000, 120, 30, 180),
+      ('SRV-FREON-01', 'Isi Freon R32', 'perbaikan', 'Pengisian freon R32 sampai tekanan standar', 150000, 45, 30, 90)
       ON CONFLICT (kode) DO NOTHING;
     `);
 
-    // 3. Technicians
-    console.log('Seeding technicians...');
     const techData = [
       { nama: 'Budi Santoso', kontak: '081234567890' },
       { nama: 'Agus Setiawan', kontak: '081234567891' }
@@ -47,10 +41,8 @@ async function seed() {
       }
     }
 
-    // 4. Users
-    console.log('Seeding users...');
     const passwordHash = await bcrypt.hash(config.demoPassword, 10);
-    
+
     await client.query(`
       INSERT INTO users (nama, email, password_hash, role)
       VALUES ('Admin Utama', 'admin@nara-ac.local', $1, 'admin')
@@ -66,8 +58,6 @@ async function seed() {
       `, [t.nama, email, passwordHash, t.id]);
     }
 
-    // 5. Customers
-    console.log('Seeding customers...');
     const custRes = await client.query(`
       INSERT INTO customers (nama, kontak, alamat, is_synthetic)
       VALUES 
@@ -77,15 +67,12 @@ async function seed() {
       RETURNING id;
     `);
     const customers = custRes.rows;
-    
-    // If no rows returned, fetch existing ones
+
     if (customers.length === 0) {
       const existingCust = await client.query(`SELECT id FROM customers WHERE kontak IN ('085512341234', '085512341235')`);
       customers.push(...existingCust.rows);
     }
 
-    // 6. Inventory
-    console.log('Seeding inventory...');
     await client.query(`
       INSERT INTO inventory (nama, kategori, stok, satuan, min_stok)
       VALUES 
@@ -94,15 +81,12 @@ async function seed() {
       ON CONFLICT (nama) DO NOTHING;
     `);
 
-    // 7. Bookings
-    console.log('Seeding bookings...');
     const svcs = (await client.query('SELECT id FROM service_catalog')).rows;
-    
+
     if (customers.length > 0 && svcs.length > 0 && techs.length > 0) {
-      // Check if seed bookings already exist
       const existingPast = (await client.query('SELECT 1 FROM bookings WHERE kode_booking = $1', ['BK-PAST-001'])).rows.length > 0;
       const existingFut = (await client.query('SELECT 1 FROM bookings WHERE kode_booking = $1', ['BK-FUT-001'])).rows.length > 0;
-      
+
       if (!existingPast) {
         await client.query(`
           INSERT INTO bookings (kode_booking, customer_id, layanan_id, jadwal_mulai, jadwal_selesai, alamat, keluhan, kontak, status, teknisi_id, is_synthetic, status_pembayaran)
@@ -112,7 +96,7 @@ async function seed() {
           ) ON CONFLICT (kode_booking) DO NOTHING;
         `, [customers[0].id, svcs[0].id, techs[0].id]);
       }
-      
+
       if (!existingFut) {
         await client.query(`
           INSERT INTO bookings (kode_booking, customer_id, layanan_id, jadwal_mulai, jadwal_selesai, alamat, keluhan, kontak, status, teknisi_id, is_synthetic, status_pembayaran)

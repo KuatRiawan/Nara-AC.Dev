@@ -1,10 +1,5 @@
 import { Component } from 'react';
 
-/**
- * ErrorBoundary component to catch and handle React component errors
- * Usage: Wrap any component tree that might throw errors
- * Example: <ErrorBoundary><MyComponent /></ErrorBoundary>
- */
 export class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
@@ -12,19 +7,16 @@ export class ErrorBoundary extends Component {
   }
 
   static getDerivedStateFromError(error) {
-    // Update state so the next render will show the fallback UI
     return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
-    // You can log the error to an error reporting service
     console.error('ErrorBoundary caught error:', error, errorInfo);
     this.setState({ errorInfo });
   }
 
   render() {
     if (this.state.hasError) {
-      // You can render any custom fallback UI
       return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50" role="alert">
           <div className="bg-white rounded-xl shadow-lg border border-red-200 p-8 max-w-md w-full text-center">

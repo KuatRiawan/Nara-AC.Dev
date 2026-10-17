@@ -1,6 +1,5 @@
 import '@testing-library/jest-dom/vitest';
 
-// Mock matchMedia for components that use it
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: (query) => ({
@@ -15,7 +14,6 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 });
 
-// Mock IntersectionObserver
 class MockIntersectionObserver {
   observe() {}
   unobserve() {}
@@ -23,7 +21,6 @@ class MockIntersectionObserver {
 }
 window.IntersectionObserver = MockIntersectionObserver;
 
-// Mock ResizeObserver
 class MockResizeObserver {
   observe() {}
   unobserve() {}
@@ -31,10 +28,8 @@ class MockResizeObserver {
 }
 window.ResizeObserver = MockResizeObserver;
 
-// Mock scrollTo
 window.scrollTo = () => {};
 
-// Mock clipboard
 Object.assign(navigator, {
   clipboard: {
     writeText: () => Promise.resolve(),

@@ -73,9 +73,14 @@ backend/uploads/*
 # Agent / Tooling State
 .agents
 
+# Design System Folder
+design-system/
+
 # Audit Reports & Local Docs
+NARA_AC*.md
 AUDIT_REPORT*.md
 test.md
 
 # Local seed files (may contain demo data)
 backend/src/db/seedDummy.js
+

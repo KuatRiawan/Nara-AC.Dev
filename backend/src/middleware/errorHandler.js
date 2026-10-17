@@ -1,7 +1,6 @@
 const { AppError } = require('../errors');
 const { logError } = require('../utils/logger');
 
-// eslint-disable-next-line no-unused-vars
 function errorHandler(err, req, res, _next) {
   if (err instanceof AppError) {
     return res.status(err.status).json({ error: { code: err.code, message: err.message, ...(err.detail ? { detail: err.detail } : {}) } });
@@ -19,7 +18,6 @@ function errorHandler(err, req, res, _next) {
     return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: err.detail || 'Nilai yang dimasukkan tidak valid untuk field ini.' } });
   }
 
-  // Structured error logging (BE-050)
   if (err && err !== 'pipe') {
     logError(req, err, { statusCode: err.status || 500 });
   }

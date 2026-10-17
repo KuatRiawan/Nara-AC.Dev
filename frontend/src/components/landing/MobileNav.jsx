@@ -21,10 +21,8 @@ export default function MobileNav({ isOpen, onClose, scrollTo }) {
   
   const drawerRef = useRef(null);
   
-  // Focus trap untuk aksesibilitas
   useFocusTrap(drawerRef, isOpen, onClose);
 
-  // Close on escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -35,7 +33,6 @@ export default function MobileNav({ isOpen, onClose, scrollTo }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Prevent body scroll when open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -51,7 +48,6 @@ export default function MobileNav({ isOpen, onClose, scrollTo }) {
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -61,7 +57,6 @@ export default function MobileNav({ isOpen, onClose, scrollTo }) {
             aria-hidden="true"
           />
 
-          {/* Drawer / Sheet */}
           <motion.div
             initial={{ opacity: 0, y: -20, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -75,7 +70,6 @@ export default function MobileNav({ isOpen, onClose, scrollTo }) {
             ref={drawerRef}
           >
             <div className="p-6">
-              {/* Header */}
               <div className="flex justify-between items-center pb-5 border-b border-slate-100">
                 <CompanyLogo dark={false} iconSize="h-8" />
                 <button
@@ -87,7 +81,6 @@ export default function MobileNav({ isOpen, onClose, scrollTo }) {
                 </button>
               </div>
 
-              {/* Navigation Links */}
               <nav className="py-4 space-y-1">
                 {navLinks.map((item) => (
                   <button
@@ -104,7 +97,6 @@ export default function MobileNav({ isOpen, onClose, scrollTo }) {
                 ))}
               </nav>
 
-              {/* Action Buttons */}
               <div className="pt-4 border-t border-slate-100 space-y-3">
                 <Link
                   to="/booking"

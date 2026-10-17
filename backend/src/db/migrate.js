@@ -4,7 +4,6 @@ const { pool } = require('./pool');
 
 async function migrate({ reset = false } = {}) {
   if (reset) {
-    // Warning: This is destructive and should only be used in development
     if (process.env.NODE_ENV === 'production') {
       throw new Error('Menolak --reset di production. Gunakan migrasi terkontrol.');
     }

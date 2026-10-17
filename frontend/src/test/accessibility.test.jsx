@@ -5,7 +5,6 @@ import { axe, toHaveNoViolations } from 'jest-axe';
 
 expect.extend(toHaveNoViolations);
 
-// Mock AuthContext
 vi.mock('../AuthContext', async () => {
   const { createContext } = await import('react');
   const MockAuthContext = createContext({ login: () => {}, logout: () => {}, user: null, loading: false });
@@ -16,14 +15,13 @@ vi.mock('../AuthContext', async () => {
   };
 });
 
-// Mock useBusinessProfile
 vi.mock('../hooks/useBusinessProfile', () => ({
   useBusinessProfile: () => ({ whatsappNumber: '6281234567890', profile: { phone: '0812-3456-7890' }, loading: false }),
   buildWhatsAppUrl: (num, msg) => `https://wa.me/${num}${msg ? `?text=${encodeURIComponent(msg)}` : ''}`,
   normalizeWhatsAppNumber: (p) => p,
+  COPYRIGHT_TEXT: '© 2026 CV. Nara Teknindotama. Seluruh hak cipta dilindungi.',
 }));
 
-// Mock api
 vi.mock('../api', () => ({
   default: { get: vi.fn(() => Promise.resolve({ data: [] })), post: vi.fn() },
   setCsrfToken: vi.fn(),
@@ -41,7 +39,6 @@ describe('LoginPage Accessibility', () => {
     );
     const results = await axe(container, {
       rules: {
-        // Focus on form-related a11y rules
         'label': { enabled: true },
         'form-field-multiple-labels': { enabled: true },
         'color-contrast': { enabled: false }, // Tailwind colors may not pass in jsdom
@@ -56,7 +53,6 @@ describe('LoginPage Accessibility', () => {
         <LoginPage />
       </BrowserRouter>
     );
-    // Every input should be findable by its label
     const emailInput = screen.getByLabelText(/Email/i);
     const passwordInput = screen.getByLabelText(/Kata Sandi/i);
     expect(emailInput).toBeInTheDocument();

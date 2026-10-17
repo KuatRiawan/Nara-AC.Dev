@@ -14,11 +14,13 @@ module.exports = {
   port: Number(process.env.PORT || 4000),
   databaseUrl: required('DATABASE_URL', 'postgres://postgres@localhost:5433/nara_ac'),
   dbSsl: process.env.DB_SSL === 'true',
-  jwtSecret: process.env.JWT_SECRET || (() => {
-    if (isProd) throw new Error('Environment variable JWT_SECRET wajib diisi di production');
-    console.warn('[config] PERINGATAN: JWT_SECRET tidak diisi. Menggunakan secret default development yang TIDAK AMAN. Wajib diisi di production!');
-    return 'dev-only-insecure-jwt-secret-change-me';
-  })(),
+  jwtSecret: required('JWT_SECRET', (() => {
+    if (!isProd) {
+      console.warn('[config] PERINGATAN: JWT_SECRET tidak diisi. Menggunakan secret default development yang TIDAK AMAN. Wajib diisi di production!');
+      return 'dev-only-insecure-jwt-secret-change-me';
+    }
+    return undefined;
+  })()),
   jwtExpires: process.env.JWT_EXPIRES || '8h',
   corsOrigins: (process.env.CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173')
     .split(',').map((s) => s.trim()).filter(Boolean),

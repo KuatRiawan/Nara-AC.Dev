@@ -1,4 +1,3 @@
-/** Helper bersama: audit log & notifikasi dalam-aplikasi. Selalu dipanggil dengan client transaksi. */
 
 const actorOf = (user) => ({
   nama: (user && (user.nama || user.label)) || 'sistem',
@@ -15,10 +14,6 @@ async function audit(db, user, action, entity, entityId, { before = null, after 
   );
 }
 
-/**
- * role: 'admin' (id null = semua admin) | 'technician' (technicians.id) | 'customer' (customers.id).
- * dedup: kunci unik agar notifikasi sama tidak berulang (mis. reminder).
- */
 async function notify(db, { role, id = null, title, message, type, bookingId = null, tautan = null, dedup = null }) {
   await db.query(
     `INSERT INTO notifications (target_role, target_id, title, message, type, reference_id, booking_id, tautan, dedup_key)

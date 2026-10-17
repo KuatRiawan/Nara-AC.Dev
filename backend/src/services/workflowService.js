@@ -1,8 +1,3 @@
-/**
- * Workflow operasional: penugasan, jadwal ulang, pembatalan, penundaan, pengerjaan teknisi,
- * checklist, foto, bahan, laporan servis. Semua aksi kritis berjalan dalam transaksi dan
- * menulis audit log + notifikasi (atomik).
- */
 const { withTx, query } = require('../db/pool');
 const { E } = require('../errors');
 const { audit, notify } = require('./common');
@@ -19,12 +14,12 @@ const DEFAULT_CHECKLIST = [
   { task: 'Cek Tekanan Freon', wajib: true },
   { task: 'Bersihkan Kondensor (Outdoor)', wajib: true },
   { task: 'Cek Arus Listrik & Kompresor', wajib: true },
-  { task: 'Cek Pipa Kapiler & Sambungan', wajib: false },
+  { task: 'Cek Pipa Kapiler & Sambungan', wajib: true },
   { task: 'Tes Nyala (Running Test)', wajib: true },
 ];
 
 const DELAY_CATEGORIES = [
-  'pelanggan_tidak_di_tempat', 'kendala_peralatan', 'pekerjaan_sebelumnya_molor', 'macet', 'kendala_teknis', 'lainnya',
+  'pelanggan_tidak_di_tempat', 'kendala_peralatan', 'pekerjaan_sebelumnya_molor', 'macet', 'kendala_teknis', 'cuaca_buruk', 'lainnya',
 ];
 
 const label = (b) => b.kode_booking;
@@ -36,7 +31,6 @@ function assertOwnJob(b, user) {
   }
 }
 
-/** Cek semua aturan penugasan. Melempar 409 (bentrok/tidak tersedia) atau 422 (teknisi nonaktif). */
 async function assertTechnicianAssignable(db, teknisiId, start, end, excludeBookingId) {
   const t = (await db.query('SELECT * FROM technicians WHERE id=$1', [teknisiId])).rows[0];
   if (!t) throw E.validation('Teknisi tidak valid.', { teknisi_id: 'Teknisi tidak ditemukan.' });
@@ -64,7 +58,6 @@ async function assertTechnicianAssignable(db, teknisiId, start, end, excludeBook
   return t;
 }
 
-/** Rekomendasi teknisi: ketersediaan, bentrok, beban kerja hari itu, status aktif. */
 async function recommendTechnicians(start, end, excludeBookingId = null) {
   const tanggal = wibDateString(start);
   const dayStart = startOfWibDay(tanggal);
@@ -185,12 +178,21 @@ async function reportDelay(id, { kategori, alasan, durasi_tunggu_menit: durasiTu
       throw E.business(`Keterlambatan tidak dapat dilaporkan pada status "${b.status}".`);
     }
     const tungguNote = durasiTunggu ? ` (Telah menunggu ${durasiTunggu} menit)` : '';
-    const teks = `[${kategori}] ${alasan}${tungguNote}`;
+    const labelKategori = {
+      macet: 'Lalu Lintas / Macet',
+      cuaca_buruk: 'Cuaca Buruk / Hujan Lebat',
+      pelanggan_tidak_di_tempat: 'Akses Lokasi / Pelanggan Belum Siap',
+      pekerjaan_sebelumnya_molor: 'Pekerjaan Sebelumnya Melebihi Estimasi',
+      kendala_peralatan: 'Kendala Peralatan Kerja',
+      kendala_teknis: 'Kendala Teknis Lapangan',
+      lainnya: 'Lainnya',
+    }[kategori] || kategori;
+    const teks = `[${labelKategori}] ${alasan}${tungguNote}`;
     await client.query('UPDATE bookings SET status=$2, alasan_tunda=$3, updated_at=now() WHERE id=$1', [id, 'delayed', teks]);
     await client.query('INSERT INTO status_log (booking_id, status_lama, status_baru, diubah_oleh, catatan) VALUES ($1,$2,$3,$4,$5)',
       [id, b.status, 'delayed', user.nama, teks]);
     await audit(client, user, 'job_delayed', 'booking', id, { before: { status: b.status }, after: { status: 'delayed' }, metadata: { kategori, alasan, durasi_tunggu_menit: durasiTunggu, kode: label(b) } });
-    await notify(client, { role: 'admin', title: 'Pekerjaan terlambat', message: `${label(b)} dilaporkan tertunda: ${teks}`, type: 'booking', bookingId: id, tautan: '/admin/bookings?status=delayed' });
+    await notify(client, { role: 'admin', title: 'Pekerjaan terlambat', message: `${label(b)} dilaporkan tertunda: ${teks}`, type: 'booking', bookingId: id, tautan: `/admin/bookings?bookingId=${id}` });
     await notify(client, { role: 'customer', id: b.customer_id, title: 'Pekerjaan tertunda', message: `Booking ${label(b)} mengalami keterlambatan. Admin akan menghubungi Anda.`, type: 'booking', bookingId: id, tautan: `/status/${label(b)}` });
     return bookingRow(client, id);
   });
@@ -330,7 +332,6 @@ async function completeJob(id, { override_alasan: overrideAlasan } = {}, user) {
       }
     }
 
-    // BR-18 & BR-19: Wajib melampirkan minimal 1 foto kondisi sebelum (before) dan 1 foto sesudah pengerjaan (after)
     const photoCounts = (await client.query(
       `SELECT tipe, COUNT(*)::int AS total FROM work_order_photos WHERE booking_id = $1 GROUP BY tipe`, [id]
     )).rows;
@@ -355,12 +356,11 @@ async function completeJob(id, { override_alasan: overrideAlasan } = {}, user) {
        ON CONFLICT (booking_id) DO UPDATE SET data=$2, dibuat_pada=now()`, [id, JSON.stringify(report)]);
     await audit(client, user, 'job_completed', 'booking', id, { before: { status: 'on process' }, after: { status: 'done' }, metadata: { kode: label(b), override: pending.length ? overrideAlasan : null } });
     await notify(client, { role: 'customer', id: b.customer_id, title: 'Service selesai', message: `Booking ${label(b)} telah selesai. Berikan penilaian Anda.`, type: 'booking', bookingId: id, tautan: `/feedback/${label(b)}` });
-    await notify(client, { role: 'admin', title: 'Pekerjaan selesai', message: `${label(b)} diselesaikan oleh ${user.nama}.`, type: 'booking', bookingId: id, tautan: '/admin/bookings' });
+    await notify(client, { role: 'admin', title: 'Pekerjaan selesai', message: `${label(b)} diselesaikan oleh ${user.nama}.`, type: 'booking', bookingId: id, tautan: `/admin/bookings?bookingId=${id}` });
     return bookingRow(client, id);
   });
 }
 
-/** Detail pekerjaan lengkap (dipakai teknisi & admin). Kontrol akses: teknisi hanya pekerjaannya. */
 async function jobDetail(id, user) {
   const b = (await query(
     `SELECT b.id, b.kode_booking, b.jadwal_mulai, b.jadwal_selesai, b.status, b.alamat, b.keluhan, b.teknisi_id, b.alasan_tunda, b.alasan_batal,
@@ -402,10 +402,6 @@ async function jobDetail(id, user) {
   };
 }
 
-/**
- * BR-14: Jika pelanggan tidak memberikan respons dalam 48 jam setelah pekerjaan selesai ('done'),
- * sistem otomatis menandai konfirmasi_pelanggan = TRUE.
- */
 async function autoConfirmOverdueCompletions() {
   const r = await query(
     `UPDATE bookings

@@ -5,7 +5,8 @@ import { AuthContext } from '../AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import CompanyLogo from '../components/CompanyLogo';
-import { useBusinessProfile, buildWhatsAppUrl } from '../hooks/useBusinessProfile';
+import { useBusinessProfile, buildWhatsAppUrl, COPYRIGHT_TEXT } from '../hooks/useBusinessProfile';
+import { useContextualBack } from '../hooks/useContextualBack';
 import api from '../api';
 import {
   Eye,
@@ -36,9 +37,8 @@ import {
 } from 'lucide-react';
 
 export default function LoginPage() {
-  const [activeTab, setActiveTab] = useState('otp'); // 'otp' | 'password'
+  const [activeTab, setActiveTab] = useState('password'); // 'otp' | 'password'
 
-  // WhatsApp OTP states
   const [otpPhone, setOtpPhone] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [otpStep, setOtpStep] = useState('phone'); // 'phone' | 'code'
@@ -48,14 +48,12 @@ export default function LoginPage() {
   const [notRegistered, setNotRegistered] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
 
-  // Email/Password states
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [pwdError, setPwdError] = useState('');
   const [pwdLoading, setPwdLoading] = useState(false);
 
-  // Forgot password & reset modal states
   const [isForgotOpen, setIsForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
@@ -68,9 +66,9 @@ export default function LoginPage() {
 
   const { login, requestCustomerOtp, verifyCustomerOtp } = useContext(AuthContext);
   const navigate = useNavigate();
+  const handleBack = useContextualBack('/');
   const { whatsappNumber } = useBusinessProfile();
 
-  // Resend countdown timer
   useEffect(() => {
     let interval = null;
     if (resendTimer > 0) {
@@ -83,7 +81,6 @@ export default function LoginPage() {
     };
   }, [resendTimer]);
 
-  // Request WhatsApp OTP
   const handleRequestOtp = async (e) => {
     if (e) e.preventDefault();
     if (!otpPhone.trim()) {
@@ -112,7 +109,6 @@ export default function LoginPage() {
     }
   };
 
-  // Verify WhatsApp OTP
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     if (!otpCode.trim() || otpCode.trim().length !== 6) {
@@ -136,7 +132,6 @@ export default function LoginPage() {
     }
   };
 
-  // Login with Email & Password
   const handlePasswordLogin = async (e) => {
     e.preventDefault();
     if (!email.trim() || !password) {
@@ -169,7 +164,6 @@ export default function LoginPage() {
     }
   };
 
-  // Forgot password
   const handleForgotSubmit = async (e) => {
     e.preventDefault();
     if (!forgotEmail.trim()) {
@@ -230,58 +224,46 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50/70 via-slate-50 to-white font-sans flex flex-col text-slate-800 relative selection:bg-blue-600 selection:text-white">
-      {/* Ambient background decoration */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 pointer-events-none overflow-hidden -z-10">
         <div className="absolute -top-24 left-1/4 w-96 h-96 bg-blue-100/50 rounded-full blur-3xl" />
         <div className="absolute -top-12 right-1/4 w-80 h-80 bg-sky-100/40 rounded-full blur-3xl" />
       </div>
 
-      {/* ============================================================== */}
-      {/* 1. TOP NAVBAR (KONSISTEN DENGAN SELURUH SISTEM NARA AC)        */}
-      {/* ============================================================== */}
       <header className="bg-white/90 backdrop-blur-md border-b border-sky-100/80 sticky top-0 z-40 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex justify-between items-center">
-          {/* Logo Brand Resmi */}
           <Link to="/" className="flex items-center hover:opacity-90 transition-opacity">
             <CompanyLogo iconSize="h-8 sm:h-9" />
           </Link>
 
-          {/* Action Links */}
           <div className="flex items-center gap-3">
             <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200/80">
               <ShieldCheck className="w-3.5 h-3.5 text-blue-600" /> Portal Pelanggan &amp; Member
             </span>
 
-            <Link to="/">
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-xl border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-2xs"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Ke Beranda</span>
-              </Button>
-            </Link>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleBack}
+              className="rounded-xl border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Kembali</span>
+            </Button>
           </div>
         </div>
       </header>
 
-      {/* ============================================================== */}
-      {/* 2. MAIN SPLIT CONTENT (12-KOLOM KONSISTEN)                     */}
-      {/* ============================================================== */}
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex items-center">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 w-full items-center">
 
-          {/* SISI KIRI: BENEFIT & PENJELASAN MEMBER NARA AC */}
           <div className="lg:col-span-7 space-y-6">
 
-            {/* Badge Status */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50/80 border border-blue-200 text-blue-700 text-xs font-bold shadow-2xs">
               <Sparkles className="w-4 h-4 text-blue-600" />
               <span>Keanggotaan Eksklusif Nara Member Care</span>
             </div>
 
-            {/* Headline Utama */}
             <div className="space-y-3">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">
                 Perawatan AC Rumah &amp; Kantor Lebih Terencana
@@ -291,7 +273,6 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {/* 3 Pillar Cards (Konsisten dengan Desain Asli) */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-2">
 
               <div className="p-4 rounded-2xl bg-white border border-sky-100/80 shadow-xs hover:border-blue-200 transition-all">
@@ -326,7 +307,6 @@ export default function LoginPage() {
 
             </div>
 
-            {/* Mini Trust Stats Bar */}
             <div className="pt-2 flex flex-wrap items-center gap-6 text-xs text-slate-600 border-t border-slate-200/70">
               <div className="flex items-center gap-1.5">
                 <Star className="w-4 h-4 text-amber-500 fill-amber-400" />
@@ -347,18 +327,15 @@ export default function LoginPage() {
 
           </div>
 
-          {/* SISI KANAN: KARTU FORM LOGIN PELANGGAN & MEMBER */}
           <div className="lg:col-span-5">
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               className="bg-white/95 backdrop-blur-md rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/60 border border-sky-100 relative overflow-hidden"
             >
-              {/* Subtle card glow */}
               <div className="absolute -top-16 -right-16 w-40 h-40 bg-blue-50 rounded-full blur-2xl pointer-events-none" />
               <div className="absolute -bottom-16 -left-16 w-40 h-40 bg-sky-50 rounded-full blur-2xl pointer-events-none" />
 
-              {/* Form Title */}
               <div className="mb-5 relative z-10">
                 <span className="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-1">
                   Portal Autentikasi Member
@@ -371,7 +348,6 @@ export default function LoginPage() {
                 </p>
               </div>
 
-              {/* Tab Switcher: WhatsApp OTP vs Password */}
               <div className="flex rounded-2xl bg-slate-100/90 p-1 mb-5 border border-slate-200/70 relative z-10">
                 <button
                   type="button"
@@ -406,10 +382,8 @@ export default function LoginPage() {
                 </button>
               </div>
 
-              {/* TAB 1: WHATSAPP OTP */}
               {activeTab === 'otp' && (
                 <div className="space-y-4 relative z-10">
-                  {/* Error Banner */}
                   {otpError && (
                     <motion.div
                       initial={{ opacity: 0, y: -6 }}
@@ -437,7 +411,6 @@ export default function LoginPage() {
                     </motion.div>
                   )}
 
-                  {/* Success Banner */}
                   {otpSuccessMsg && !otpError && (
                     <motion.div
                       initial={{ opacity: 0, y: -6 }}
@@ -449,7 +422,6 @@ export default function LoginPage() {
                     </motion.div>
                   )}
 
-                  {/* Step 1: Input Phone */}
                   {otpStep === 'phone' ? (
                     <form onSubmit={handleRequestOtp} className="space-y-4">
                       <div className="space-y-1.5">
@@ -492,25 +464,33 @@ export default function LoginPage() {
                       </Button>
                     </form>
                   ) : (
-                    /* Step 2: Input 6-Digit OTP */
                     <form onSubmit={handleVerifyOtp} className="space-y-4">
-                      <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/70 flex items-center justify-between">
-                        <div>
-                          <span className="text-2xs text-slate-500 block">Kode dikirim ke WhatsApp:</span>
-                          <span className="font-mono font-bold text-xs text-slate-800">{otpPhone}</span>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label htmlFor="otp-phone-readonly" className="text-xs font-bold text-slate-700">
+                            Nomor WhatsApp Tujuan (Terkunci)
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOtpStep('phone');
+                              setOtpCode('');
+                              setOtpError('');
+                              setOtpSuccessMsg('');
+                            }}
+                            className="text-2xs font-bold text-blue-600 hover:underline cursor-pointer"
+                          >
+                            Ubah Nomor
+                          </button>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setOtpStep('phone');
-                            setOtpCode('');
-                            setOtpError('');
-                            setOtpSuccessMsg('');
-                          }}
-                          className="text-2xs font-bold text-blue-600 hover:underline cursor-pointer"
-                        >
-                          Ubah Nomor
-                        </button>
+                        <Input
+                          id="otp-phone-readonly"
+                          type="tel"
+                          readOnly
+                          aria-readonly="true"
+                          value={otpPhone}
+                          className="h-10 text-xs font-mono font-bold rounded-xl border-slate-200 bg-slate-100 text-slate-700 cursor-not-allowed"
+                        />
                       </div>
 
                       <div className="space-y-1.5">
@@ -572,7 +552,6 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* TAB 2: EMAIL & PASSWORD */}
               {activeTab === 'password' && (
                 <form onSubmit={handlePasswordLogin} className="space-y-4 relative z-10">
                   {pwdError && (
@@ -589,13 +568,13 @@ export default function LoginPage() {
                   )}
 
                   <div className="space-y-1.5">
-                    <label htmlFor="cust-email" className="text-xs font-bold text-slate-700 block">
+                    <label htmlFor="login-email" className="text-xs font-bold text-slate-700 block">
                       Email Akun Member
                     </label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <Input
-                        id="cust-email"
+                        id="login-email"
                         type="email"
                         placeholder="nama@email.com"
                         value={email}
@@ -610,7 +589,7 @@ export default function LoginPage() {
 
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <label htmlFor="cust-password" className="text-xs font-bold text-slate-700">
+                      <label htmlFor="login-password" className="text-xs font-bold text-slate-700">
                         Kata Sandi
                       </label>
                       <div className="flex items-center gap-2">
@@ -642,7 +621,7 @@ export default function LoginPage() {
                     <div className="relative">
                       <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <Input
-                        id="cust-password"
+                        id="login-password"
                         type={showPassword ? 'text' : 'password'}
                         placeholder="••••••••"
                         value={password}
@@ -683,7 +662,6 @@ export default function LoginPage() {
                 </form>
               )}
 
-              {/* Tautan Pendaftaran & Portal Staf */}
               <div className="mt-6 pt-5 border-t border-slate-100 text-center space-y-3 relative z-10">
                 <p className="text-xs text-slate-600">
                   Belum memiliki akun member?{' '}
@@ -708,9 +686,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* ============================================================== */}
-      {/* 3. MODAL FORGOT PASSWORD (KONSISTEN)                           */}
-      {/* ============================================================== */}
       <AnimatePresence>
         {isForgotOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
@@ -831,12 +806,9 @@ export default function LoginPage() {
         )}
       </AnimatePresence>
 
-      {/* ============================================================== */}
-      {/* 4. FOOTER RESMI (KONSISTEN)                                    */}
-      {/* ============================================================== */}
       <footer className="bg-white border-t border-slate-200/80 py-6 text-xs text-slate-500 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          <p className="font-medium text-slate-600">&copy; {new Date().getFullYear()} CV. Nara Teknindotama. Seluruh hak cipta dilindungi.</p>
+          <p className="font-medium text-slate-600">{COPYRIGHT_TEXT}</p>
           <div className="flex items-center gap-3 font-medium">
             <Link to="/terms" className="hover:text-blue-600 transition-colors">
               Syarat &amp; Ketentuan

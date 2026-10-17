@@ -1,19 +1,9 @@
--- =============================================================================
--- Migration 019: Full Audit & Business Rules Remediation (A26-CS054)
--- =============================================================================
--- Fixes:
--- 1. DB-001: Add missing `severity` column on `complaint_tickets` used by `chatService.handleComplaint`.
--- 2. DB-002 (BR-23): Add configurable `garansi_hari` (14, 30, or 45 days) to `service_catalog`.
--- 3. DB-003 (BR-04, BR-14, BR-22): Add customer completion confirmation & dual-approval service fee change columns on `bookings`.
--- 4. DB-004: Add `last_message_id` on `whatsapp_conversations` and `whatsapp_webhook_events` table for idempotent webhook processing.
--- 5. DB-005: Seed authentic `CV. Nara Teknindotama` business profile into `settings`.
+BEGIN;
 
--- 1. complaint_tickets.severity
 ALTER TABLE complaint_tickets
   ADD COLUMN IF NOT EXISTS severity VARCHAR(30) NOT NULL DEFAULT 'normal'
   CHECK (severity IN ('normal', 'urgent', 'severe'));
 
--- 2. service_catalog.garansi_hari (BR-23: 14, 30, or 45 days)
 ALTER TABLE service_catalog
   ADD COLUMN IF NOT EXISTS garansi_hari INT NOT NULL DEFAULT 14
   CHECK (garansi_hari IN (14, 30, 45));
@@ -26,7 +16,6 @@ SET garansi_hari = CASE
 END
 WHERE garansi_hari = 14;
 
--- 3. bookings: customer work completion confirmation (BR-14, BR-22) & service fee adjustment dual approval (BR-04)
 ALTER TABLE bookings
   ADD COLUMN IF NOT EXISTS konfirmasi_pelanggan BOOLEAN NOT NULL DEFAULT FALSE,
   ADD COLUMN IF NOT EXISTS waktu_konfirmasi_pelanggan TIMESTAMPTZ,
@@ -37,13 +26,15 @@ ALTER TABLE bookings
   ADD COLUMN IF NOT EXISTS status_persetujuan_biaya VARCHAR(30) NOT NULL DEFAULT 'none'
     CHECK (status_persetujuan_biaya IN ('none', 'pending_approval', 'approved', 'rejected'));
 
--- Backfill konfirmasi_pelanggan for existing bookings that already have a rating
 UPDATE bookings
 SET konfirmasi_pelanggan = TRUE,
-    waktu_konfirmasi_pelanggan = COALESCE(updated_at, created_at, NOW())
-WHERE id IN (SELECT booking_id FROM feedback WHERE rating IS NOT NULL) AND konfirmasi_pelanggan = FALSE;
+    waktu_konfirmasi_pelanggan = COALESCE(selesai_aktual, updated_at, created_at, NOW())
+WHERE konfirmasi_pelanggan = FALSE
+  AND EXISTS (SELECT 1 FROM feedback f WHERE f.booking_id = bookings.id);
 
--- 4. WhatsApp Webhook Idempotency (DB-004 / SEC-004)
+ALTER TABLE warranty_claims
+  ADD COLUMN IF NOT EXISTS foto_bukti_url TEXT;
+
 ALTER TABLE whatsapp_conversations
   ADD COLUMN IF NOT EXISTS last_message_id VARCHAR(120);
 
@@ -58,7 +49,16 @@ CREATE TABLE IF NOT EXISTS whatsapp_webhook_events (
 
 CREATE INDEX IF NOT EXISTS idx_wa_webhook_events_phone ON whatsapp_webhook_events(phone);
 
--- 5. Authentic Company Profile from CV. Nara Teknindotama Company Profile (DB-005)
+INSERT INTO settings (key, value, updated_at)
+VALUES (
+  'operating_hours',
+  '{"open": "08:00", "close": "19:00", "days": [1, 2, 3, 4, 5, 6], "slot_minutes": 60, "min_lead_minutes": 60, "max_advance_days": 60, "reminder_hour": 8}'::jsonb,
+  NOW()
+)
+ON CONFLICT (key) DO UPDATE
+SET value = jsonb_set(settings.value, '{close}', '"19:00"'::jsonb, true),
+    updated_at = NOW();
+
 INSERT INTO settings (key, value, updated_at)
 VALUES (
   'business_profile',
@@ -77,10 +77,12 @@ VALUES (
     'website', 'www.narateknindotama.com',
     'instagram', '@narateknindotamaserviceac',
     'tiktok', 'Nara Theknik',
-    'hours', 'Senin - Minggu (Layanan 24 Jam / Operasional Reguler 08:00 - 17:00 WIB)'
+    'hours', 'Senin - Sabtu: 08:00 - 19:00 WIB (Layanan Darurat 24 Jam)'
   ),
   NOW()
 )
 ON CONFLICT (key) DO UPDATE
 SET value = EXCLUDED.value,
     updated_at = NOW();
+
+COMMIT;

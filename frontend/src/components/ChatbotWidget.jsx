@@ -54,7 +54,6 @@ export default function ChatbotWidget({
   const handleSend = async (e, quickReplyText = null) => {
     e?.preventDefault();
     
-    // Handle quick reply selection
     let userText = input.trim();
     if (quickReplyText) {
       userText = quickReplyText;
@@ -88,7 +87,6 @@ export default function ChatbotWidget({
       const intent = data?.intent || null;
       const fallback = data?.fallback || false;
       
-      // Set quick replies and suggestions
       if (newQuickReplies && newQuickReplies.length > 0) {
         setQuickReplies(newQuickReplies);
       }
@@ -96,7 +94,6 @@ export default function ChatbotWidget({
         setSuggestions(saran);
       }
       
-      // Map actions to action buttons
       let action = null;
       if (actions && actions.length > 0) {
         action = actions[0]; // Take first action
@@ -106,7 +103,6 @@ export default function ChatbotWidget({
         action = { text: 'Cek Status', link: '/status' };
       }
 
-      // If this is a fallback, show suggestions
       if (fallback && saran && saran.length > 0 && quickReplies.length === 0) {
         setQuickReplies(saran);
       }
@@ -122,7 +118,6 @@ export default function ChatbotWidget({
       
       setMessages(prev => [...prev, botMessage]);
       
-      // Auto-hide quick replies after they're used
       if (quickReplyText) {
         setTimeout(() => setQuickReplies([]), 100);
       }
@@ -142,7 +137,6 @@ export default function ChatbotWidget({
   const handleQuickReply = (replyText) => {
     setQuickReplies([]);
     setInput(replyText);
-    // Auto-send after a brief delay
     setTimeout(() => {
       handleSend(null, replyText);
     }, 100);
@@ -150,7 +144,6 @@ export default function ChatbotWidget({
 
   return (
     <>
-      {/* Floating Button - Offset on mobile to avoid colliding with Bottom Navigation */}
       {!hideFloatingButton && (
         <button 
           onClick={handleToggle}
@@ -164,11 +157,9 @@ export default function ChatbotWidget({
         </button>
       )}
 
-      {/* Chat Window */}
       {isOpen && (
         <div className="fixed bottom-20 sm:bottom-24 right-4 sm:right-6 w-[calc(100vw-2rem)] sm:w-96 max-w-sm h-[32rem] max-h-[calc(100dvh-7rem)] bg-white rounded-3xl shadow-2xl border border-sky-100 flex flex-col z-50 overflow-hidden animate-in slide-in-from-bottom-5 duration-300">
           
-          {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-sky-600 text-white p-4 flex justify-between items-center shadow-sm z-10">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
@@ -190,7 +181,6 @@ export default function ChatbotWidget({
             </button>
           </div>
           
-          {/* Chat Area dengan aria-live untuk aksesibilitas */}
           <div 
             className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/70"
             aria-live="polite"
@@ -237,7 +227,6 @@ export default function ChatbotWidget({
               </div>
             )}
             
-            {/* Quick Replies */}
             {(quickReplies.length > 0 || (messages.length > 0 && messages[messages.length - 1]?.quickReplies?.length > 0)) && (
               <div className="flex flex-wrap gap-2 pt-2">
                 {(quickReplies.length > 0 ? quickReplies : messages.length > 0 ? messages[messages.length - 1]?.quickReplies || [] : []).map((reply, idx) => (
@@ -255,10 +244,11 @@ export default function ChatbotWidget({
             <div ref={endRef} />
           </div>
 
-          {/* Input Area */}
           <form onSubmit={handleSend} className="p-3 border-t border-slate-100 bg-white">
             <div className="relative flex items-center">
               <input
+                id="chatbot-message-input"
+                name="chatbot_message"
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}

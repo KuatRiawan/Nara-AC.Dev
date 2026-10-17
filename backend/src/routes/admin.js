@@ -29,7 +29,6 @@ const paging = (q) => {
   return { page, limit: safeLimit, offset: safeOffset };
 };
 
-// ---------- Dasbor ----------
 router.get('/dashboard/summary', validate(Joi.object({ hari: Joi.number().valid(7, 30).default(30) }), 'query'), wrap(async (req, res) => {
   res.json(await dash.summary({ hari: req.valid.query.hari }));
 }));
@@ -46,17 +45,17 @@ router.get('/dashboard/kpi', validate(Joi.object({}), 'query'), wrap(async (_req
   });
 }));
 
-// ---------- Pelanggan ----------
 router.get('/customers', validate(Joi.object({ q: Joi.string().trim().max(80).allow(''), aktif: Joi.boolean(), ...pageQ }), 'query'), wrap(async (req, res) => {
   const { q, aktif } = req.valid.query;
   const { page, limit, offset } = paging(req.valid.query);
   const params = []; const where = [];
-  if (q) { params.push(`%${q}%`); where.push(`(c.nama ILIKE $${params.length} OR c.kontak ILIKE $${params.length} OR c.alamat ILIKE $${params.length})`); }
+  if (q) { params.push(`%${q}%`); where.push(`(c.nama ILIKE $${params.length} OR c.kontak ILIKE $${params.length} OR c.alamat ILIKE $${params.length} OR c.kode_pelanggan ILIKE $${params.length})`); }
   if (aktif !== undefined) { params.push(aktif); where.push(`c.aktif = $${params.length}`); }
   const w = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const total = (await query(`SELECT COUNT(*)::int n FROM customers c ${w}`, params)).rows[0].n;
   const rows = (await query(
     `SELECT c.id, c.nama, c.kontak, c.alamat, c.aktif, c.created_at,
+       c.kode_pelanggan, c.segmen_pelanggan, c.segmen_rfm, c.skor_rfm, c.total_belanja, c.terdaftar_member,
        (SELECT COUNT(*)::int FROM bookings b WHERE b.customer_id=c.id) AS total_booking,
        (SELECT COUNT(*)::int FROM ac_units u WHERE u.customer_id=c.id AND u.aktif) AS total_unit,
        (SELECT MAX(b.jadwal_mulai) FROM bookings b WHERE b.customer_id=c.id) AS booking_terakhir,
@@ -114,7 +113,6 @@ router.patch('/customers/:id', validate(idParam, 'params'), validate(Joi.object(
       const n = (await c.query("SELECT COUNT(*)::int n FROM bookings WHERE customer_id=$1 AND status IN ('scheduled','rescheduled','delayed','on process')", [id])).rows[0].n;
       if (n) throw E.business(`Pelanggan masih memiliki ${n} booking aktif. Selesaikan/batalkan dulu sebelum menonaktifkan.`);
     }
-    // Whitelist kolom yang boleh diupdate untuk mencegah SQL injection
     const allowedColumns = new Set(['nama', 'kontak', 'alamat', 'catatan_umum', 'aktif']);
     const keys = Object.keys(patch).filter(k => allowedColumns.has(k));
     if (keys.length === 0) throw E.validation('Tidak ada field yang valid untuk diupdate.', { field: 'Minimal satu field valid diperlukan.' });
@@ -132,7 +130,6 @@ router.patch('/customers/:id', validate(idParam, 'params'), validate(Joi.object(
   res.json(out);
 }));
 
-// ---------- Unit AC ----------
 const unitFields = {
   brand: Joi.string().trim().min(1).max(60).label('Merk'),
   model: Joi.string().trim().max(60).allow(null, ''),
@@ -192,7 +189,6 @@ router.post('/ac-units', validate(Joi.object({
 }));
 
 router.patch('/ac-units/:id', validate(idParam, 'params'), validate(Joi.object(unitFields).min(1)), wrap(async (req, res) => {
-  // Whitelist kolom yang boleh diupdate untuk mencegah SQL injection
   const allowedColumns = new Set(['brand', 'model', 'tipe', 'kapasitas_pk', 'nomor_seri', 'lokasi', 'tanggal_pasang', 'catatan', 'aktif']);
   const keys = Object.keys(req.body).filter(k => allowedColumns.has(k));
   if (keys.length === 0) throw E.validation('Tidak ada field yang valid untuk diupdate.', { field: 'Minimal satu field valid diperlukan.' });
@@ -208,7 +204,6 @@ router.delete('/ac-units/:id', validate(idParam, 'params'), wrap(async (req, res
   res.json({ success: true, message: 'Unit AC berhasil dinonaktifkan' });
 }));
 
-// ---------- Teknisi ----------
 router.get('/technicians/:id', validate(idParam, 'params'), wrap(async (req, res) => {
   const id = Number(req.params.id);
   const t = (await query('SELECT id, nama, kontak, aktif, catatan, telegram_chat_id, created_at FROM technicians WHERE id=$1', [id])).rows[0];
@@ -233,7 +228,6 @@ router.get('/technicians/:id', validate(idParam, 'params'), wrap(async (req, res
     ...t, akun: user.rows[0] || null, performa: perf.rows[0], rating: rating.rows[0],
     kalender: cal.rows, pekerjaan_berjalan: current.rows, pekerjaan_selesai: completed.rows, pekerjaan_tertunda: delayed.rows,
     ketersediaan: avail.rows,
-    // alias kompatibilitas
     performance: {
       ...perf.rows[0],
       total_jobs: perf.rows[0].total,
@@ -269,7 +263,6 @@ router.post('/technicians/:id/availability', validate(idParam, 'params'), valida
   res.json(out);
 }));
 
-// ---------- Jadwal ----------
 router.get('/schedule', validate(Joi.object({
   dari: dateStr.required(), sampai: dateStr.required(), teknisi_id: Joi.number().integer().positive(),
   layanan_id: Joi.number().integer().positive(), status: Joi.string().valid(...STATUSES),
@@ -309,12 +302,10 @@ router.get('/schedule/recommendation', validate(Joi.object({
   res.json({ data: await wf.recommendTechnicians(start, end, excl) });
 }));
 
-// ---------- Aksi booking ----------
 router.patch('/bookings/:id/assign', validate(idParam, 'params'), validate(Joi.object({ teknisi_id: Joi.number().integer().positive().required().label('Teknisi') })), wrap(async (req, res) => {
   res.json(await wf.assign(Number(req.params.id), req.body.teknisi_id, req.user));
 }));
 
-// BR-11 & BR-12: Penggantian teknisi oleh admin jika berhalangan, atau tawarkan slot alternatif jika tidak ada teknisi pengganti
 router.patch('/bookings/:id/replace-technician', validate(idParam, 'params'), validate(Joi.object({
   teknisi_baru_id: Joi.number().integer().positive().optional().allow(null).label('Teknisi Pengganti'),
   alasan: Joi.string().trim().min(3).max(300).required().label('Alasan Penggantian')
@@ -325,7 +316,6 @@ router.patch('/bookings/:id/replace-technician', validate(idParam, 'params'), va
   const b = (await query('SELECT * FROM bookings WHERE id = $1', [bookingId])).rows[0];
   if (!b) throw E.notFound('Booking tidak ditemukan.');
 
-  // Jika admin memilih teknisi pengganti secara spesifik
   if (newTechId) {
     const updated = await wf.assign(bookingId, newTechId, req.user);
     return res.json({
@@ -335,7 +325,6 @@ router.patch('/bookings/:id/replace-technician', validate(idParam, 'params'), va
     });
   }
 
-  // Jika teknisi_baru_id tidak disediakan, sistem mencari teknisi pengganti yang tersedia (BR-11)
   const recommendations = await wf.recommendTechnicians(new Date(b.jadwal_mulai), new Date(b.jadwal_selesai), bookingId);
   const availableCandidate = recommendations.find((r) => r.assignable);
 
@@ -349,7 +338,6 @@ router.patch('/bookings/:id/replace-technician', validate(idParam, 'params'), va
     });
   }
 
-  // BR-12: Jika teknisi pengganti tidak tersedia, sistem mencari dan menawarkan slot alternatif
   const dateStr = wibDateString(new Date(b.jadwal_mulai));
   const altAvailability = await bs.getAvailability(dateStr, b.layanan_id, b.jumlah_unit || 1);
   const availableSlots = (altAvailability.slot || []).filter((s) => s.tersedia);
@@ -376,7 +364,36 @@ router.patch('/bookings/:id/cancel', validate(idParam, 'params'), validate(Joi.o
   res.json(await wf.adminCancel(Number(req.params.id), req.body.alasan, req.user));
 }));
 
-router.patch('/bookings/:id/delay', validate(idParam, 'params'), validate(Joi.object({
+const DELAY_CATEGORY_MAP = {
+  'lalu lintas / macet': 'macet',
+  'lalu lintas / macet di jalan': 'macet',
+  'macet': 'macet',
+  'cuaca / hujan lebat': 'cuaca_buruk',
+  'cuaca buruk / hujan lebat': 'cuaca_buruk',
+  'cuaca_buruk': 'cuaca_buruk',
+  'akses lokasi sulit': 'pelanggan_tidak_di_tempat',
+  'akses lokasi / rumah pelanggan belum siap': 'pelanggan_tidak_di_tempat',
+  'pelanggan_tidak_di_tempat': 'pelanggan_tidak_di_tempat',
+  'pekerjaan sebelumnya melebihi estimasi': 'pekerjaan_sebelumnya_molor',
+  'pekerjaan_sebelumnya_molor': 'pekerjaan_sebelumnya_molor',
+  'kendala teknis / alat': 'kendala_teknis',
+  'kendala teknis peralatan / kendaraan': 'kendala_teknis',
+  'kendala_peralatan': 'kendala_peralatan',
+  'kendala_teknis': 'kendala_teknis',
+  'lainnya': 'lainnya',
+};
+
+const normalizeDelayCategory = (req, _res, next) => {
+  if (req.body && req.body.kategori) {
+    const raw = String(req.body.kategori).trim().toLowerCase();
+    if (DELAY_CATEGORY_MAP[raw]) {
+      req.body.kategori = DELAY_CATEGORY_MAP[raw];
+    }
+  }
+  next();
+};
+
+router.patch('/bookings/:id/delay', validate(idParam, 'params'), normalizeDelayCategory, validate(Joi.object({
   kategori: Joi.string().valid(...wf.DELAY_CATEGORIES).default('lainnya'), alasan: Joi.string().trim().min(3).max(300).required().label('Alasan'),
 })), wrap(async (req, res) => {
   res.json(await wf.reportDelay(Number(req.params.id), req.body, req.user));
@@ -398,7 +415,6 @@ router.get('/bookings/:id/report', validate(idParam, 'params'), wrap(async (req,
   res.json(r);
 }));
 
-// ---------- Inventory ----------
 const invStatus = (r) => (Number(r.stok) <= 0 ? 'out' : Number(r.stok) <= Number(r.min_stok) ? 'low' : 'ok');
 
 router.get('/inventory', validate(Joi.object({ q: Joi.string().trim().max(60).allow(''), status: Joi.string().valid('ok', 'low', 'out') }), 'query'), wrap(async (req, res) => {
@@ -490,7 +506,6 @@ router.patch('/inventory/:id', validate(idParam, 'params'), validate(Joi.object(
   min_stok: Joi.number().min(0).max(1000000),
   aktif: Joi.boolean(),
 }).min(1)), wrap(async (req, res) => {
-  // Whitelist of allowed columns for UPDATE to prevent mass assignment
   const allowedColumns = ['nama', 'kategori', 'stok', 'satuan', 'min_stok', 'aktif'];
   const sets = []; const params = [req.params.id];
   for (const [k, v] of Object.entries(req.body)) {
@@ -510,8 +525,6 @@ router.patch('/inventory/:id', validate(idParam, 'params'), validate(Joi.object(
   }
 }));
 
-
-// ---------- Audit log ----------
 router.get('/audit-logs', validate(Joi.object({
   q: Joi.string().trim().max(60).allow(''), action: Joi.string().trim().max(60).allow(''), role: Joi.string().valid('admin', 'technician', 'customer', 'system'),
   dari: dateStr, sampai: dateStr, ...pageQ,
@@ -529,12 +542,11 @@ router.get('/audit-logs', validate(Joi.object({
   res.json({ data: rows, meta: { total, page, limit } });
 }));
 
-// ---------- Notifikasi admin ----------
 router.get('/notifications', validate(Joi.object({ unread: Joi.boolean(), ...pageQ }), 'query'), wrap(async (req, res) => {
   const { unread } = req.valid.query;
   const { page, limit, offset } = paging(req.valid.query);
   const params = [];
-  const where = ["target_role='admin'"];
+  const where = ["(target_role='admin' OR target_role IS NULL)"];
   if (unread !== undefined) {
     params.push(!unread ? true : false);
     where.push(`is_read=$${params.length}`);
@@ -549,17 +561,22 @@ router.get('/notifications', validate(Joi.object({ unread: Joi.boolean(), ...pag
   res.json({ data: rows, meta: { total, page, limit } });
 }));
 
-router.patch('/notifications/:id/read', validate(idParam, 'params'), validate(Joi.object({}), 'body'), wrap(async (req, res) => {
-  await query("UPDATE notifications SET is_read=true WHERE id=$1 AND target_role='admin'", [req.params.id]);
-  res.json({ ok: true });
-}));
+const markAdminNotificationRead = wrap(async (req, res) => {
+  await query("UPDATE notifications SET is_read=true WHERE id=$1 AND (target_role='admin' OR target_role IS NULL)", [req.params.id]);
+  res.json({ ok: true, success: true });
+});
 
-router.patch('/notifications/read-all', validate(Joi.object({}), 'body'), wrap(async (_req, res) => {
-  await query("UPDATE notifications SET is_read=true WHERE target_role='admin'");
-  res.json({ ok: true });
-}));
+const markAllAdminNotificationsRead = wrap(async (_req, res) => {
+  await query("UPDATE notifications SET is_read=true WHERE (target_role='admin' OR target_role IS NULL)");
+  res.json({ ok: true, success: true });
+});
 
-// ---------- Feedback ----------
+router.patch('/notifications/:id/read', validate(idParam, 'params'), markAdminNotificationRead);
+router.post('/notifications/:id/read', validate(idParam, 'params'), markAdminNotificationRead);
+
+router.patch('/notifications/read-all', markAllAdminNotificationsRead);
+router.post('/notifications/read-all', markAllAdminNotificationsRead);
+
 router.get('/feedback', validate(Joi.object({
   rating: Joi.number().integer().min(1).max(5), teknisi_id: Joi.number().integer().positive(), maks_rating: Joi.number().integer().min(1).max(5), ...pageQ,
 }), 'query'), wrap(async (req, res) => {
@@ -578,7 +595,6 @@ router.get('/feedback', validate(Joi.object({
   res.json({ data: rows, meta: { total, page, limit }, ringkasan: { ...sum, distribusi: [1, 2, 3, 4, 5].map((r) => ({ rating: r, jumlah: (dist.find((d) => d.rating === r) || {}).jumlah || 0 })), per_teknisi: perTeknisi } });
 }));
 
-// ---------- Akun pelanggan oleh admin ----------
 router.post('/customers/:id/account', validate(idParam, 'params'), validate(Joi.object({
   email: Joi.string().email({ tlds: { allow: false } }).max(120).required().label('Email'), password: Joi.string().min(8).max(100).required().label('Password'),
 })), wrap(async (req, res) => {

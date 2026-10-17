@@ -7,7 +7,6 @@ export default function AirflowBreeze() {
     return null;
   }
 
-  // Atmospheric flow lines representing fresh, clean air circulating
   const breezeStreams = [
     {
       id: 1,
@@ -38,7 +37,6 @@ export default function AirflowBreeze() {
     },
   ];
 
-  // Micro cool air floating particles
   const particles = [
     { id: 1, x: '12%', y: '25%', size: 4, delay: 0, duration: 6 },
     { id: 2, x: '28%', y: '45%', size: 3, delay: 1.5, duration: 8 },
@@ -50,7 +48,6 @@ export default function AirflowBreeze() {
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-      {/* SVG Wave Streams */}
       <svg
         className="absolute top-10 left-0 w-[200%] md:w-[130%] h-80 -translate-x-12 opacity-80"
         viewBox="0 0 1600 300"
@@ -101,7 +98,6 @@ export default function AirflowBreeze() {
         ))}
       </svg>
 
-      {/* Floating Cooling Air Particles */}
       {particles.map((p) => (
         <motion.div
           key={p.id}

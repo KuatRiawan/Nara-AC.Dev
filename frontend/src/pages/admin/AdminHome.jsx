@@ -14,14 +14,12 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
   const navigate = useNavigate();
   const { user: _user } = useContext(AuthContext);
 
-  // Search & Filter state for Today's Operations
   const [searchToday, setSearchToday] = useState('');
   const [filterTodayStatus, setFilterTodayStatus] = useState('all'); // all | scheduled | on process | done | unassigned
   const [assigningId, setAssigningId] = useState(null);
   const [selectedTechForAssign, setSelectedTechForAssign] = useState('');
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
-  // Timeframe selector state for Trend Chart (7 Hari, 1 Bulan, 3 Bulan, 1 Tahun)
   const [trendPeriod, setTrendPeriod] = useState('7d'); // '7d' | '30d' | '90d' | '1y'
   const [apiTrendData, setApiTrendData] = useState(null);
   const [loadingTrends, setLoadingTrends] = useState(false);
@@ -52,7 +50,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
     });
   }, []);
 
-  // Helper fleksibel untuk mengecek & mendapatkan data teknisi yang ditugaskan
   const getAssignedTechnician = useCallback((b) => {
     if (!b) return null;
     if (b.teknisi && typeof b.teknisi === 'object' && b.teknisi.nama) {
@@ -73,7 +70,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
     return null;
   }, [technicians]);
 
-  // Direct fetch for Today's bookings to ensure 100% sync with database
   const [todayBookingsData, setTodayBookingsData] = useState([]);
   const [_loadingToday, setLoadingToday] = useState(false);
 
@@ -112,12 +108,10 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
     return bookings.filter(b => b.jadwal_mulai && isDateToday(b.jadwal_mulai));
   }, [todayBookingsData, bookings]);
 
-  // Action Center state & tabs ('today' | 'upcoming')
   const [actionTab, setActionTab] = useState('today');
   const [upcomingPending, setUpcomingPending] = useState([]);
   const [_loadingUpcoming, setLoadingUpcoming] = useState(false);
 
-  // Fetch upcoming unassigned bookings (from tomorrow onwards, nearest first)
   const fetchUpcomingPending = useCallback(async () => {
     try {
       setLoadingUpcoming(true);
@@ -150,14 +144,12 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
     return () => window.removeEventListener('nara-booking-updated', handleUpdate);
   }, [fetchUpcomingPending]);
 
-  // Today's pending bookings (delayed or unassigned)
   const todayPending = useMemo(() => {
     return todayBookings
       .filter(b => (!getAssignedTechnician(b) && b.status === 'scheduled') || b.status === 'delayed')
       .sort((a, b) => new Date(a.jadwal_mulai).getTime() - new Date(b.jadwal_mulai).getTime());
   }, [todayBookings, getAssignedTechnician]);
 
-  // Active list based on selected tab in Pusat Tindakan
   const actionRequired = useMemo(() => {
     return actionTab === 'today' ? todayPending : upcomingPending;
   }, [actionTab, todayPending, upcomingPending]);
@@ -205,7 +197,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
     );
   };
 
-  // Derived KPI and status stats
   const bookingStats = useMemo(() => {
     const counts = { scheduled: 0, 'on process': 0, done: 0, cancelled: 0, delayed: 0, rescheduled: 0 };
     let todayBookingsCount = todayBookings.length;
@@ -221,7 +212,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
         pendingAssignCount++;
       }
 
-      // Calculate revenue for today (BR-02: 10% discount exclusively for registered members on service fee)
       const unit = b.jumlah_unit || 1;
       const basePrice = b.layanan?.harga || b.harga || 75000;
       const subtotal = basePrice * unit;
@@ -244,7 +234,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
     };
   }, [todayBookings, getAssignedTechnician]);
 
-  // Filtered Today Bookings
   const filteredTodayBookings = useMemo(() => {
     return todayBookings.filter(b => {
       const q = searchToday.toLowerCase();
@@ -268,7 +257,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
     });
   }, [todayBookings, searchToday, filterTodayStatus, getAssignedTechnician]);
 
-  // Derived charts data
   const statusData = useMemo(() => {
     const counts = bookingStats.counts;
     return [
@@ -280,7 +268,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
     ].filter(d => d.value > 0);
   }, [bookingStats]);
 
-  // Fetch trend aggregation from backend
   const fetchTrends = useCallback(async (period) => {
     try {
       setLoadingTrends(true);
@@ -353,7 +340,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
       };
     });
 
-    // Hitung seluruh beban penugasan aktif (b.status scheduled, on process, delayed)
     bookings.forEach(b => {
       const assigned = getAssignedTechnician(b);
       if (assigned && assigned.id && workload[assigned.id]) {
@@ -363,7 +349,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
       }
     });
 
-    // Hitung beban hari ini
     todayBookings.forEach(b => {
       const assigned = getAssignedTechnician(b);
       if (assigned && assigned.id && workload[assigned.id]) {
@@ -391,9 +376,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 bg-slate-50/60 relative min-w-0 font-sans">
       
-      {/* ============================================================== */}
-      {/* 1. CLEAN OPERATIONAL HEADER & FAST ACTIONS                     */}
-      {/* ============================================================== */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
@@ -424,12 +406,8 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
         </div>
       </div>
 
-      {/* ============================================================== */}
-      {/* 2. 5-CARD HIGH IMPACT METRICS GRID                             */}
-      {/* ============================================================== */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
         
-        {/* Card 1: Booking Hari Ini */}
         <div 
           onClick={() => navigate('/admin/schedule')}
           className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
@@ -450,7 +428,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
           </div>
         </div>
 
-        {/* Card 2: On Process */}
         <div 
           onClick={() => navigate('/admin/bookings')}
           className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
@@ -471,7 +448,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
           </div>
         </div>
 
-        {/* Card 3: Selesai Hari Ini */}
         <div 
           onClick={() => navigate('/admin/bookings')}
           className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
@@ -492,7 +468,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
           </div>
         </div>
 
-        {/* Card 4: Perlu Tindakan / Unassigned */}
         <div 
           onClick={() => setFilterTodayStatus('unassigned')}
           className={cn(
@@ -529,10 +504,9 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
           </div>
         </div>
 
-        {/* Card 5: Estimasi Omzet Hari Ini */}
         <div 
           onClick={() => navigate('/admin/invoices')}
-          className="col-span-2 md:col-span-1 bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+          className="col-span-2 sm:col-span-1 lg:col-span-1 bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
         >
           <div className="flex justify-between items-start mb-3">
             <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">Estimasi Nilai Servis</span>
@@ -552,15 +526,8 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
 
       </div>
 
-      {/* ============================================================== */}
-      {/* 4. ANALYTICS & EXECUTIVE INSIGHTS GRID                         */}
-      {/* ============================================================== */}
-      {/* ============================================================== */}
-      {/* 3. OPERASIONAL & KAPASITAS TEKNISI                             */}
-      {/* ============================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-w-0 items-stretch">
         
-        {/* Main Area Chart: Trend Servis & Penyelesaian (7 Cols) */}
         <div className="lg:col-span-7 bg-white p-5 sm:p-7 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between min-w-0">
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
@@ -574,7 +541,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
               </div>
 
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                {/* Timeframe Selector Pills */}
                 <div className="inline-flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200/80">
                   {periodOptions.map((opt) => {
                     const isActive = trendPeriod === opt.key;
@@ -596,7 +562,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
                   })}
                 </div>
 
-                {/* Legend */}
                 <div className="flex items-center gap-3 text-xs font-bold text-slate-600 pl-1">
                   <span className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
@@ -674,7 +639,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
           </div>
         </div>
 
-        {/* Technician Workload Card (5 Cols) */}
         <div className="lg:col-span-5 bg-white p-5 sm:p-7 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between min-w-0">
           <div>
             <div className="flex items-center justify-between mb-4">
@@ -696,7 +660,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
               </Button>
             </div>
 
-            {/* Progress Bars for Technicians */}
             <div className="space-y-3 overflow-y-auto max-h-[210px] pr-1">
               {techWorkload.length === 0 ? (
                 <div className="text-center py-8 text-xs text-slate-500 font-semibold">
@@ -751,12 +714,8 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
 
       </div>
 
-      {/* ============================================================== */}
-      {/* 4. DISTRIBUSI STATUS & PUSAT TINDAKAN                          */}
-      {/* ============================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-w-0 items-stretch">
         
-        {/* Status Donut Distribution (5 Cols) */}
         <div className="lg:col-span-5 bg-white p-5 sm:p-7 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between min-w-0">
           <div>
             <h3 className="text-base font-black text-slate-900 tracking-tight">
@@ -796,7 +755,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
               </PieChart>
             </ResponsiveContainer>
             
-            {/* Center Stats */}
             <div className="absolute text-center pointer-events-none">
               <span className="text-2xl font-black text-slate-900 leading-none block">
                 {todayBookings.length}
@@ -818,7 +776,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
           </div>
         </div>
 
-        {/* Action Center Card (7 Cols) */}
         <div className="lg:col-span-7 bg-white p-5 sm:p-7 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between min-w-0">
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -844,7 +801,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
               </Badge>
             </div>
 
-            {/* Scope / Filter Tabs */}
             <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl mb-3.5">
               <button
                 type="button"
@@ -947,10 +903,11 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
                       )}
                     </div>
 
-                    {/* Quick Assign Inline Action */}
                     {assigningId === b.id ? (
                       <div className="mt-1 flex items-center gap-1.5 animate-in fade-in">
                         <select
+                          id={`quick-assign-tech-${b.id}`}
+                          name="teknisi_id"
                           value={selectedTechForAssign}
                           onChange={(e) => setSelectedTechForAssign(e.target.value)}
                           className="flex-1 rounded-xl border border-blue-200 bg-white h-8 text-xs px-2 font-medium"
@@ -1018,12 +975,8 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
 
       </div>
 
-      {/* ============================================================== */}
-      {/* 5. OPERASI HARI INI: TABLE & REAL-TIME SEARCH                  */}
-      {/* ============================================================== */}
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden">
         
-        {/* Table Header & Search Controls */}
         <div className="p-5 sm:p-7 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
@@ -1039,11 +992,12 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
             </p>
           </div>
 
-          {/* Filter and Search Bar */}
           <div className="flex flex-wrap items-center gap-2.5">
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <Input
+                id="search-today-booking"
+                name="search_today_booking"
                 type="text"
                 value={searchToday}
                 onChange={(e) => setSearchToday(e.target.value)}
@@ -1053,7 +1007,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
               />
             </div>
 
-            {/* Filter Pills */}
             <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 text-xs font-bold">
               <button
                 type="button"
@@ -1109,7 +1062,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
           </div>
         </div>
 
-        {/* Table Content */}
         {loading ? (
           <div className="p-12 text-center text-slate-500 font-bold flex flex-col items-center gap-2">
             <Clock className="w-7 h-7 animate-spin text-blue-600" />
@@ -1122,67 +1074,23 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
             <p className="text-xs text-slate-500 mt-0.5">Semua data hari ini telah ditampilkan atau filter belum menemukan hasil.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-slate-100 bg-white text-slate-500 font-bold uppercase tracking-wider text-xs">
-                  <th className="py-3 px-6">Waktu Kunjungan</th>
-                  <th className="py-3 px-6">Kode Tiket</th>
-                  <th className="py-3 px-6">Pelanggan & Lokasi</th>
-                  <th className="py-3 px-6">Paket Servis</th>
-                  <th className="py-3 px-6">Status Pengerjaan</th>
-                  <th className="py-3 px-6">Teknisi Bertugas</th>
-                  <th className="py-3 px-6 text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-                {filteredTodayBookings.map(b => (
-                  <tr key={b.id} className="hover:bg-slate-50/80 transition-colors">
-                    
-                    {/* Waktu */}
-                    <td className="py-3.5 px-6 font-bold text-slate-900 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-blue-500" />
-                        <span>
-                          {b.jadwal_mulai ? new Date(b.jadwal_mulai).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB' : '-'}
+          <>
+            {/* Mobile / Tablet Card View */}
+            <div className="block lg:hidden divide-y divide-slate-100">
+              {filteredTodayBookings.map(b => {
+                const assignedTech = getAssignedTechnician(b);
+                return (
+                  <div key={b.id} className="p-4 space-y-3 hover:bg-slate-50/60 transition-colors">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 font-bold text-xs text-slate-900">
+                        <Clock className="w-3.5 h-3.5 text-blue-600" />
+                        <span>{b.jadwal_mulai ? new Date(b.jadwal_mulai).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB' : '-'}</span>
+                        <span className="font-mono text-xs font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                          {b.kode_booking}
                         </span>
                       </div>
-                    </td>
-
-                    {/* Kode */}
-                    <td className="py-3.5 px-6 whitespace-nowrap">
-                      <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
-                        {b.kode_booking}
-                      </span>
-                    </td>
-
-                    {/* Pelanggan */}
-                    <td className="py-3.5 px-6">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-700 font-bold text-xs flex items-center justify-center shrink-0">
-                          {(b.customer?.nama || b.nama || 'P').charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-900">{b.customer?.nama || b.nama || 'Pelanggan'}</p>
-                          <p className="text-xs text-slate-500 truncate max-w-xs">{b.alamat || '-'}</p>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Layanan */}
-                    <td className="py-3.5 px-6 whitespace-nowrap">
-                      <p className="font-bold text-slate-900 text-xs">
-                        {b.layanan?.nama || b.layanan?.nama_layanan || b.nama_layanan || 'Cuci AC Standard'}
-                      </p>
-                      <span className="text-xs font-semibold text-slate-500">
-                        {b.jumlah_unit || 1} Unit
-                      </span>
-                    </td>
-
-                    {/* Status */}
-                    <td className="py-3.5 px-6 whitespace-nowrap">
                       <span className={cn(
-                        "px-2.5 py-1 text-xs font-black uppercase tracking-wider rounded-full border",
+                        "px-2 py-0.5 text-xs font-black uppercase tracking-wider rounded-full border",
                         b.status === 'scheduled' ? "bg-amber-50 text-amber-700 border-amber-200" :
                         b.status === 'on process' ? "bg-blue-50 text-blue-700 border-blue-200" :
                         b.status === 'done' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
@@ -1191,36 +1099,42 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
                       )}>
                         {b.status}
                       </span>
-                    </td>
+                    </div>
 
-                    {/* Teknisi */}
-                    <td className="py-3.5 px-6 whitespace-nowrap">
-                      {(() => {
-                        const assignedTech = getAssignedTechnician(b);
-                        if (assignedTech) {
-                          return (
-                            <div className="flex items-center gap-1.5 font-bold text-slate-800">
-                              <Wrench className="w-3.5 h-3.5 text-blue-500" />
-                              <span>{assignedTech.nama}</span>
-                            </div>
-                          );
-                        }
-                        return (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200">
-                            <AlertTriangle className="w-3 h-3" /> Belum Ditugaskan
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">{b.customer?.nama || b.nama || 'Pelanggan'}</p>
+                        <p className="text-xs text-slate-500 font-medium">
+                          {b.layanan?.nama || b.layanan?.nama_layanan || b.nama_layanan || 'Cuci AC Standard'} • {b.jumlah_unit || 1} Unit
+                        </p>
+                        {b.alamat && (
+                          <p className="text-xs text-slate-500 line-clamp-1 mt-0.5" title={b.alamat}>
+                            {b.alamat}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 gap-2">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                        {assignedTech ? (
+                          <>
+                            <Wrench className="w-3.5 h-3.5 text-blue-600" />
+                            <span>{assignedTech.nama}</span>
+                          </>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-rose-600">
+                            <AlertTriangle className="w-3.5 h-3.5" /> Belum Ditugaskan
                           </span>
-                        );
-                      })()}
-                    </td>
+                        )}
+                      </div>
 
-                    {/* Aksi */}
-                    <td className="py-3.5 px-6 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-1.5">
+                      <div className="flex items-center gap-1.5">
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => navigate(`/admin/invoices`)}
-                          className="rounded-xl text-xs font-bold h-8 px-2 text-slate-600 hover:text-blue-700 hover:bg-blue-50"
+                          onClick={() => navigate('/admin/invoices')}
+                          className="h-7.5 px-2 text-xs font-bold text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg"
                         >
                           <Receipt className="w-3.5 h-3.5" />
                         </Button>
@@ -1228,23 +1142,134 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
                           size="sm"
                           variant="outline"
                           onClick={() => navigate('/admin/bookings')}
-                          className="rounded-xl text-xs font-bold h-8 px-2.5 border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer"
+                          className="h-7.5 px-3 text-xs font-bold border-slate-200 text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer"
                         >
                           Detail
                         </Button>
                       </div>
-                    </td>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-white text-slate-500 font-bold uppercase tracking-wider text-xs">
+                    <th className="py-3 px-6">Waktu Kunjungan</th>
+                    <th className="py-3 px-6">Kode Tiket</th>
+                    <th className="py-3 px-6">Pelanggan & Lokasi</th>
+                    <th className="py-3 px-6">Paket Servis</th>
+                    <th className="py-3 px-6">Status Pengerjaan</th>
+                    <th className="py-3 px-6">Teknisi Bertugas</th>
+                    <th className="py-3 px-6 text-right">Aksi</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
+                  {filteredTodayBookings.map(b => (
+                    <tr key={b.id} className="hover:bg-slate-50/80 transition-colors">
+                      
+                      <td className="py-3.5 px-6 font-bold text-slate-900 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-blue-500" />
+                          <span>
+                            {b.jadwal_mulai ? new Date(b.jadwal_mulai).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB' : '-'}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-6 whitespace-nowrap">
+                        <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+                          {b.kode_booking}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-6">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-700 font-bold text-xs flex items-center justify-center shrink-0">
+                            {(b.customer?.nama || b.nama || 'P').charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-bold text-slate-900">{b.customer?.nama || b.nama || 'Pelanggan'}</p>
+                            <p className="text-xs text-slate-500 truncate max-w-xs">{b.alamat || '-'}</p>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-6 whitespace-nowrap">
+                        <p className="font-bold text-slate-900 text-xs">
+                          {b.layanan?.nama || b.layanan?.nama_layanan || b.nama_layanan || 'Cuci AC Standard'}
+                        </p>
+                        <span className="text-xs font-semibold text-slate-500">
+                          {b.jumlah_unit || 1} Unit
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-6 whitespace-nowrap">
+                        <span className={cn(
+                          "px-2.5 py-1 text-xs font-black uppercase tracking-wider rounded-full border",
+                          b.status === 'scheduled' ? "bg-amber-50 text-amber-700 border-amber-200" :
+                          b.status === 'on process' ? "bg-blue-50 text-blue-700 border-blue-200" :
+                          b.status === 'done' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                          b.status === 'delayed' ? "bg-orange-50 text-orange-700 border-orange-200" :
+                          b.status === 'cancelled' ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-slate-100 text-slate-700"
+                        )}>
+                          {b.status}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-6 whitespace-nowrap">
+                        {(() => {
+                          const assignedTech = getAssignedTechnician(b);
+                          if (assignedTech) {
+                            return (
+                              <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                                <Wrench className="w-3.5 h-3.5 text-blue-500" />
+                                <span>{assignedTech.nama}</span>
+                              </div>
+                            );
+                          }
+                          return (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200">
+                              <AlertTriangle className="w-3 h-3" /> Belum Ditugaskan
+                            </span>
+                          );
+                        })()}
+                      </td>
+
+                      <td className="py-3.5 px-6 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => navigate(`/admin/invoices`)}
+                            className="rounded-xl text-xs font-bold h-8 px-2 text-slate-600 hover:text-blue-700 hover:bg-blue-50"
+                          >
+                            <Receipt className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => navigate('/admin/bookings')}
+                            className="rounded-xl text-xs font-bold h-8 px-2.5 border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer"
+                          >
+                            Detail
+                          </Button>
+                        </div>
+                      </td>
+
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
 
       </div>
 
-      {/* Internal Admin Booking Modal for WhatsApp / Phone Bookings */}
       <AdminCreateBookingModal
         isOpen={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}

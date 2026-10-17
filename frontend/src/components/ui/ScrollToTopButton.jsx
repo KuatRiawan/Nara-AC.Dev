@@ -1,7 +1,3 @@
-/**
- * ScrollToTopButton - Tombol untuk kembali ke atas halaman
- * Muncul saat pengguna scroll ke bawah
- */
 import { useState, useEffect } from 'react';
 import { ArrowUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,7 +7,6 @@ export default function ScrollToTopButton() {
 
   useEffect(() => {
     const handleScroll = () => {
-      // Tampilkan tombol jika scroll > 300px
       setIsVisible(window.pageYOffset > 300);
     };
 

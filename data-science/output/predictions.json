@@ -3,7 +3,7 @@
   "model_version": "nara-ds-v2.1-ridge-ts",
   "keterangan": "Prediksi permintaan servis AC harian (14 hari ke depan) menggunakan model Autoregressive Ridge Regression pada 527 hari data historis nyata CV. Nara Teknindotama (Mei 2025 – Oktober 2026).",
   "is_synthetic": false,
-  "dibuat_pada": "2026-10-17T05:44:13.383173",
+  "dibuat_pada": "2026-10-17T22:54:10.548852",
   "split_info": {
     "train_period": "2025-05-05 s/d 2026-07-31 (453 hari)",
     "test_period": "2026-08-01 s/d 2026-10-13 (74 hari)"

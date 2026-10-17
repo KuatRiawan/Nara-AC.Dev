@@ -18,9 +18,7 @@ import {
   Code2
 } from 'lucide-react';
 
-// Human-friendly Indonesian dictionary for log snapshot fields
 const FIELD_LABELS = {
-  // AC Unit
   brand: 'Merek AC',
   lokasi: 'Lokasi Pemasangan',
   model: 'Model / Tipe AC',
@@ -34,7 +32,6 @@ const FIELD_LABELS = {
   tahun_pasang: 'Tahun Pasang',
   catatan_unit: 'Catatan Unit',
 
-  // Customer / Booking
   customer_id: 'ID Pelanggan',
   customer_name: 'Nama Pelanggan',
   nama_pelanggan: 'Nama Pelanggan',
@@ -55,7 +52,6 @@ const FIELD_LABELS = {
   keterangan: 'Keterangan',
   catatan_admin: 'Catatan Admin',
 
-  // Teknisi & Pengerjaan
   teknisi_id: 'ID Teknisi',
   nama_teknisi: 'Nama Teknisi',
   status: 'Status',
@@ -67,7 +63,6 @@ const FIELD_LABELS = {
   nomor_rekening: 'Nomor Rekening',
   atas_nama: 'Atas Nama Rekening',
   
-  // Keuangan
   nominal: 'Nominal Pembayaran',
   total_biaya: 'Total Biaya',
   biaya: 'Biaya',
@@ -77,7 +72,6 @@ const FIELD_LABELS = {
   invoice_id: 'ID Invoice',
   nomor_invoice: 'Nomor Invoice',
 
-  // Inventaris
   item_id: 'ID Barang',
   nama_barang: 'Nama Barang / Sparepart',
   kategori: 'Kategori Barang',
@@ -88,12 +82,10 @@ const FIELD_LABELS = {
   satuan: 'Satuan Unit',
   alasan: 'Alasan Penyesuaian',
 
-  // Rating & Review
   rating: 'Rating Bintang',
   ulasan: 'Ulasan Pelanggan',
   komentar: 'Komentar Konsumen',
 
-  // System
   role: 'Hak Akses (Role)',
   email: 'Alamat Email',
   user_id: 'ID Pengguna',
@@ -247,13 +239,11 @@ export default function AdminReports() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
   
-  // Detail modal state
   const [selectedLog, setSelectedLog] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [viewMode, setViewMode] = useState('formatted'); // 'formatted' | 'raw'
 
-  // Close modal on Escape
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
@@ -264,7 +254,6 @@ export default function AdminReports() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Fetch audit logs
   const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
@@ -283,7 +272,6 @@ export default function AdminReports() {
     fetchLogs();
   }, [fetchLogs]);
 
-  // KPIs
   const kpis = useMemo(() => {
     let adminCount = 0;
     let techCount = 0;
@@ -306,7 +294,6 @@ export default function AdminReports() {
     };
   }, [logs]);
 
-  // Filtered Logs
   const filteredLogs = useMemo(() => {
     return logs.filter(l => {
       const q = search.toLowerCase();
@@ -327,12 +314,10 @@ export default function AdminReports() {
     });
   }, [logs, search, roleFilter, entityFilter]);
 
-  // Reset pagination when search or filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [search, roleFilter, entityFilter]);
 
-  // Paginated logs
   const totalPages = Math.max(1, Math.ceil(filteredLogs.length / itemsPerPage));
   const paginatedLogs = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -364,7 +349,6 @@ export default function AdminReports() {
     }
   };
 
-  // Helper dictionary label tindakan
   const getActionInfo = (action) => {
     switch (action) {
       case 'technician_assigned':
@@ -419,7 +403,6 @@ export default function AdminReports() {
     }
   };
 
-  // Helper badge peran
   const getRoleBadge = (role) => {
     switch (role) {
       case 'admin':
@@ -433,7 +416,6 @@ export default function AdminReports() {
     }
   };
 
-  // Format date helper
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     try {
@@ -450,7 +432,6 @@ export default function AdminReports() {
     }
   };
 
-  // Export Bookings CSV
   const exportBookings = async () => {
     setExporting(true);
     try {
@@ -493,7 +474,6 @@ export default function AdminReports() {
     }
   };
 
-  // Export Audit Logs CSV
   const exportAuditLogs = () => {
     if (filteredLogs.length === 0) {
       showWarning('Tidak ada data log audit untuk diexport.');
@@ -535,7 +515,6 @@ export default function AdminReports() {
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 bg-slate-50/50 relative min-w-0">
       
-      {/* Title & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
@@ -560,7 +539,7 @@ export default function AdminReports() {
           <Button
             onClick={exportBookings}
             disabled={exporting}
-            className="rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
+            className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
           >
             <FileText className="w-4 h-4 text-sky-400" />
             <span>Export Booking (CSV)</span>
@@ -568,10 +547,8 @@ export default function AdminReports() {
         </div>
       </div>
 
-      {/* KPI Cards (Clean White Style consistent with other pages) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* Total Aktivitas Audit */}
         <div className="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Log Aktivitas</span>
@@ -589,7 +566,6 @@ export default function AdminReports() {
           </div>
         </div>
 
-        {/* Tindakan Admin */}
         <div className="p-5 rounded-3xl bg-white border border-indigo-100 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">Aktivitas Admin</span>
@@ -607,7 +583,6 @@ export default function AdminReports() {
           </div>
         </div>
 
-        {/* Tindakan Teknisi */}
         <div className="p-5 rounded-3xl bg-white border border-teal-100 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-teal-600">Aktivitas Teknisi</span>
@@ -625,7 +600,6 @@ export default function AdminReports() {
           </div>
         </div>
 
-        {/* Aktivitas Pelanggan */}
         <div className="p-5 rounded-3xl bg-white border border-emerald-100 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Aktivitas Pelanggan</span>
@@ -645,7 +619,6 @@ export default function AdminReports() {
 
       </div>
 
-      {/* Filter & Search Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col lg:flex-row items-center justify-between gap-3">
         <div className="relative w-full lg:w-80">
           <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -659,7 +632,6 @@ export default function AdminReports() {
         </div>
 
         <div className="flex items-center gap-2 w-full lg:w-auto overflow-x-auto">
-          {/* Role Filter Buttons */}
           <Button
             size="sm"
             variant={roleFilter === 'all' ? 'default' : 'outline'}
@@ -693,9 +665,10 @@ export default function AdminReports() {
             Pelanggan ({kpis.custCount})
           </Button>
 
-          {/* Entity Filter Dropdown */}
           <div className="border-l border-slate-200 pl-2 ml-1">
             <select
+              id="admin-filter-reports-entity"
+              name="admin_filter_reports_entity"
               value={entityFilter}
               onChange={(e) => setEntityFilter(e.target.value)}
               className="h-9 px-3 text-xs font-bold rounded-xl border border-slate-200 bg-slate-50 text-slate-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
@@ -710,7 +683,6 @@ export default function AdminReports() {
         </div>
       </div>
 
-      {/* Audit Log Table */}
       <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
@@ -742,7 +714,6 @@ export default function AdminReports() {
                 paginatedLogs.map((log) => {
                   const act = getActionInfo(log.action);
                   
-                  // Extract quick summary from metadata or snapshots
                   let summary = '-';
                   if (log.metadata && typeof log.metadata === 'object' && Object.keys(log.metadata).length > 0) {
                     if (log.metadata.teknisi) summary = `Teknisi: ${log.metadata.teknisi}`;
@@ -816,7 +787,6 @@ export default function AdminReports() {
           </table>
         </div>
 
-        {/* PAGINATION TOOLBAR */}
         <div className="p-4 bg-slate-50/70 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 font-medium">
           <div>
             Menampilkan <strong className="text-slate-900">{filteredLogs.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}</strong> - <strong className="text-slate-900">{Math.min(filteredLogs.length, currentPage * itemsPerPage)}</strong> dari <strong className="text-slate-900">{filteredLogs.length}</strong> log aktivitas
@@ -848,9 +818,6 @@ export default function AdminReports() {
         </div>
       </div>
 
-      {/* ============================================================== */}
-      {/* MODAL DETAIL INSPEKSI AUDIT LOG                               */}
-      {/* ============================================================== */}
       {isDetailOpen && selectedLog && (
         <div 
           onClick={(e) => { if (e.target === e.currentTarget) setIsDetailOpen(false); }}
@@ -858,8 +825,7 @@ export default function AdminReports() {
         >
           <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden my-4 sm:my-8 animate-in zoom-in-95 duration-200 flex flex-col">
             
-            {/* Modal Header */}
-            <div className="p-5 sm:p-6 bg-slate-900 text-white flex items-center justify-between">
+            <div className="p-5 sm:p-6 bg-gradient-to-r from-blue-700 to-sky-600 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-blue-600/30 text-sky-400 rounded-xl border border-blue-500/30">
                   <ShieldCheck className="w-5 h-5" />
@@ -883,10 +849,8 @@ export default function AdminReports() {
               </button>
             </div>
 
-            {/* Modal Body */}
             <div className="p-5 sm:p-6 space-y-5 max-h-[72vh] overflow-y-auto">
               
-              {/* Event Summary Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs">
                 <div>
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Waktu Kejadian</span>
@@ -921,7 +885,6 @@ export default function AdminReports() {
                 </div>
               </div>
 
-              {/* Data Before & After Comparison */}
               {(selectedLog.sebelum || selectedLog.sesudah) && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -958,7 +921,6 @@ export default function AdminReports() {
 
                   {viewMode === 'formatted' ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                      {/* Before */}
                       <div className="p-3.5 rounded-2xl bg-rose-50/50 border border-rose-200/80 flex flex-col">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-bold text-rose-700 uppercase tracking-wider">
@@ -977,7 +939,6 @@ export default function AdminReports() {
                         <FormattedSnapshotViewer data={selectedLog.sebelum} type="before" />
                       </div>
 
-                      {/* After */}
                       <div className="p-3.5 rounded-2xl bg-emerald-50/50 border border-emerald-200/80 flex flex-col">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">
@@ -992,7 +953,6 @@ export default function AdminReports() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                      {/* Before Raw */}
                       <div className="p-3.5 rounded-2xl bg-rose-50/60 border border-rose-200">
                         <span className="text-xs font-bold text-rose-700 uppercase tracking-wider block mb-1.5">
                           Sebelum Perubahan (Raw JSON)
@@ -1002,7 +962,6 @@ export default function AdminReports() {
                         </pre>
                       </div>
 
-                      {/* After Raw */}
                       <div className="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200">
                         <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider block mb-1.5">
                           Sesudah Perubahan (Raw JSON)
@@ -1016,7 +975,6 @@ export default function AdminReports() {
                 </div>
               )}
 
-              {/* Metadata */}
               {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
                 <div className="space-y-2">
                   <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
@@ -1036,11 +994,10 @@ export default function AdminReports() {
 
             </div>
 
-            {/* Modal Footer */}
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end">
               <Button
                 onClick={() => setIsDetailOpen(false)}
-                className="rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white h-9 px-5 cursor-pointer shadow-sm"
+                className="rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white h-9 px-5 cursor-pointer shadow-sm"
               >
                 Tutup Inspeksi
               </Button>

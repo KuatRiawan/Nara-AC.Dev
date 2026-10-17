@@ -1,8 +1,3 @@
-/**
- * TrackerCard Component
- * Lacak Status Tiket Booking untuk pelanggan
- * Memungkinkan pengguna untuk memantau status pengerjaan servis AC
- */
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -41,7 +36,6 @@ export default function TrackerCard() {
       transition={{ duration: 0.5, delay: 0.2 }}
       className="relative"
     >
-      {/* Ambient Pulsing Backing Glow */}
       <motion.div
         animate={{
           opacity: [0.3, 0.55, 0.3],
@@ -53,7 +47,6 @@ export default function TrackerCard() {
 
       <div className="relative bg-white/95 backdrop-blur-2xl p-6 sm:p-7 rounded-3xl border border-sky-100 shadow-2xl shadow-blue-900/10 text-left">
         
-        {/* Header */}
         <div className="flex items-center gap-2.5 mb-6">
           <div className="w-10 h-10 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center">
             <Search className="w-5 h-5" />
@@ -99,7 +92,6 @@ export default function TrackerCard() {
           </Button>
         </form>
 
-        {/* Sample Ticket Mini Simulation */}
         <div className="pt-4 border-t border-sky-100">
           <div className="bg-sky-50/80 rounded-xl p-3 border border-sky-100 flex items-center justify-between">
             <div className="flex items-center gap-2.5">

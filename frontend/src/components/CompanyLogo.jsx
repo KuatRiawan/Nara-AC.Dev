@@ -4,6 +4,9 @@ export default function CompanyLogo({ className = '', dark = false, iconSize = '
       <img 
         src="/images/logo.png" 
         alt="CV. Nara Teknindotama Logo" 
+        width={48}
+        height={48}
+        style={{ aspectRatio: '1 / 1' }}
         className={`${iconSize} object-contain shrink-0 transition-transform duration-300 ${dark ? 'brightness-0 invert' : ''}`} 
       />
       {!iconOnly && (

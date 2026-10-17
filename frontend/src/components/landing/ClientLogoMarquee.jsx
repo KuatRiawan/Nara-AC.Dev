@@ -1,17 +1,14 @@
 import React from 'react';
 
-// Kalibrasi optical sizing per logo agar ukuran visual seimbang, proporsional & jelas terbaca
 const clientLogos = [
   {
     src: '/images/clients/permata-bank.webp?v=2',
     alt: 'Permata Bank',
-    // Logo horizontal panjang: berikan ruang tinggi & lebar maksimal agar teks jelas dan tegas
     className: 'max-h-11 sm:max-h-12 max-w-[170px] sm:max-w-[195px]',
   },
   {
     src: '/images/clients/resik-cemerlang.webp?v=2',
     alt: 'Resik Cemerlang',
-    // Logo horizontal: diperbesar agar proporsional sejajar dengan logo lainnya
     className: 'max-h-11 sm:max-h-12 max-w-[160px] sm:max-w-[185px]',
   },
   {
@@ -77,12 +74,10 @@ const clientLogos = [
 ];
 
 export default function ClientLogoMarquee() {
-  // Gandakan list untuk infinite seamless loop running ticker
   const displayLogos = [...clientLogos, ...clientLogos];
 
   return (
     <section className="py-6 sm:py-8 bg-slate-50/50 backdrop-blur-xs border-y border-slate-100 overflow-hidden relative">
-      {/* Gradient mask on left and right edges for smooth fading */}
       <div className="absolute inset-y-0 left-0 w-16 sm:w-32 bg-gradient-to-r from-slate-50 via-slate-50/80 to-transparent z-10 pointer-events-none" />
       <div className="absolute inset-y-0 right-0 w-16 sm:w-32 bg-gradient-to-l from-slate-50 via-slate-50/80 to-transparent z-10 pointer-events-none" />
 
@@ -95,8 +90,10 @@ export default function ClientLogoMarquee() {
             >
               <img
                 src={logo.src}
-                alt=""
-                loading="lazy"
+                alt={logo.alt || 'Klien NARA AC'}
+                width={180}
+                height={48}
+                style={{ aspectRatio: '180 / 48' }}
                 className={`${logo.className} w-auto h-auto object-contain opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300`}
               />
             </div>

@@ -22,7 +22,6 @@ import ScrollToTopButton from '../components/ui/ScrollToTopButton';
 
 const easeOutCubic = [0.16, 1, 0.3, 1];
 
-// Staggered scroll animation variants
 const staggerContainer = {
   hidden: { opacity: 0 },
   visible: {
@@ -47,13 +46,11 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const { whatsappNumber, profile } = useBusinessProfile();
 
-  // State
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
   const [typingIndex, setTypingIndex] = useState(0);
 
-  // Parallax scroll tracking
   const { scrollY } = useScroll();
   const smoothScroll = useSpring(scrollY, { damping: 25, stiffness: 120 });
   const yHeroGlow1 = useTransform(smoothScroll, [0, 700], [0, 130]);
@@ -68,7 +65,6 @@ export default function LandingPage() {
     'Lebih Nyaman.'
   ], []);
 
-  // Rotating headline text interval
   useEffect(() => {
     const timer = setInterval(() => {
       setTypingIndex(prev => (prev + 1) % rotatingWords.length);
@@ -76,7 +72,6 @@ export default function LandingPage() {
     return () => clearInterval(timer);
   }, [rotatingWords]);
 
-  // Scroll listener for sticky header styling
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 40);
@@ -106,13 +101,10 @@ export default function LandingPage() {
         }
       })
       .catch(() => {
-        // Fallback to static defaults
       });
     return () => { active = false; };
   }, []);
 
-  // Structured Service Packages for AC Scope Comparison (Standar vs Core vs Core + Freon)
-  // Dynamically synchronized with backend pricing when admin updates tariff
   const servicePackages = useMemo(() => {
     const list = Array.isArray(liveServices) ? liveServices : [];
     const std = list.find(s => s.kode === 'SRV-CUCI-01' || (s.nama_layanan || '').toLowerCase().includes('standard') || s.id === 1);
@@ -186,16 +178,10 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans selection:bg-blue-600 selection:text-white overflow-x-hidden text-slate-800">
-      {/* ============================================================== */}
-      {/* SKIP TO MAIN CONTENT - Aksesibilitas                             */}
-      {/* ============================================================== */}
       <a href="#main-content" className="sr-only focus:not-sr-only absolute top-0 left-0 z-50 p-4 bg-blue-600 text-white font-bold rounded-br-xl text-sm hover:bg-blue-700 transition-colors">
         Lewati ke Konten Utama
       </a>
 
-      {/* ============================================================== */}
-      {/* 1. NAVBAR                                                      */}
-      {/* ============================================================== */}
       <header
         className={`fixed w-full top-0 z-40 transition-all duration-300 ${isScrolled
           ? 'bg-white/95 backdrop-blur-xl shadow-xs border-b border-sky-100 py-3.5'
@@ -204,12 +190,10 @@ export default function LandingPage() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
 
-          {/* Brand Logo */}
           <Link to="/" className="flex items-center shrink-0 mr-4 xl:mr-8 group transition-transform hover:opacity-90">
             <CompanyLogo dark={false} iconSize="h-8 sm:h-9" />
           </Link>
 
-          {/* Desktop Navigation Links (Spacious & Non-Wrapping) */}
           <nav className="hidden lg:flex items-center gap-4 xl:gap-7 text-xs xl:text-sm font-bold text-slate-700">
             {[
               { id: 'layanan', label: 'Layanan' },
@@ -236,7 +220,6 @@ export default function LandingPage() {
             ))}
           </nav>
 
-          {/* Desktop Actions */}
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             <Link to="/status">
               <Button
@@ -259,7 +242,6 @@ export default function LandingPage() {
               </Button>
             </Link>
 
-            {/* Mobile Hamburger Trigger */}
             <button
               onClick={() => setMobileMenuOpen(true)}
               className="lg:hidden p-2 rounded-xl text-slate-700 hover:bg-sky-50 transition-colors cursor-pointer ml-1"
@@ -275,22 +257,17 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Mobile Navigation Drawer */}
       <MobileNav
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
         scrollTo={scrollTo}
       />
 
-      {/* ============================================================== */}
-      {/* 2. HERO SECTION (CLEAN LIGHT BLUE & WHITE THEME)               */}
-      {/* ============================================================== */}
       <main id="main-content">
         <section
           id="home"
           className="relative pt-32 pb-20 md:pt-40 md:pb-28 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-sky-50/90 via-blue-50/40 to-white text-slate-900 overflow-hidden min-h-[92vh] flex items-center"
         >
-          {/* Parallax Atmospheric Glowing Ambient Spheres */}
           <motion.div
             style={{ y: yHeroGlow1 }}
             className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-sky-200/40 rounded-full blur-[140px] pointer-events-none"
@@ -300,10 +277,8 @@ export default function LandingPage() {
             className="absolute bottom-10 right-10 w-96 h-96 bg-blue-200/35 rounded-full blur-[120px] pointer-events-none"
           />
 
-          {/* Cinematic Cool Air Breeze Wave Streams */}
           <AirflowBreeze />
 
-          {/* Subtle grid pattern overlay */}
           <div
             className="absolute inset-0 opacity-[0.14] pointer-events-none"
             style={{
@@ -314,13 +289,11 @@ export default function LandingPage() {
 
           <div className="max-w-7xl mx-auto w-full relative z-10 grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
 
-            {/* Left Hero Storytelling with Parallax */}
             <motion.div
               style={{ y: yHeroLeft }}
               className="lg:col-span-7 space-y-7 text-center lg:text-left"
             >
 
-              {/* Pill Tag */}
               <motion.div
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -331,7 +304,6 @@ export default function LandingPage() {
                 <span>Solusi Perawatan AC Terencana • CV. Nara Teknindotama</span>
               </motion.div>
 
-              {/* Main Headline */}
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -356,7 +328,6 @@ export default function LandingPage() {
                 </span>
               </motion.h1>
 
-              {/* Supporting Description */}
               <motion.p
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -366,7 +337,6 @@ export default function LandingPage() {
                 Jadwalkan servis AC dengan lebih mudah, pantau proses pengerjaan secara transparan, dan kelola perawatan AC Anda bersama teknisi terverifikasi NARA AC.
               </motion.p>
 
-              {/* Hero CTAs */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -393,7 +363,6 @@ export default function LandingPage() {
                 </button>
               </motion.div>
 
-              {/* Live Micro Badges */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -426,7 +395,6 @@ export default function LandingPage() {
               </motion.div>
             </motion.div>
 
-            {/* Right Hero: Single Card with Tabs - Kalkulator & Lacak Status */}
             <motion.div
               style={{ y: yHeroRight }}
               className="lg:col-span-5 relative"
@@ -436,18 +404,11 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ============================================================== */}
-        {/* 3. CLIENT LOGOS RUNNING TICKER                                */}
-        {/* ============================================================== */}
         <ClientLogoMarquee />
 
-        {/* ============================================================== */}
-        {/* 4. PERBANDINGAN PAKET & CAKUPAN PENGERJAAN AC                   */}
-        {/* ============================================================== */}
         <section id="layanan" className="py-24 bg-white relative">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-            {/* Header ala Apple Compare Matrix */}
             <div className="text-center max-w-3xl mx-auto mb-16">
               <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-widest border border-blue-200 mb-3">
                 BANDINGKAN MODEL
@@ -460,7 +421,6 @@ export default function LandingPage() {
               </p>
             </div>
 
-            {/* Pricing Comparison Cards Grid with Stagger & 3D Tilt Hover */}
             <motion.div
               variants={staggerContainer}
               initial="hidden"
@@ -481,7 +441,6 @@ export default function LandingPage() {
                       : 'bg-white border-2 border-sky-100 hover:border-sky-300 shadow-md hover:shadow-xl shadow-sky-900/5'
                       }`}
                   >
-                    {/* Popular Highlight Badge */}
                     {isCore && (
                       <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[11px] font-extrabold uppercase tracking-widest px-4 py-1 rounded-full shadow-md whitespace-nowrap">
                         PALING DIREKOMENDASIKAN
@@ -489,22 +448,18 @@ export default function LandingPage() {
                     )}
 
                     <div>
-                      {/* Top Category / Subtitle */}
                       <span className="text-xs font-bold uppercase tracking-widest text-slate-500 block mb-1">
                         {pkg.subtitle}
                       </span>
 
-                      {/* Service Name */}
                       <h3 className="text-2xl font-black text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
                         {pkg.nama_layanan}
                       </h3>
 
-                      {/* Brief 2-line Description */}
                       <p className="text-slate-600 text-xs sm:text-sm leading-relaxed mb-6 min-h-[44px]">
                         {pkg.deskripsi}
                       </p>
 
-                      {/* Price & Warranty Block */}
                       <div className="mb-6 pb-6 border-b border-sky-100">
                         <div className="flex items-baseline gap-1.5">
                           <span className="text-3xl sm:text-4xl font-black text-slate-900">
@@ -517,7 +472,6 @@ export default function LandingPage() {
                         </p>
                       </div>
 
-                      {/* Checklist Features */}
                       <div className="space-y-3 mb-6">
                         {(pkg.highlights || []).map((task, tIdx) => (
                           <div key={`hl-${tIdx}`} className="flex items-center gap-2.5 text-xs sm:text-sm text-slate-700">
@@ -530,7 +484,6 @@ export default function LandingPage() {
                       </div>
                     </div>
 
-                    {/* Booking CTA Button */}
                     <Link to={pkg.bookingUrl} className="block w-full pt-4">
                       <Button
                         className={`w-full h-11 rounded-full font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 ${isCore
@@ -546,7 +499,6 @@ export default function LandingPage() {
               })}
             </motion.div>
 
-            {/* Bottom helper: Kantor / B2B */}
             <div className="p-6 sm:p-8 rounded-3xl bg-sky-50/70 border border-sky-200/80 flex flex-col sm:flex-row items-center justify-between gap-5 text-center sm:text-left">
               <div>
                 <span className="text-xs font-bold tracking-wider uppercase text-blue-600 bg-white px-3 py-1 rounded-full border border-sky-200 inline-block mb-1.5">
@@ -570,12 +522,8 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ============================================================== */}
-        {/* 5. KEUNGGULAN NARA AC (CLEAN WHITE & LIGHT BLUE BENTO GRID)     */}
-        {/* ============================================================== */}
         <section id="keunggulan" className="py-24 bg-gradient-to-b from-white via-sky-50/40 to-white text-slate-900 relative overflow-hidden border-t border-sky-100/60">
 
-          {/* Glows */}
           <div className="absolute top-1/2 left-0 w-96 h-96 bg-blue-200/30 rounded-full blur-[140px] pointer-events-none" />
           <div className="absolute bottom-0 right-0 w-96 h-96 bg-sky-200/30 rounded-full blur-[140px] pointer-events-none" />
 
@@ -593,7 +541,6 @@ export default function LandingPage() {
               </p>
             </div>
 
-            {/* Asymmetric Bento Grid (Staggered Animation with Spring Lift) */}
             <motion.div
               variants={staggerContainer}
               initial="hidden"
@@ -602,7 +549,6 @@ export default function LandingPage() {
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
             >
 
-              {/* Bento Card 1 */}
               <motion.div
                 variants={fadeInUpVariant}
                 whileHover={{ y: -6, scale: 1.012, transition: { duration: 0.25, ease: easeOutCubic } }}
@@ -622,7 +568,6 @@ export default function LandingPage() {
                 </div>
               </motion.div>
 
-              {/* Bento Card 2 */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -644,7 +589,6 @@ export default function LandingPage() {
                 </div>
               </motion.div>
 
-              {/* Bento Card 3 */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -666,7 +610,6 @@ export default function LandingPage() {
                 </div>
               </motion.div>
 
-              {/* Bento Card 4 */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -688,7 +631,6 @@ export default function LandingPage() {
                 </div>
               </motion.div>
 
-              {/* Bento Card 5 */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -710,7 +652,6 @@ export default function LandingPage() {
                 </div>
               </motion.div>
 
-              {/* Bento Card 6 */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -736,9 +677,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ============================================================== */}
-        {/* 6. CARA KERJA & ALUR RESERVASI                                 */}
-        {/* ============================================================== */}
         <section id="cara-kerja" className="py-24 bg-white relative border-t border-sky-100/60">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
@@ -791,29 +729,18 @@ export default function LandingPage() {
                     whileHover={{ y: -8, scale: 1.015, transition: { duration: 0.25, ease: easeOutCubic } }}
                     className="relative group"
                   >
-                    {/* Step Circle + Connector Line (Desktop) */}
-                    <div className="absolute lg:left-1/2 lg:-translate-x-1/2 -translate-y-1/2 w-24 h-24 flex flex-col items-center z-10">
-                      {/* Step Number Circle */}
-                      <div className="relative w-16 h-16 rounded-full bg-white border-3 border-sky-200 flex items-center justify-center shadow-lg shadow-sky-500/10 transition-all duration-300 group-hover:border-blue-400 group-hover:shadow-xl group-hover:shadow-blue-500/20">
-                        <span className="font-mono text-2xl font-black text-blue-600 group-hover:text-blue-700 transition-colors">
-                          {st.step}
-                        </span>
-                        {/* Pulse ring on hover */}
-                        <motion.div
-                          animate={{ scale: [1, 1.3, 1], opacity: [0.6, 0, 0.6] }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                          className="absolute inset-0 rounded-full border-2 border-blue-400/30 pointer-events-none"
-                        />
-                      </div>
-                      {/* "Tahap X" Label */}
-                      <span className="mt-2 text-xs font-bold tracking-wider uppercase text-blue-700 bg-white px-2.5 py-1 rounded-full border border-sky-200 shadow-2xs whitespace-nowrap">
-                        Tahap {sIndex + 1}
-                      </span>
-                    </div>
-
-                    {/* Content Card */}
-                    <div className="lg:pt-28 bg-sky-50/60 border border-sky-100 rounded-3xl p-6 sm:p-7 flex flex-col justify-between hover:bg-white hover:border-blue-300 hover:shadow-xl shadow-blue-900/5 transition-all duration-300">
+                    <div className="bg-sky-50/60 border border-sky-100 rounded-3xl p-6 sm:p-7 h-full flex flex-col justify-between hover:bg-white hover:border-blue-300 hover:shadow-xl shadow-blue-900/5 transition-all duration-300">
                       <div>
+                        <div className="flex items-center justify-between gap-3 mb-5 pb-4 border-b border-sky-100">
+                          <div className="w-12 h-12 rounded-2xl bg-white border-2 border-sky-200 flex items-center justify-center shadow-sm group-hover:border-blue-500 group-hover:bg-blue-600 transition-colors">
+                            <span className="font-mono text-lg font-black text-blue-600 group-hover:text-white transition-colors">
+                              {st.step}
+                            </span>
+                          </div>
+                          <span className="text-xs font-bold tracking-wider uppercase text-blue-700 bg-white px-3 py-1 rounded-full border border-sky-200 shadow-2xs whitespace-nowrap">
+                            Tahap {sIndex + 1}
+                          </span>
+                        </div>
                         <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">{st.title}</h3>
                         <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{st.desc}</p>
                       </div>
@@ -826,29 +753,16 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ============================================================== */}
-        {/* 7. DOKUMENTASI NYATA KEGIATAN TEKNISI                          */}
-        {/* ============================================================== */}
         <GallerySection />
 
-        {/* ============================================================== */}
-        {/* 7.5 ULASAN ASLI GOOGLE MAPS                                   */}
-        {/* ============================================================== */}
         <GoogleReviewsSection />
 
-        {/* ============================================================== */}
-        {/* 8. DIGITAL EXPERIENCE PREVIEW                                  */}
-        {/* ============================================================== */}
         <DigitalExperienceSection />
 
-        {/* ============================================================== */}
-        {/* 9. PROFIL PERUSAHAAN & LEGALITAS                              */}
-        {/* ============================================================== */}
         <section id="profil" className="py-24 bg-white relative border-t border-sky-100/60">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
 
-              {/* Story */}
               <div className="lg:col-span-6 space-y-6">
                 <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-widest border border-blue-200">
                   <ShieldCheck className="w-3.5 h-3.5" /> Profil Resmi
@@ -875,7 +789,6 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* Coverage Card (Clean Light Blue & White) */}
               <div className="lg:col-span-6 bg-gradient-to-br from-sky-50 via-blue-50/70 to-sky-100/60 text-slate-900 rounded-3xl p-8 sm:p-10 shadow-xl shadow-blue-500/5 border border-sky-200 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-blue-200/40 rounded-full blur-[80px] pointer-events-none" />
 
@@ -915,9 +828,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ============================================================== */}
-        {/* 10. FAQ ACCORDION                                              */}
-        {/* ============================================================== */}
         <section id="faq" className="py-24 bg-sky-50/30 border-t border-sky-100/60 relative">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 
@@ -968,9 +878,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ============================================================== */}
-        {/* 11. FINAL HEROIC CALL TO ACTION BANNER (CLEAN LIGHT BLUE)       */}
-        {/* ============================================================== */}
         <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white border-t border-sky-100/60">
           <div className="max-w-6xl mx-auto">
             <motion.div
@@ -980,7 +887,6 @@ export default function LandingPage() {
               viewport={{ once: true }}
               className="rounded-3xl bg-gradient-to-br from-blue-600 via-blue-500 to-sky-500 p-8 sm:p-14 lg:p-16 text-white text-center relative overflow-hidden shadow-2xl shadow-blue-500/20"
             >
-              {/* Ambient Lighting */}
               <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-[90px] pointer-events-none" />
               <div className="absolute bottom-0 left-0 w-80 h-80 bg-sky-300/20 rounded-full blur-[90px] pointer-events-none" />
 
@@ -1024,13 +930,9 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ============================================================== */}
-        {/* 12. FOOTER (CLEAN LIGHT BLUE & WHITE THEME)                    */}
-        {/* ============================================================== */}
         <footer className="bg-sky-50/60 text-slate-600 pt-16 pb-28 sm:pb-36 px-4 sm:px-6 lg:px-8 border-t border-sky-100">
           <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8 pb-12 border-b border-sky-200/70">
 
-            {/* Brand Info */}
             <div className="lg:col-span-4 space-y-4">
               <Link to="/" className="inline-block">
                 <CompanyLogo dark={false} iconSize="h-10" />
@@ -1040,7 +942,6 @@ export default function LandingPage() {
               </p>
             </div>
 
-            {/* Quick Links */}
             <div className="lg:col-span-2 space-y-3">
               <h4 className="font-bold text-sm text-slate-900 tracking-wider uppercase">Menu Utama</h4>
               <ul className="space-y-2 text-xs sm:text-sm text-slate-600">
@@ -1082,7 +983,6 @@ export default function LandingPage() {
               </ul>
             </div>
 
-            {/* Legalitas & Area */}
             <div className="lg:col-span-3 space-y-3">
               <h4 className="font-bold text-sm text-slate-900 tracking-wider uppercase">Informasi Usaha</h4>
               <ul className="space-y-2.5 text-xs text-slate-600 leading-relaxed">
@@ -1102,7 +1002,6 @@ export default function LandingPage() {
               </ul>
             </div>
 
-            {/* Contact & Socials */}
             <div className="lg:col-span-3 space-y-3">
               <h4 className="font-bold text-sm text-slate-900 tracking-wider uppercase">Kontak Resmi</h4>
               <ul className="space-y-2.5 text-xs sm:text-sm text-slate-600">
@@ -1138,10 +1037,9 @@ export default function LandingPage() {
 
           </div>
 
-          {/* Bottom copyright & legal links */}
           <div className="max-w-7xl mx-auto pt-8 flex flex-col md:flex-row items-center md:items-start justify-between gap-4 text-xs text-slate-500">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-6 text-center sm:text-left">
-              <p>&copy; {new Date().getFullYear()} CV. Nara Teknindotama. Seluruh hak cipta dilindungi.</p>
+              <p>© 2026 CV. Nara Teknindotama. Seluruh hak cipta dilindungi.</p>
               <div className="flex items-center gap-3 font-medium">
                 <Link to="/terms" className="hover:text-blue-600 transition-colors">
                   Syarat &amp; Ketentuan
@@ -1152,15 +1050,12 @@ export default function LandingPage() {
                 </Link>
               </div>
             </div>
-            {/* Reserved spacer on right so nothing in footer ever clashes with floating booking dock */}
             <div className="hidden lg:block w-72 shrink-0 pointer-events-none" aria-hidden="true" />
           </div>
         </footer>
 
-        {/* Floating Bottom Booking Action Pill */}
         <StickyBottomBooking />
 
-        {/* Tombol Kembali ke Atas */}
         <ScrollToTopButton />
       </main>
 

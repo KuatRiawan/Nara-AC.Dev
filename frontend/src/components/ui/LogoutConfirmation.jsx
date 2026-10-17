@@ -3,9 +3,6 @@ import { createPortal } from 'react-dom';
 import { LogOut, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-/**
- * Focus trap utility - keep focus within the dialog
- */
 const FOCUSABLE_SELECTORS = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 function useFocusTrap(ref, isOpen) {
@@ -35,7 +32,6 @@ function useFocusTrap(ref, isOpen) {
     };
     
     const handleFocusIn = (e) => {
-      // If focus goes outside the dialog
       if (ref.current && !ref.current.contains(e.target)) {
         firstElement.focus();
       }
@@ -45,7 +41,6 @@ function useFocusTrap(ref, isOpen) {
     dialog.addEventListener('keydown', handleTabKey);
     document.addEventListener('focusin', handleFocusIn);
     
-    // Focus first element on open
     firstElement.focus();
     
     return () => {
@@ -55,25 +50,15 @@ function useFocusTrap(ref, isOpen) {
   }, [isOpen]);
 }
 
-/**
- * LogoutConfirmationDialog Component
- * - Menampilkan dialog konfirmasi sebelum logout
- * - Dapat dioperasikan dengan keyboard (Escape untuk batal, Enter untuk logout)
- * - Memiliki focus management yang baik
- * - Mencegah double-click
- */
 export default function LogoutConfirmationDialog({ isOpen, onConfirm, onCancel, message = 'Apakah Anda yakin ingin mengakhiri sesi sekarang?' }) {
   const [isLoading, setIsLoading] = useState(false);
   const dialogRef = useRef(null);
   const confirmButtonRef = useRef(null);
 
-  // Focus trap untuk memastikan focus tetap di dalam dialog
   useFocusTrap(dialogRef, isOpen);
 
-  // Focus management saat dialog dibuka (fallback)
   useEffect(() => {
     if (isOpen && dialogRef.current) {
-      // Focus ke tombol confirm setelah dialog terbuka
       setTimeout(() => {
         if (confirmButtonRef.current) {
           confirmButtonRef.current.focus();
@@ -82,7 +67,6 @@ export default function LogoutConfirmationDialog({ isOpen, onConfirm, onCancel, 
     }
   }, [isOpen]);
 
-  // Handle keyboard events
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Escape' && isOpen) {
       e.preventDefault();
@@ -95,7 +79,6 @@ export default function LogoutConfirmationDialog({ isOpen, onConfirm, onCancel, 
     }
   }, [isOpen, isLoading, onCancel, onConfirm]);
 
-  // Setup keyboard listener and body scroll lock
   useEffect(() => {
     if (isOpen) {
       document.addEventListener('keydown', handleKeyDown);
@@ -140,7 +123,6 @@ export default function LogoutConfirmationDialog({ isOpen, onConfirm, onCancel, 
         role="document"
         tabIndex={-1}
         onKeyDown={(e) => {
-          // Tangani Escape dan Enter
           if (e.key === 'Escape') {
             e.preventDefault();
             onCancel();
@@ -150,7 +132,6 @@ export default function LogoutConfirmationDialog({ isOpen, onConfirm, onCancel, 
           }
         }}
       >
-        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
@@ -165,7 +146,6 @@ export default function LogoutConfirmationDialog({ isOpen, onConfirm, onCancel, 
               </h2>
             </div>
           </div>
-          {/* Close button */}
           <button
             onClick={onCancel}
             disabled={isLoading}
@@ -177,7 +157,6 @@ export default function LogoutConfirmationDialog({ isOpen, onConfirm, onCancel, 
           </button>
         </div>
 
-        {/* Message */}
         <div className="mb-6">
           <p
             id="logout-message"
@@ -187,7 +166,6 @@ export default function LogoutConfirmationDialog({ isOpen, onConfirm, onCancel, 
           </p>
         </div>
 
-        {/* Actions */}
         <div className="flex gap-3 justify-end">
           <button
             onClick={onCancel}

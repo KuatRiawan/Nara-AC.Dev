@@ -55,7 +55,6 @@ export default function TechnicianDashboard() {
       const rawJobs = jobsRes?.data?.data || jobsRes?.data || jobsRes || [];
       const jobList = Array.isArray(rawJobs) ? rawJobs : [];
 
-      // Merge today's & upcoming jobs from dashboardData if not already present
       const existingIds = new Set(jobList.map(j => j.id));
       const merged = [...jobList];
 
@@ -99,7 +98,6 @@ export default function TechnicianDashboard() {
 
     fetchData(false);
 
-    // Auto-poll every 10 seconds for real-time synchronization with Admin
     const interval = setInterval(() => {
       fetchData(true);
     }, 10000);
@@ -107,7 +105,6 @@ export default function TechnicianDashboard() {
     return () => clearInterval(interval);
   }, [user, authLoading, navigate, fetchData]);
 
-  // Real-time synchronization listeners across tabs and local events
   useEffect(() => {
     const handleSync = () => {
       fetchData(true);
@@ -132,7 +129,6 @@ export default function TechnicianDashboard() {
     };
   }, [fetchData]);
 
-  // Prioritize exact today & upcoming jobs from backend dashboard endpoint
   const todayJobs = useMemo(() => {
     if (dashboardData?.pekerjaan_hari_ini && Array.isArray(dashboardData.pekerjaan_hari_ini)) {
       return dashboardData.pekerjaan_hari_ini;
@@ -233,11 +229,9 @@ export default function TechnicianDashboard() {
     </Card>
   );
 
-  // Subviews based on pathname
   const currentPath = location.pathname.replace(/\/$/, '');
 
   const renderContent = () => {
-    // 1. JOBS LIST TAB (/technician/jobs)
     if (currentPath === '/technician/jobs') {
       const filteredJobs = jobs.filter(job => {
         const matchesStatus = statusFilter === 'all' || job.status?.toLowerCase() === statusFilter.toLowerCase();
@@ -268,7 +262,6 @@ export default function TechnicianDashboard() {
             </div>
           </div>
 
-          {/* Filter Pills */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
             {[
               { id: 'all', label: 'Semua', count: jobs.length },
@@ -306,7 +299,6 @@ export default function TechnicianDashboard() {
       );
     }
 
-    // 2. SCHEDULE TAB (/technician/schedule)
     if (currentPath === '/technician/schedule') {
       return (
         <div className="space-y-6">
@@ -350,7 +342,6 @@ export default function TechnicianDashboard() {
       );
     }
 
-    // 3. HISTORY TAB (/technician/history)
     if (currentPath === '/technician/history') {
       return (
         <div className="space-y-6">
@@ -374,7 +365,6 @@ export default function TechnicianDashboard() {
       );
     }
 
-    // 4. PROFILE TAB (/technician/profile)
     if (currentPath === '/technician/profile') {
       return (
         <div className="max-w-xl mx-auto space-y-6">
@@ -423,7 +413,6 @@ export default function TechnicianDashboard() {
       );
     }
 
-    // DEFAULT: DASHBOARD OVERVIEW (/technician/dashboard)
     const kpiHariIni = dashboardData?.ringkasan?.hari_ini ?? todayJobs.length;
     const kpiMendatang = dashboardData?.pekerjaan_mendatang?.length ?? upcomingJobs.length;
     const kpiBerjalan = dashboardData?.ringkasan?.berjalan ?? inProgressJobs.length;
@@ -431,7 +420,6 @@ export default function TechnicianDashboard() {
 
     return (
       <div className="space-y-6">
-        {/* KPI Cards Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tugas Hari Ini</span>
@@ -466,7 +454,6 @@ export default function TechnicianDashboard() {
           </div>
         </div>
 
-        {/* Section: Tugas Hari Ini */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -503,7 +490,6 @@ export default function TechnicianDashboard() {
           )}
         </section>
 
-        {/* Section: Mendatang */}
         {upcomingJobs.length > 0 && (
           <section className="space-y-4 pt-2">
             <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">

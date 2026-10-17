@@ -1,13 +1,18 @@
-import { createContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api, { setCsrfToken } from './api';
 
-export const AuthContext = createContext();
+export const AuthContext = createContext({
+  user: null,
+  token: null,
+  csrfToken: null,
+  loading: false,
+});
 
-/**
- * AuthProvider with logout confirmation.
- * Tidak menyimpan data user di sessionStorage/localStorage (AUD-005).
- * Setiap page load, user data diambil fresh dari /auth/me via HttpOnly cookie.
- */
+export function useAuth() {
+  const context = useContext(AuthContext);
+  return context || {};
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
@@ -17,8 +22,6 @@ export function AuthProvider({ children }) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
-    // Ambil user fresh dari server via HttpOnly cookie (AUD-005)
-    // Tidak lagi membaca dari sessionStorage untuk menghindari kebocoran data via XSS
     let isMounted = true;
 
     api.get('/auth/me')
@@ -27,7 +30,6 @@ export function AuthProvider({ children }) {
         const userData = res?.user || res?.data?.user || res;
         if (userData && userData.id) {
           setUser(userData);
-          // Fetch CSRF token setelah berhasil validasi sesi
           api.get('/auth/csrf-token')
             .then((csrfRes) => {
               if (!isMounted) return;
@@ -35,10 +37,12 @@ export function AuthProvider({ children }) {
               setCsrfTokenState(csrfRes.csrfToken);
             })
             .catch(() => { /* CSRF token akan di-fetch ulang saat dibutuhkan */ });
+        } else {
+          setUser(null);
         }
       })
       .catch(() => {
-        // 401 atau network error — user memang belum login, tidak perlu apa-apa
+        if (isMounted) setUser(null);
       })
       .finally(() => {
         if (isMounted) setLoading(false);
@@ -57,9 +61,6 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  /**
-   * Fetch a new CSRF token from the server
-   */
   const fetchCsrfToken = useCallback(async () => {
     try {
       const res = await api.get('/auth/csrf-token');
@@ -74,9 +75,7 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
-    // Token is stored in HttpOnly cookie by backend, not in localStorage/sessionStorage
     setUser(res.user);
-    // Fetch CSRF token after login
     await fetchCsrfToken();
     return res;
   }, [fetchCsrfToken]);
@@ -107,38 +106,26 @@ export function AuthProvider({ children }) {
     return res;
   }, [fetchCsrfToken]);
 
-  /**
-   * Confirm logout - tampilkan dialog konfirmasi
-   */
   const confirmLogout = useCallback(() => {
     setShowLogoutConfirm(true);
   }, []);
 
-  /**
-   * Cancel logout - tutup dialog tanpa melakukan logout
-   */
   const cancelLogout = useCallback(() => {
     setShowLogoutConfirm(false);
   }, []);
 
-  /**
-   * Execute logout - benar-benar keluar dari sistem
-   */
   const executeLogout = useCallback(async () => {
     setIsLoggingOut(true);
     try {
-      // Panggil endpoint logout backend jika tersedia
       try {
         await api.post('/auth/logout');
       } catch (err) {
-        // Jika logout endpoint gagal, tetap lanjut dengan logout lokal
         console.warn('Logout endpoint gagal, melanjutkan logout lokal:', err);
       }
       setToken(null);
       setUser(null);
       setCsrfToken(null);       // clear module-level token di api.js
       setCsrfTokenState(null);  // clear state lokal
-      // Kirim event untuk memberitahu komponen lain
       window.dispatchEvent(new Event('auth-logout'));
     } finally {
       setIsLoggingOut(false);
@@ -146,10 +133,6 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  /**
-   * Logout langsung (tanpa konfirmasi) - untuk kasus khusus
-   * Biasanya digunakan setelah token expired
-   */
   const forceLogout = useCallback(() => {
     setToken(null);
     setUser(null);
@@ -159,7 +142,6 @@ export function AuthProvider({ children }) {
     window.dispatchEvent(new Event('auth-logout'));
   }, []);
 
-  // Legacy logout function - redirect to confirmLogout
   const logout = useCallback(() => {
     confirmLogout();
   }, [confirmLogout]);

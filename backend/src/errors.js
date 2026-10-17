@@ -1,4 +1,3 @@
-/** Error aplikasi dengan kontrak seragam: { error: { code, message, detail? } } */
 class AppError extends Error {
   constructor(status, code, message, detail) {
     super(message);

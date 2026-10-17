@@ -19,7 +19,6 @@ const MESSAGES = {
   'object.unknown': 'Field "{{#label}}" tidak dikenali.',
 };
 
-/** Middleware validasi Joi. source: 'body' | 'query' | 'params'. */
 function validate(schema, source = 'body') {
   return (req, _res, next) => {
     const { value, error } = schema.validate(req[source], {
@@ -39,7 +38,6 @@ function validate(schema, source = 'body') {
       return next(E.validation('Data yang dikirim tidak valid. Periksa kembali isian Anda.', detail));
     }
     if (source === 'query') {
-      // Express 4: req.query boleh ditimpa; simpan juga di req.valid
       req.valid = { ...(req.valid || {}), query: value };
     } else {
       req[source] = value;

@@ -21,27 +21,75 @@ export default function AdminBookings({
 }) {
   const { error: showError, success: showSuccess } = useToast();
 
-  // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // all | unassigned | scheduled | on process | done | delayed | cancelled
   const [filterTechnician, setFilterTechnician] = useState('all');
   const [sortBy, setSortBy] = useState('schedule_asc'); // schedule_asc | schedule_desc | created_desc
   const [selectedBookingForDetail, setSelectedBookingForDetail] = useState(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.location) return;
+    const params = new URLSearchParams(window.location.search);
+    const targetBookingId = params.get('bookingId') || params.get('id');
+    const targetKode = params.get('kode') || params.get('code');
+    if (!targetBookingId && !targetKode) return;
+
+    let found = null;
+    if (targetBookingId) {
+      found = bookings.find(b => String(b.id) === String(targetBookingId));
+    }
+    if (!found && targetKode) {
+      found = bookings.find(b => String(b.kode_booking || '').toUpperCase() === String(targetKode).toUpperCase());
+    }
+
+    if (found) {
+      setSelectedBookingForDetail(found);
+      return;
+    }
+
+    let isCancelled = false;
+    const fetchTargetBooking = async () => {
+      try {
+        const idOrKode = targetBookingId || targetKode;
+        const res = await api.get(`/bookings/${idOrKode}`);
+        const data = res?.data || res;
+        if (!isCancelled && data && (data.id || data.kode_booking)) {
+          setSelectedBookingForDetail(data);
+        }
+      } catch (err) {
+        console.warn('Failed to load target booking detail from notification link:', err);
+      }
+    };
+
+    fetchTargetBooking();
+    return () => { isCancelled = true; };
+  }, [bookings]);
+
+  const handleCloseDetail = useCallback(() => {
+    setSelectedBookingForDetail(null);
+    try {
+      if (typeof window !== 'undefined' && window.location) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('bookingId');
+        url.searchParams.delete('id');
+        url.searchParams.delete('kode');
+        url.searchParams.delete('code');
+        window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+      }
+    } catch {}
+  }, []);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [copiedCode, setCopiedCode] = useState(null);
 
-  // Modal Invoice State
   const [selectedInvoiceBooking, setSelectedInvoiceBooking] = useState(null);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
 
-  // Payment Verification State (BR-37, BR-41, BR-42)
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
   const [rejectCatatan, setRejectCatatan] = useState('');
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [isProcessingRefund, setIsProcessingRefund] = useState(false);
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
 
-  // Escape key to close invoice modal
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isInvoiceModalOpen) {
@@ -52,18 +100,15 @@ export default function AdminBookings({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isInvoiceModalOpen]);
 
-  // Modal Reschedule State
   const [rescheduleBooking, setRescheduleBooking] = useState(null);
   const [newRescheduleDate, setNewRescheduleDate] = useState('');
   const [newRescheduleTime, setNewRescheduleTime] = useState('09:00');
   const [rescheduleReason, setRescheduleReason] = useState('Penyesuaian jadwal servis oleh admin');
   const [isSubmittingReschedule, setIsSubmittingReschedule] = useState(false);
 
-  // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
-  // Copy code helper
   const handleCopyCode = useCallback((code, e) => {
     if (e) e.stopPropagation();
     navigator.clipboard?.writeText(code);
@@ -71,7 +116,6 @@ export default function AdminBookings({
     setTimeout(() => setCopiedCode(null), 2000);
   }, []);
 
-  // Helper fleksibel teknisi
   const getAssignedTechnician = useCallback((b) => {
     if (!b) return null;
     if (b.teknisi && typeof b.teknisi === 'object' && b.teknisi.nama) {
@@ -86,7 +130,6 @@ export default function AdminBookings({
     return null;
   }, [technicians]);
 
-  // Format Rupiah
   const formatRupiah = (num) => {
     if (!num && num !== 0) return 'Rp 0';
     return new Intl.NumberFormat('id-ID', {
@@ -96,7 +139,6 @@ export default function AdminBookings({
     }).format(num);
   };
 
-  // Helper WA link
   const getWhatsAppLink = (rawPhone, bookingCode, customerName) => {
     if (!rawPhone) return null;
     let clean = String(rawPhone).replace(/\D/g, '');
@@ -106,7 +148,6 @@ export default function AdminBookings({
     return `https://wa.me/${clean}?text=${text}`;
   };
 
-  // Open Reschedule Modal
   const openReschedule = (booking) => {
     setRescheduleBooking(booking);
     if (booking.jadwal_mulai) {
@@ -129,7 +170,6 @@ export default function AdminBookings({
     setRescheduleReason('Penyesuaian jadwal servis oleh admin');
   };
 
-  // Submit Reschedule (Ubah Tanggal)
   const handleConfirmReschedule = async (e) => {
     e.preventDefault();
     if (!rescheduleBooking) return;
@@ -139,7 +179,6 @@ export default function AdminBookings({
       return;
     }
 
-    // Validasi hari Minggu
     const targetDateObj = new Date(newRescheduleDate + 'T00:00:00');
     if (targetDateObj.getDay() === 0) {
       showError('Hari Minggu adalah libur operasional CV. Nara Teknindotama. Silakan pilih hari Senin s/d Sabtu.');
@@ -170,7 +209,6 @@ export default function AdminBookings({
     }
   };
 
-  // Payment Verification Handlers (BR-37)
   const handleVerifyPayment = async (bookingId, status, catatan = '') => {
     setIsVerifyingPayment(true);
     const isApproved = status === 'diverifikasi' || status === true;
@@ -198,7 +236,6 @@ export default function AdminBookings({
     }
   };
 
-  // Refund Handler (BR-41)
   const handleRefundPayment = async (bookingId, nominal, catatan = '') => {
     setIsProcessingRefund(true);
     try {
@@ -222,7 +259,6 @@ export default function AdminBookings({
     }
   };
 
-  // Send WhatsApp Invoice Handler (BR-42, BR-43)
   const handleSendWhatsAppInvoice = async (bookingId, tipeInvoice = 'final') => {
     setIsSendingWhatsApp(true);
     try {
@@ -237,7 +273,6 @@ export default function AdminBookings({
     }
   };
 
-  // Invoice modal handler
   const openInvoiceModal = (booking) => {
     setSelectedInvoiceBooking(booking);
     setIsInvoiceModalOpen(true);
@@ -263,7 +298,6 @@ export default function AdminBookings({
     };
   }, [isInvoiceModalOpen]);
 
-  // Metrics KPI Cepat
   const metrics = useMemo(() => {
     let total = bookings.length;
     let unassigned = 0;
@@ -288,18 +322,15 @@ export default function AdminBookings({
     return { total, unassigned, scheduled, onProcess, done, delayed, cancelled };
   }, [bookings, getAssignedTechnician]);
 
-  // Filtered & Sorted Bookings
   const filteredBookings = useMemo(() => {
     let result = [...bookings];
 
-    // Status / Unassigned Filter
     if (filterStatus === 'unassigned') {
       result = result.filter(b => b.status === 'scheduled' && !getAssignedTechnician(b));
     } else if (filterStatus !== 'all') {
       result = result.filter(b => b.status === filterStatus);
     }
 
-    // Technician Filter
     if (filterTechnician !== 'all') {
       if (filterTechnician === 'unassigned') {
         result = result.filter(b => !getAssignedTechnician(b));
@@ -312,7 +343,6 @@ export default function AdminBookings({
       }
     }
 
-    // Search Query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       result = result.filter(b => {
@@ -330,7 +360,6 @@ export default function AdminBookings({
       });
     }
 
-    // Sorting
     result.sort((a, b) => {
       if (sortBy === 'schedule_asc') {
         return new Date(a.jadwal_mulai || 0) - new Date(b.jadwal_mulai || 0);
@@ -347,7 +376,6 @@ export default function AdminBookings({
     return result;
   }, [bookings, filterStatus, filterTechnician, searchQuery, sortBy, getAssignedTechnician]);
 
-  // Paginated bookings
   const totalPages = Math.max(1, Math.ceil(filteredBookings.length / itemsPerPage));
   const paginatedBookings = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -362,7 +390,6 @@ export default function AdminBookings({
     setCurrentPage(1);
   };
 
-  // Helper date badge
   const getDateLabel = (dateStr) => {
     if (!dateStr) return null;
     const date = new Date(dateStr);
@@ -380,7 +407,6 @@ export default function AdminBookings({
 
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 bg-slate-50/50 relative min-w-0 font-sans">
-      {/* HEADER: Standard Clean Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Daftar Booking Service</h1>
@@ -400,9 +426,7 @@ export default function AdminBookings({
         </div>
       </div>
 
-      {/* QUICK KPI METRIC CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Tiket */}
         <div
           onClick={() => { setFilterStatus('all'); setCurrentPage(1); }}
           className={cn(
@@ -424,7 +448,6 @@ export default function AdminBookings({
           </div>
         </div>
 
-        {/* Menunggu Teknisi (Paling Kritis) */}
         <div
           onClick={() => { setFilterStatus('unassigned'); setCurrentPage(1); }}
           className={cn(
@@ -464,7 +487,6 @@ export default function AdminBookings({
           </div>
         </div>
 
-        {/* Sedang Dikerjakan */}
         <div
           onClick={() => { setFilterStatus('on process'); setCurrentPage(1); }}
           className={cn(
@@ -488,7 +510,6 @@ export default function AdminBookings({
           </div>
         </div>
 
-        {/* Selesai */}
         <div
           onClick={() => { setFilterStatus('done'); setCurrentPage(1); }}
           className={cn(
@@ -511,14 +532,13 @@ export default function AdminBookings({
         </div>
       </div>
 
-      {/* FILTER & SEARCH TOOLBAR */}
       <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-4 sm:p-5 space-y-4">
-        {/* Row 1: Search & Dropdowns */}
         <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-          {/* Search Box */}
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
+              id="admin-search-bookings"
+              name="admin_search_bookings"
               type="text"
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
@@ -536,11 +556,11 @@ export default function AdminBookings({
             )}
           </div>
 
-          {/* Filter Teknisi & Sort Dropdowns */}
           <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
-            {/* Filter Teknisi */}
             <div className="relative min-w-[170px] flex-1 sm:flex-none">
               <select
+                id="admin-filter-technician"
+                name="admin_filter_technician"
                 value={filterTechnician}
                 onChange={(e) => { setFilterTechnician(e.target.value); setCurrentPage(1); }}
                 className="appearance-none w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-3 pr-8 text-xs sm:text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer shadow-sm"
@@ -554,9 +574,10 @@ export default function AdminBookings({
               <ChevronDown className="w-4 h-4 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
             </div>
 
-            {/* Sorting */}
             <div className="relative min-w-[160px] flex-1 sm:flex-none">
               <select
+                id="admin-sort-by"
+                name="admin_sort_by"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="appearance-none w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-3 pr-8 text-xs sm:text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer shadow-sm"
@@ -568,7 +589,6 @@ export default function AdminBookings({
               <ArrowUpDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
             </div>
 
-            {/* Reset Filter Button if active */}
             {(searchQuery || filterStatus !== 'all' || filterTechnician !== 'all') && (
               <Button
                 variant="ghost"
@@ -582,14 +602,13 @@ export default function AdminBookings({
           </div>
         </div>
 
-        {/* Row 2: Status Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 border-t border-slate-100 scrollbar-none">
           <button
             onClick={() => { setFilterStatus('all'); setCurrentPage(1); }}
             className={cn(
               "px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5",
               filterStatus === 'all'
-                ? "bg-slate-900 text-white shadow-sm"
+                ? "bg-gradient-to-r from-blue-700 to-sky-600 text-white shadow-sm"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             )}
           >
@@ -691,7 +710,6 @@ export default function AdminBookings({
         </div>
       </div>
 
-      {/* DATA CONTENT (TABLE / MOBILE CARDS) */}
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden">
         {loading ? (
           <div className="p-16 text-center">
@@ -700,7 +718,6 @@ export default function AdminBookings({
             <p className="text-xs text-slate-500 mt-1">Mengambil jadwal dan status teknisi terkini.</p>
           </div>
         ) : filteredBookings.length === 0 ? (
-          /* EMPTY STATE */
           <div className="p-16 text-center max-w-md mx-auto">
             <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-500 mx-auto mb-4">
               <Search className="w-8 h-8" />
@@ -719,15 +736,14 @@ export default function AdminBookings({
           </div>
         ) : (
           <>
-            {/* MOBILE CARDS VIEW (< md) */}
-            <div className="block md:hidden divide-y divide-gray-100">
-              {paginatedBookings.map(b => {
-                const assignedTech = getAssignedTechnician(b);
-                const waLink = getWhatsAppLink(b.customer?.kontak || b.kontak, b.kode_booking, b.customer?.nama || b.nama);
+            <div className="block lg:hidden p-3 sm:p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {paginatedBookings.map(b => {
+                  const assignedTech = getAssignedTechnician(b);
+                  const waLink = getWhatsAppLink(b.customer?.kontak || b.kontak, b.kode_booking, b.customer?.nama || b.nama);
 
-                return (
-                  <div key={b.id} className="p-4 space-y-3 hover:bg-slate-50/50 transition-colors">
-                    {/* Top Row: Ticket Code & Schedule Date */}
+                  return (
+                    <div key={b.id} className="p-4 space-y-3 bg-white rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-sm transition-all flex flex-col justify-between">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5">
                         <button
@@ -755,7 +771,6 @@ export default function AdminBookings({
                       </div>
                     </div>
 
-                    {/* Customer & Service Info */}
                     <div className="flex justify-between items-start gap-2">
                       <div>
                         <h4 className="font-bold text-sm text-slate-900 leading-snug">
@@ -771,7 +786,6 @@ export default function AdminBookings({
                         </div>
                       </div>
 
-                      {/* WhatsApp Button if phone available */}
                       {waLink && (
                         <a
                           href={waLink}
@@ -785,7 +799,6 @@ export default function AdminBookings({
                       )}
                     </div>
 
-                    {/* Address snippet if available */}
                     {b.alamat && (
                       <p className="text-xs text-slate-500 flex items-start gap-1 line-clamp-1">
                         <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
@@ -793,14 +806,13 @@ export default function AdminBookings({
                       </p>
                     )}
 
-                    {/* Assignment & Status Controls */}
                     <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
-                      {/* Status Selector */}
                       <div>
-                        <label htmlFor="admin-bookings-f1" className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Status</label>
+                        <label htmlFor={`admin-booking-status-card-${b.id}`} className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Status</label>
                         <div className="relative">
                           <select
-                            id="admin-bookings-f1"
+                            id={`admin-booking-status-card-${b.id}`}
+                            name={`booking_status_${b.id}`}
                             value={b.status}
                             onChange={(e) => handleStatus && handleStatus(b.id, e.target.value)}
                             className={cn(
@@ -823,13 +835,13 @@ export default function AdminBookings({
                         </div>
                       </div>
 
-                      {/* Technician Assign Selector */}
                       <div>
-                        <label htmlFor="admin-bookings-f2" className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Teknisi</label>
+                        <label htmlFor={`admin-booking-tech-card-${b.id}`} className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Teknisi</label>
                         {isAdmin ? (
                           <div className="relative">
                             <select
-                              id="admin-bookings-f2"
+                              id={`admin-booking-tech-card-${b.id}`}
+                              name={`booking_tech_${b.id}`}
                               value={assignedTech?.id || ''}
                               onChange={(e) => {
                                 const tId = parseInt(e.target.value);
@@ -862,7 +874,6 @@ export default function AdminBookings({
                       </div>
                     </div>
 
-                    {/* Bottom Action Buttons */}
                     <div className="pt-2 flex justify-end gap-1.5 flex-wrap">
                       <Button
                         variant="outline"
@@ -899,10 +910,10 @@ export default function AdminBookings({
                   </div>
                 );
               })}
+              </div>
             </div>
 
-            {/* DESKTOP TABLE VIEW (>= md) */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden lg:block overflow-x-auto">
               <table className="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
                   <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider font-bold">
@@ -927,7 +938,6 @@ export default function AdminBookings({
                           !assignedTech && b.status === 'scheduled' && "bg-amber-50/20"
                         )}
                       >
-                        {/* WAKTU & JADWAL */}
                         <td className="py-3.5 px-6">
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-slate-900 text-sm">
@@ -947,7 +957,6 @@ export default function AdminBookings({
                           </div>
                         </td>
 
-                        {/* KODE & LAYANAN */}
                         <td className="py-3.5 px-6">
                           <div className="flex items-center gap-1.5">
                             <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded-md">
@@ -980,7 +989,6 @@ export default function AdminBookings({
                           </div>
                         </td>
 
-                        {/* PELANGGAN & LOKASI */}
                         <td className="py-3.5 px-6">
                           <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-black text-xs shrink-0">
@@ -1015,11 +1023,12 @@ export default function AdminBookings({
                           )}
                         </td>
 
-                        {/* TEKNISI */}
                         <td className="py-3.5 px-6">
                           {isAdmin ? (
                             <div className="relative inline-block w-48">
                               <select
+                                id={`assign-tech-select-${b.id}`}
+                                name="assigned_technician_id"
                                 value={assignedTech?.id || ''}
                                 onChange={(e) => {
                                   const tId = parseInt(e.target.value);
@@ -1060,10 +1069,11 @@ export default function AdminBookings({
                           )}
                         </td>
 
-                        {/* STATUS */}
                         <td className="py-3.5 px-6">
                           <div className="relative inline-block w-38">
                             <select
+                              id={`booking-status-select-${b.id}`}
+                              name="booking_status"
                               value={b.status}
                               onChange={(e) => handleStatus && handleStatus(b.id, e.target.value)}
                               className={cn(
@@ -1086,7 +1096,6 @@ export default function AdminBookings({
                           </div>
                         </td>
 
-                        {/* AKSI */}
                         <td className="py-3.5 px-6 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             <Button
@@ -1129,7 +1138,6 @@ export default function AdminBookings({
               </table>
             </div>
 
-            {/* PAGINATION TOOLBAR */}
             <div className="p-4 bg-slate-50/70 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 font-medium">
               <div>
                 Menampilkan <strong className="text-slate-900">{Math.min(filteredBookings.length, (currentPage - 1) * itemsPerPage + 1)}</strong> - <strong className="text-slate-900">{Math.min(filteredBookings.length, currentPage * itemsPerPage)}</strong> dari <strong className="text-slate-900">{filteredBookings.length}</strong> tiket booking
@@ -1161,11 +1169,9 @@ export default function AdminBookings({
         )}
       </div>
 
-      {/* MODAL RINCIAN BOOKING (360 VIEW) */}
       {selectedBookingForDetail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-xl w-full overflow-hidden flex flex-col max-h-[90vh]">
-            {/* Modal Header */}
             <div className="p-5 sm:p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-start">
               <div>
                 <div className="flex items-center gap-2">
@@ -1193,16 +1199,14 @@ export default function AdminBookings({
                 </h3>
               </div>
               <button
-                onClick={() => setSelectedBookingForDetail(null)}
+                onClick={handleCloseDetail}
                 className="p-1.5 bg-slate-200 hover:bg-slate-300 text-slate-600 rounded-lg transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Modal Body */}
             <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1 text-xs sm:text-sm">
-              {/* Jadwal Pelaksanaan */}
               <div className="bg-blue-50/60 p-4 rounded-xl border border-blue-100 flex items-center justify-between gap-4">
                 <div className="space-y-1">
                   <span className="text-xs font-bold text-blue-600 uppercase tracking-wider block">Waktu Jadwal</span>
@@ -1235,7 +1239,6 @@ export default function AdminBookings({
                 </Button>
               </div>
 
-              {/* Data Pelanggan */}
               <div className="space-y-2 border-b border-slate-100 pb-4">
                 <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider text-slate-500">Informasi Pelanggan</h4>
                 <div className="flex items-center justify-between">
@@ -1265,7 +1268,6 @@ export default function AdminBookings({
                 </div>
               </div>
 
-              {/* Layanan & Unit AC */}
               <div className="space-y-2 border-b border-slate-100 pb-4">
                 <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider text-slate-500">Layanan & Unit AC</h4>
                 <div className="flex items-center justify-between">
@@ -1288,7 +1290,6 @@ export default function AdminBookings({
                 )}
               </div>
 
-              {/* Teknisi Bertugas */}
               <div className="space-y-2 border-b border-slate-100 pb-4">
                 <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider text-slate-500">Penugasan Teknisi</h4>
                 <div className="flex items-center justify-between">
@@ -1301,7 +1302,6 @@ export default function AdminBookings({
                 </div>
               </div>
 
-              {/* Status & Verifikasi Pembayaran (BR-34 s/d BR-43) */}
               <div className="space-y-3 bg-slate-50/70 p-4 rounded-2xl border border-slate-200">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
@@ -1336,7 +1336,6 @@ export default function AdminBookings({
                   </div>
                 </div>
 
-                {/* Bukti Transfer & Verifikasi Manual (BR-37) */}
                 {selectedBookingForDetail.metode_pembayaran === 'transfer' && (
                   <div className="pt-2 border-t border-slate-200 text-xs space-y-2">
                     <div className="flex items-center justify-between">
@@ -1366,7 +1365,6 @@ export default function AdminBookings({
                       </div>
                     )}
 
-                    {/* Tombol Aksi Verifikasi Admin */}
                     {selectedBookingForDetail.status_verifikasi_pembayaran !== 'diverifikasi' && (
                       <div className="pt-1 flex items-center gap-2">
                         <Button
@@ -1399,7 +1397,6 @@ export default function AdminBookings({
                   </div>
                 )}
 
-                {/* Refund Kelebihan Bayar (BR-41) */}
                 {selectedBookingForDetail.status === 'done' && Number(selectedBookingForDetail.refund_nominal || 0) > 0 && (
                   <div className="pt-2 border-t border-slate-200 text-xs">
                     <div className="flex items-center justify-between mb-1.5">
@@ -1428,7 +1425,6 @@ export default function AdminBookings({
               </div>
             </div>
 
-            {/* Modal Footer */}
             <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50/50 flex flex-wrap justify-between items-center gap-3">
               <div className="flex items-center gap-2">
                 <Button
@@ -1440,7 +1436,6 @@ export default function AdminBookings({
                   <span>Cetak E-Invoice</span>
                 </Button>
 
-                {/* Kirim Invoice via WhatsApp (BR-42) */}
                 <Button
                   size="sm"
                   variant="outline"
@@ -1465,8 +1460,8 @@ export default function AdminBookings({
               </div>
 
               <Button
-                onClick={() => setSelectedBookingForDetail(null)}
-                className="bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl px-5 h-9 cursor-pointer"
+                onClick={handleCloseDetail}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl px-5 h-9 cursor-pointer"
               >
                 Tutup
               </Button>
@@ -1475,7 +1470,6 @@ export default function AdminBookings({
         </div>
       )}
 
-      {/* MODAL UBAH TANGGAL (RESCHEDULE JADWAL) */}
       {rescheduleBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden">
@@ -1503,13 +1497,13 @@ export default function AdminBookings({
                 <span className="text-blue-700">Layanan: {rescheduleBooking.layanan?.nama_layanan || rescheduleBooking.layanan?.nama || 'Service AC'}</span>
               </div>
 
-              {/* Tanggal Baru */}
               <div>
-                <label htmlFor="admin-bookings-f3" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label htmlFor="admin-reschedule-new-date" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                   Tanggal Baru:
                 </label>
                 <input
-                  id="admin-bookings-f3"
+                  id="admin-reschedule-new-date"
+                  name="reschedule_date"
                   type="date"
                   required
                   value={newRescheduleDate}
@@ -1521,13 +1515,13 @@ export default function AdminBookings({
                 </span>
               </div>
 
-              {/* Jam Baru */}
               <div>
-                <label htmlFor="admin-bookings-f4" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label htmlFor="admin-reschedule-new-time" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                   Jam Kunjungan:
                 </label>
                 <select
-                  id="admin-bookings-f4"
+                  id="admin-reschedule-new-time"
+                  name="reschedule_time"
                   value={newRescheduleTime}
                   onChange={(e) => setNewRescheduleTime(e.target.value)}
                   className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer"
@@ -1540,16 +1534,18 @@ export default function AdminBookings({
                   <option value="14:00">14:00 WIB</option>
                   <option value="15:00">15:00 WIB</option>
                   <option value="16:00">16:00 WIB</option>
+                  <option value="17:00">17:00 WIB</option>
+                  <option value="18:00">18:00 WIB (Layanan ≤ 60 Menit)</option>
                 </select>
               </div>
 
-              {/* Alasan Perubahan */}
               <div>
-                <label htmlFor="admin-bookings-f5" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label htmlFor="admin-reschedule-reason" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                   Alasan Perubahan Jadwal:
                 </label>
                 <textarea
-                  id="admin-bookings-f5"
+                  id="admin-reschedule-reason"
+                  name="reschedule_reason"
                   rows={2}
                   required
                   value={rescheduleReason}
@@ -1583,7 +1579,6 @@ export default function AdminBookings({
         </div>
       )}
 
-      {/* INPUT BOOKING MODAL */}
       <AdminCreateBookingModal
         isOpen={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}
@@ -1595,7 +1590,6 @@ export default function AdminBookings({
         }}
       />
 
-      {/* MODAL E-INVOICE RESMI (OFFICIAL INVOICE PAPER) */}
       {isInvoiceModalOpen && selectedInvoiceBooking && typeof document !== 'undefined' && createPortal(
         <div
           id="invoice-print-portal"
@@ -1604,8 +1598,7 @@ export default function AdminBookings({
         >
           <div className="bg-white rounded-3xl max-w-4xl w-full shadow-2xl border border-slate-200 overflow-hidden my-2 sm:my-4 animate-in fade-in zoom-in-95 duration-200 invoice-modal-card relative flex flex-col print:overflow-visible print:max-w-none print:w-full print:border-none print:shadow-none print:my-0 print:rounded-none">
 
-            {/* Modal Header Actions */}
-            <div className="sticky top-0 z-20 p-3 sm:p-4 bg-slate-900 text-white flex items-center justify-between shadow-md print:hidden">
+            <div className="sticky top-0 z-20 p-3 sm:p-4 bg-gradient-to-r from-blue-700 to-sky-600 text-white flex items-center justify-between shadow-md print:hidden">
               <div className="flex items-center gap-2">
                 <Receipt className="w-5 h-5 text-sky-400" />
                 <span className="font-black text-xs sm:text-sm text-white truncate">
@@ -1634,7 +1627,6 @@ export default function AdminBookings({
               </div>
             </div>
 
-            {/* Official Printable Paper Area */}
             <div className="overflow-x-auto bg-white flex-1 print:overflow-visible print:p-0 print:w-full">
               <OfficialInvoicePaper
                 booking={selectedInvoiceBooking}
@@ -1642,7 +1634,6 @@ export default function AdminBookings({
               />
             </div>
 
-            {/* Modal Bottom Bar */}
             <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 print:hidden">
               <span className="truncate pr-2">Gunakan tombol <strong>Cetak / Download PDF</strong> untuk menyimpan dokumen faktur resmi.</span>
             </div>
@@ -1652,7 +1643,6 @@ export default function AdminBookings({
         document.body
       )}
 
-      {/* Scoped print styles */}
       <style>{`
         @media print {
           @page {

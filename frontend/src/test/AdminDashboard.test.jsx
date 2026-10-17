@@ -4,7 +4,6 @@ import { MemoryRouter } from 'react-router-dom';
 import AdminDashboard from '../pages/AdminDashboard';
 import { AuthContext } from '../AuthContext';
 
-// Mock api
 vi.mock('../api', () => ({
   default: {
     get: vi.fn((url) => {

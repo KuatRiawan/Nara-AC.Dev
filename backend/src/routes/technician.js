@@ -84,7 +84,6 @@ router.get('/jobs', TECH, validate(Joi.object({
   if (q) { params.push(`%${q}%`); where.push(`(b.kode_booking ILIKE $${params.length} OR c.nama ILIKE $${params.length})`); }
   const w = where.join(' AND ');
   const total = (await query(`SELECT COUNT(*)::int n ${JOB_FROM} WHERE ${w}`, params)).rows[0].n;
-  // ORDER BY direction: upcoming & today order chronologically ASC, all & done order newest first DESC
   const orderDir = (scope === 'today' || scope === 'upcoming') ? 'ASC' : 'DESC';
   const rows = (await query(`SELECT ${JOB_COLS} ${JOB_FROM} WHERE ${w} ORDER BY b.jadwal_mulai ${orderDir} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`, [...params, safeLimit, safeOffset])).rows;
   res.json({ data: rows, meta: { total, page, limit } });
@@ -109,7 +108,36 @@ router.patch('/jobs/:id/complete', TECH_OR_ADMIN, validate(idParam, 'params'), v
   res.json(await wf.completeJob(Number(req.params.id), req.body, req.user));
 }));
 
-router.post('/jobs/:id/delay', TECH_OR_ADMIN, validate(idParam, 'params'), validate(Joi.object({
+const DELAY_CATEGORY_MAP = {
+  'lalu lintas / macet': 'macet',
+  'lalu lintas / macet di jalan': 'macet',
+  'macet': 'macet',
+  'cuaca / hujan lebat': 'cuaca_buruk',
+  'cuaca buruk / hujan lebat': 'cuaca_buruk',
+  'cuaca_buruk': 'cuaca_buruk',
+  'akses lokasi sulit': 'pelanggan_tidak_di_tempat',
+  'akses lokasi / rumah pelanggan belum siap': 'pelanggan_tidak_di_tempat',
+  'pelanggan_tidak_di_tempat': 'pelanggan_tidak_di_tempat',
+  'pekerjaan sebelumnya melebihi estimasi': 'pekerjaan_sebelumnya_molor',
+  'pekerjaan_sebelumnya_molor': 'pekerjaan_sebelumnya_molor',
+  'kendala teknis / alat': 'kendala_teknis',
+  'kendala teknis peralatan / kendaraan': 'kendala_teknis',
+  'kendala_peralatan': 'kendala_peralatan',
+  'kendala_teknis': 'kendala_teknis',
+  'lainnya': 'lainnya',
+};
+
+const normalizeDelayCategory = (req, _res, next) => {
+  if (req.body && req.body.kategori) {
+    const raw = String(req.body.kategori).trim().toLowerCase();
+    if (DELAY_CATEGORY_MAP[raw]) {
+      req.body.kategori = DELAY_CATEGORY_MAP[raw];
+    }
+  }
+  next();
+};
+
+router.post('/jobs/:id/delay', TECH_OR_ADMIN, validate(idParam, 'params'), normalizeDelayCategory, validate(Joi.object({
   kategori: Joi.string().valid(...wf.DELAY_CATEGORIES).required().label('Kategori'),
   alasan: Joi.string().trim().min(3).max(300).required().label('Alasan'),
   durasi_tunggu_menit: Joi.number().integer().min(0).max(180).optional().label('Durasi Tunggu'),
@@ -119,7 +147,7 @@ router.post('/jobs/:id/delay', TECH_OR_ADMIN, validate(idParam, 'params'), valid
 
 router.post('/jobs/:id/checklist', TECH_OR_ADMIN, validate(idParam, 'params'), validate(Joi.object({
   task: Joi.string().trim().min(2).max(160).required().label('Tugas'),
-  wajib: Joi.boolean().default(false),
+  wajib: Joi.boolean().default(true),
 })), wrap(async (req, res) => {
   res.status(201).json(await wf.addChecklistItem(Number(req.params.id), req.body, req.user));
 }));
@@ -139,7 +167,6 @@ router.put('/jobs/:id/work-order', TECH_OR_ADMIN, validate(idParam, 'params'), v
   res.json(await wf.saveWorkOrder(Number(req.params.id), req.body, req.user));
 }));
 
-// Cek kepemilikan sebelum menerima berkas (hindari menyimpan file untuk job orang lain)
 const guardUpload = wrap(async (req, _res, next) => {
   const b = (await query('SELECT teknisi_id FROM bookings WHERE id=$1', [req.params.id])).rows[0];
   if (!b) throw E.notFound('Pekerjaan tidak ditemukan.');
@@ -180,7 +207,6 @@ router.post('/jobs/:id/notes', TECH_OR_ADMIN, validate(idParam, 'params'), valid
   res.status(201).json(r);
 }));
 
-// ---- Ketersediaan & jadwal sendiri ----
 router.get('/availability', TECH, validate(Joi.object({
   limit: Joi.number().integer().min(1).max(365).default(30),
 }), 'query'), wrap(async (req, res) => {

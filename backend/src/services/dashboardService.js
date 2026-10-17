@@ -1,4 +1,3 @@
-/** Agregasi dasbor admin: satu endpoint, semua dari database nyata (WIB). */
 const { query } = require('../db/pool');
 const { wibDateString, addDaysWibString, startOfWibDay, DAY_MS } = require('../utils/time');
 const analytics = require('./analyticsService');
@@ -141,7 +140,6 @@ async function summary({ hari = 30 } = {}, now = new Date()) {
     { kunci: 'keluhan_terbuka', jumlah: komplain.terbuka, teks: 'tiket keluhan terbuka', tautan: '/admin/notifications', tingkat: 'info' },
   ].filter((a) => a.jumlah > 0);
 
-  // Insight hanya dari data nyata
   const insights = [];
   if (prevCount.n >= 3 && curCount.n > prevCount.n * 1.15) {
     insights.push({ tingkat: 'info', judul: 'Permintaan meningkat', teks: `Booking ${hari} hari terakhir (${curCount.n}) naik dibanding periode sebelumnya (${prevCount.n}).`, rekomendasi: 'Pertimbangkan memastikan ketersediaan teknisi dan material sebelum periode ramai.' });

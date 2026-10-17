@@ -4,13 +4,11 @@ import axios from 'axios';
 import api from '../api';
 import { AuthContext } from '../AuthContext';
 
-
 import { Bell, X } from 'lucide-react';
 import { useToast } from '../components/ui/toast';
 import { getErrorMessage } from '../utils/errors';
 import DashboardLayout from '../components/layout/DashboardLayout';
 
-// Admin Subpages
 import AdminHome from './admin/AdminHome';
 import AdminCustomers from './admin/AdminCustomers';
 import AdminACUnits from './admin/AdminACUnits';
@@ -28,7 +26,6 @@ import AdminSettings from './admin/AdminSettings';
 import AdminClaims from './admin/AdminClaims';
 import AdminWhatsApp from './admin/AdminWhatsApp';
 
-
 export default function AdminDashboard() {
   const { error: showError, success: showSuccess } = useToast();
   const { user, loading: authLoading } = useContext(AuthContext);
@@ -40,37 +37,36 @@ export default function AdminDashboard() {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
 
-  // Ref to track if component is mounted and current request
   const isMountedRef = useRef(true);
   const abortControllerRef = useRef(null);
+  const prevNotifsRef = useRef(null);
 
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
-      // Cancel pending requests on unmount
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
     };
   }, []);
 
-  // Fetch unread notifications count for header badge
   const fetchUnreadNotifs = useCallback(async () => {
     try {
       const res = await api.get('/admin/notifications?unread=true&limit=1');
       const total = res?.meta?.total ?? res?.data?.meta?.total ?? (Array.isArray(res?.data) ? res.data.length : (Array.isArray(res) ? res.length : 0));
+      if (prevNotifsRef.current !== null && total > prevNotifsRef.current) {
+        showSuccess('Notifikasi Baru: Ada booking atau aktivitas baru yang masuk!');
+      }
+      prevNotifsRef.current = total;
       setUnreadNotifs(total);
     } catch {
-      // ignore
     }
-  }, []);
+  }, [showSuccess]);
 
-  // Fetch bookings for auto-refresh polling
   const fetchBookings = useCallback(async () => {
     if (!isMountedRef.current) return;
     try {
-      // Ambil transaksi aktif periode berjalan (mulai 1 Okt 2026, hingga 1000 tiket)
       const res = await api.get('/bookings', { params: { dari: '2026-10-01', limit: 1000 } });
       const rawBookings = res?.data?.data || res?.data || res;
       const finalBookings = Array.isArray(rawBookings) ? rawBookings : (rawBookings?.data && Array.isArray(rawBookings.data) ? rawBookings.data : []);
@@ -78,7 +74,6 @@ export default function AdminDashboard() {
         setBookings(finalBookings);
       }
     } catch (err) {
-      // Silently ignore polling errors
       console.debug('Polling bookings failed:', err);
     }
   }, []);
@@ -87,41 +82,47 @@ export default function AdminDashboard() {
 
   const handleBookingCreated = useCallback(() => {
     fetchBookings();
+    fetchUnreadNotifs();
     try {
       localStorage.setItem('nara_booking_sync_timestamp', Date.now().toString());
+      localStorage.setItem('nara_notification_sync', Date.now().toString());
     } catch (_) {}
     window.dispatchEvent(new CustomEvent('nara-booking-updated'));
-  }, [fetchBookings]);
+    window.dispatchEvent(new CustomEvent('nara-notification-updated'));
+  }, [fetchBookings, fetchUnreadNotifs]);
 
   useEffect(() => {
     fetchUnreadNotifs();
-    const notifInterval = setInterval(fetchUnreadNotifs, 15000);
+    const notifInterval = setInterval(fetchUnreadNotifs, 5000);
     return () => clearInterval(notifInterval);
   }, [fetchUnreadNotifs]);
 
   useEffect(() => {
-    // Initial fetch
     fetchBookings();
-    // Poll for new bookings every 15 seconds
-    const bookingInterval = setInterval(fetchBookings, 15000);
+    const bookingInterval = setInterval(fetchBookings, 5000);
     return () => clearInterval(bookingInterval);
   }, [fetchBookings]);
 
-  // Global event listener for instant synchronization across all components & tabs
   useEffect(() => {
     const handleGlobalUpdate = () => {
       fetchBookings();
       fetchUnreadNotifs();
     };
+    window.addEventListener('focus', handleGlobalUpdate);
+    window.addEventListener('nara-booking-created', handleGlobalUpdate);
     window.addEventListener('nara-booking-updated', handleGlobalUpdate);
+    window.addEventListener('nara-notification-updated', handleGlobalUpdate);
     const handleStorage = (e) => {
-      if (e.key === 'nara_booking_sync_timestamp') {
+      if (e.key === 'nara_booking_sync_timestamp' || e.key === 'nara_notification_sync') {
         handleGlobalUpdate();
       }
     };
     window.addEventListener('storage', handleStorage);
     return () => {
+      window.removeEventListener('focus', handleGlobalUpdate);
+      window.removeEventListener('nara-booking-created', handleGlobalUpdate);
       window.removeEventListener('nara-booking-updated', handleGlobalUpdate);
+      window.removeEventListener('nara-notification-updated', handleGlobalUpdate);
       window.removeEventListener('storage', handleStorage);
     };
   }, [fetchBookings, fetchUnreadNotifs]);
@@ -144,7 +145,6 @@ export default function AdminDashboard() {
     }
 
     const fetchData = async () => {
-      // Cancel previous request if it exists
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -153,7 +153,6 @@ export default function AdminDashboard() {
       abortControllerRef.current = controller;
       
       try {
-        // Only fetch technicians here; bookings are fetched via polling
         const resTechs = await api.get('/technicians', { signal: controller.signal });
         
         const rawTechs = resTechs?.data?.data || resTechs?.data || resTechs;
@@ -193,7 +192,6 @@ export default function AdminDashboard() {
         } : b));
       }
       showSuccess(`Teknisi ${tech?.nama || 'terpilih'} berhasil ditugaskan.`);
-      // Refresh background data secara sinkron
       refreshBookings();
       fetchUnreadNotifs();
       window.dispatchEvent(new CustomEvent('nara-booking-updated'));
@@ -248,7 +246,6 @@ export default function AdminDashboard() {
         </Routes>
       </div>
 
-      {/* Notifications Drawer */}
       {isNotifOpen && (
         <>
           <div 

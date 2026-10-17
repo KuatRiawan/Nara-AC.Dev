@@ -1,8 +1,6 @@
 const crypto = require('crypto');
 
-
 function generateBookingCode(date = new Date(), attempt = 0) {
-  // WIB is UTC+7
   const d = new Date(date.getTime() + 7 * 3600000);
   const pad = (n) => String(n).padStart(2, '0');
   const hh = pad(d.getUTCHours());
@@ -10,7 +8,6 @@ function generateBookingCode(date = new Date(), attempt = 0) {
   const dd = pad(d.getUTCDate());
   const mo = pad(d.getUTCMonth() + 1);
   const yyyy = d.getUTCFullYear();
-  // 16 bytes = 128 bits of cryptographically secure pseudo-randomness
   const rand = crypto.randomBytes(16).toString('hex').toUpperCase();
   const base = `NARA-AC${hh}${mm}${dd}${mo}${yyyy}-${rand}`;
   if (attempt === 0) return base;
@@ -20,7 +17,6 @@ function generateBookingCode(date = new Date(), attempt = 0) {
 
 const BOOKING_CODE_RE = /\b(NARA-AC[A-Za-z0-9-]+|AC-[A-HJKMNP-Z2-9]{4}|BK-[A-Za-z0-9-]+)\b/i;
 
-/** Normalisasi nomor HP Indonesia ke format 08xxxxxxxxx. Null jika tidak valid. */
 function normalizePhone(raw) {
   if (typeof raw !== 'string') return null;
   let s = raw.replace(/[\s().-]/g, '');
@@ -41,19 +37,16 @@ function maskCustomerName(name) {
   }).join(' ');
 }
 
-/** Generate secure single-use feedback token */
 function generateFeedbackToken() {
   return crypto.randomBytes(24).toString('hex');
 }
 
 const sha256 = (s) => crypto.createHash('sha256').update(s).digest('hex');
 
-/** Generate idempotency key for duplicate request prevention */
 function generateIdempotencyKey() {
   return crypto.randomBytes(16).toString('hex');
 }
 
-/** Generate idempotency key from provided key or generate new one */
 function getIdempotencyKey(providedKey) {
   if (providedKey && typeof providedKey === 'string' && providedKey.length > 0) {
     return providedKey;

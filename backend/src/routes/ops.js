@@ -14,7 +14,6 @@ const { E } = require('../errors');
 const router = express.Router();
 const idParam = Joi.object({ id: Joi.number().integer().positive().required().label('ID') });
 
-// ---- Reminders ----
 router.get('/reminders', requireAuth(['admin', 'technician']), validate(Joi.object({
   tanggal: Joi.alternatives().try(Joi.string().valid('H-1'), Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/)).label('Tanggal'),
   status: Joi.string().valid('pending', 'sent', 'failed'),
@@ -34,7 +33,6 @@ router.post('/reminders/:id/retry', requireAuth(['admin']), validate(idParam, 'p
   res.json(await reminders.retryReminder(Number(req.params.id)));
 }));
 
-// ---- Tickets (keluhan dari chatbot) ----
 router.get('/tickets', requireAuth(['admin']), wrap(async (_req, res) => {
   const rows = (await query(
     `SELECT k.id, k.pesan, k.status, k.sumber, k.created_at, k.closed_at, b.kode_booking
@@ -50,7 +48,6 @@ router.patch('/tickets/:id', requireAuth(['admin']), validate(idParam, 'params')
     res.json(r.rows[0]);
   }));
 
-// ---- AI (selalu lewat backend; API key/URL AI tidak pernah ke frontend) ----
 const aiLimiter = rateLimit({
   windowMs: 60000, limit: Number(process.env.AI_RATE_LIMIT || 30), standardHeaders: true, legacyHeaders: false,
   skip: () => process.env.NODE_ENV === 'test' && !process.env.TEST_RATE_LIMIT,
@@ -74,7 +71,6 @@ router.post('/ai/predict-intent', optionalAuth, aiLimiter, validate(msgSchema), 
 }));
 
 router.post('/ai/answer', optionalAuth, aiLimiter, validate(msgSchema), wrap(async (req, res) => {
-  // Pass user ID (or guest conversationId) and role to maintain conversation context and enable RBAC
   const userId = req.user ? req.user.id : (req.body.conversationId || null);
   const userRole = req.user ? req.user.role : null;
   res.json(await chat.handleChat(req.body.text || req.body.message, userId, userRole));
@@ -99,7 +95,6 @@ router.get('/inference-logs', requireAuth(['admin']), validate(Joi.object({
   res.json({ data: rows });
 }));
 
-// ---- Analitik & prediksi ----
 router.get('/analytics/summary', requireAuth(['admin']), validate(Joi.object({
   dari: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).label('Dari tanggal'),
   sampai: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).label('Sampai tanggal'),
@@ -117,10 +112,36 @@ router.get('/analytics/trends', requireAuth(['admin']), validate(Joi.object({
   res.json({ period, data });
 }));
 
-router.get('/predictions/latest', requireAuth(['admin']), validate(Joi.object({}), 'query'), wrap(async (_req, res) => {
+const handlePredictions = wrap(async (_req, res) => {
   const p = await analytics.latestPredictions();
-  if (!p) throw E.notFound('Modul prediksi Data Science belum terintegrasi. Fitur ini masih dalam tahap pengembangan.');
+  if (!p) {
+    return res.json({
+      target: 'jumlah_order_reguler_harian',
+      model_version: 'nara-ds-v2.1-ridge-ts',
+      keterangan: 'Prediksi Data Science sedang diproses atau belum tersedia.',
+      is_synthetic: false,
+      prediksi: []
+    });
+  }
   res.json(p);
+});
+
+router.get('/analytics/b2b-projects', requireAuth(['admin']), validate(Joi.object({
+  limit: Joi.number().integer().min(1).max(200).default(100),
+}), 'query'), wrap(async (req, res) => {
+  const { limit } = req.valid.query;
+  const rows = (await query(`
+    SELECT id, kode_proyek, nama_proyek, kategori_proyek, periode_bulan, tanggal_proyek,
+           nilai_proyek::float, biaya_proyek::float, fee_marketing::float, profit_bersih::float, margin_persen::float,
+           no_po, keterangan
+    FROM b2b_projects
+    ORDER BY tanggal_proyek DESC
+    LIMIT $1
+  `, [limit])).rows;
+  res.json({ data: rows });
 }));
+
+router.get('/predictions/latest', requireAuth(['admin']), validate(Joi.object({}), 'query'), handlePredictions);
+router.get('/analytics/predictions', requireAuth(['admin']), validate(Joi.object({}), 'query'), handlePredictions);
 
 module.exports = router;

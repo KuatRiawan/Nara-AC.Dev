@@ -1,11 +1,38 @@
+const path = require('path');
+const fs = require('fs');
 const { query, withTx } = require('../db/pool');
 const { E } = require('../errors');
 const { notify } = require('./common');
 const { calculateInvoice } = require('./bookingService');
+const { UPLOAD_DIR } = require('../utils/upload');
 
-/**
- * Mengambil pengaturan skema & metode pembayaran aktif (BR-34, BR-36)
- */
+function verifyCustomerOrPhone(booking, user, kontak, actionLabel = 'mengakses pembayaran booking ini') {
+  const userCustomerId = user ? (user.customer_id || user.customerId) : null;
+  if (user && (user.role === 'admin' || user.role === 'technician')) {
+    return true;
+  }
+  if (user && user.role === 'customer') {
+    if (!userCustomerId || Number(booking.customer_id) !== Number(userCustomerId)) {
+      throw E.forbidden(`Anda tidak berhak ${actionLabel}.`);
+    }
+    return true;
+  }
+  const rawKontak = String(kontak || '').trim();
+  if (!rawKontak || rawKontak.includes('*') || rawKontak.includes('•')) {
+    throw E.unauthorized(`Masukkan nomor WhatsApp pemesan lengkap (minimal 8 digit) untuk ${actionLabel}.`);
+  }
+  const cleanKontak = rawKontak.replace(/\D/g, '');
+  const cleanBookingKontak = String(booking.kontak || '').replace(/\D/g, '');
+  if (
+    cleanKontak.length < 8 ||
+    cleanBookingKontak.length < 8 ||
+    cleanBookingKontak.slice(-8) !== cleanKontak.slice(-8)
+  ) {
+    throw E.forbidden('Nomor WhatsApp verifikasi tidak sesuai dengan data pemesan (minimal 8 digit terakhir harus cocok).');
+  }
+  return true;
+}
+
 async function getPaymentSettings() {
   const schemesRow = (await query("SELECT value FROM settings WHERE key = 'payment_schemes'")).rows[0];
   const methodsRow = (await query("SELECT value FROM settings WHERE key = 'payment_methods'")).rows[0];
@@ -17,7 +44,7 @@ async function getPaymentSettings() {
   };
 
   const defaultMethods = {
-    transfer: { enabled: true, label: 'Transfer Bank', instruksi: 'Transfer ke rekening resmi Nara AC dan upload bukti bayar.' },
+    transfer: { enabled: true, label: 'Transfer Bank', instruksi: 'Transfer ke rekening resmi Nara AC dan unggah foto bukti bayar.' },
     qris: { enabled: true, label: 'QRIS', instruksi: 'Scan QRIS resmi Nara AC dengan aplikasi m-banking atau e-wallet.' },
     cash: { enabled: true, label: 'Tunai', instruksi: 'Bayar tunai langsung kepada teknisi di lokasi servis.' },
   };
@@ -28,9 +55,6 @@ async function getPaymentSettings() {
   };
 }
 
-/**
- * Admin mengatur skema & metode pembayaran yang tersedia (BR-34)
- */
 async function updatePaymentSettings({ schemes, methods }) {
   if (schemes) {
     await query(`
@@ -51,13 +75,9 @@ async function updatePaymentSettings({ schemes, methods }) {
   return getPaymentSettings();
 }
 
-/**
- * Customer memilih skema & metode pembayaran yang tersedia (BR-35, BR-36, BR-38)
- */
 async function selectPaymentScheme(bookingId, { skema_pembayaran, metode_pembayaran }, user = null, kontak = null) {
   const settings = await getPaymentSettings();
 
-  // Validasi skema tersedia
   if (skema_pembayaran) {
     const schemeConfig = settings.schemes[skema_pembayaran];
     if (!schemeConfig || !schemeConfig.enabled) {
@@ -65,7 +85,6 @@ async function selectPaymentScheme(bookingId, { skema_pembayaran, metode_pembaya
     }
   }
 
-  // Validasi metode tersedia
   if (metode_pembayaran) {
     const methodConfig = settings.methods[metode_pembayaran];
     if (!methodConfig || !methodConfig.enabled) {
@@ -78,20 +97,7 @@ async function selectPaymentScheme(bookingId, { skema_pembayaran, metode_pembaya
     const booking = bRes.rows[0];
     if (!booking) throw E.notFound('Booking tidak ditemukan.');
 
-    // Verifikasi kepemilikan jika user customer atau tamu dengan kontak (SEC-002)
-    const userCustomerId = user ? (user.customer_id || user.customerId) : null;
-    if (user && user.role === 'customer' && userCustomerId && Number(booking.customer_id) !== Number(userCustomerId)) {
-      throw E.forbidden('Anda tidak berhak mengakses booking ini.');
-    } else if (!user) {
-      if (!kontak || !String(kontak).trim()) {
-        throw E.unauthorized('Silakan login atau masukkan nomor WhatsApp pemesan (minimal 8 digit) untuk memilih skema pembayaran.');
-      }
-      const cleanKontak = String(kontak).replace(/\D/g, '');
-      const cleanBookingKontak = (booking.kontak || '').replace(/\D/g, '');
-      if (cleanKontak.length < 8 || cleanBookingKontak.length < 8 || (!cleanBookingKontak.endsWith(cleanKontak.slice(-8)) && !cleanKontak.endsWith(cleanBookingKontak.slice(-8)))) {
-        throw E.forbidden('Nomor kontak verifikasi tidak sesuai (minimal 8 digit).');
-      }
-    }
+    verifyCustomerOrPhone(booking, user, kontak, 'memilih skema pembayaran');
 
     const updated = (await client.query(`
       UPDATE bookings
@@ -102,7 +108,6 @@ async function selectPaymentScheme(bookingId, { skema_pembayaran, metode_pembaya
       RETURNING *
     `, [skema_pembayaran || null, metode_pembayaran || null, bookingId])).rows[0];
 
-    // BR-38: Booking yang belum dibayar tetap aktif (status tetap scheduled/on process, status_pembayaran tetap pending)
     return {
       success: true,
       booking: updated,
@@ -111,12 +116,13 @@ async function selectPaymentScheme(bookingId, { skema_pembayaran, metode_pembaya
   });
 }
 
-/**
- * Upload bukti pembayaran transfer bank (BR-37)
- */
-async function uploadTransferProof(bookingId, { bukti_url, nominal, catatan }, user = null, kontak = null) {
-  if (!bukti_url || !bukti_url.trim()) {
-    throw E.badRequest('Bukti pembayaran wajib diunggah (BR-37).');
+async function uploadTransferProof(bookingId, { bukti_url, nominal, catatan, file }, user = null, kontak = null) {
+  const resolvedUrl = file && file.storedName
+    ? `/api/v1/payments/bookings/${bookingId}/proof-file/${file.storedName}`
+    : (bukti_url ? String(bukti_url).trim() : '');
+
+  if (!resolvedUrl) {
+    throw E.badRequest('Bukti pembayaran berupa foto/gambar atau tautan bukti wajib dilampirkan (BR-37).');
   }
 
   const nominalNum = Number(nominal);
@@ -129,20 +135,7 @@ async function uploadTransferProof(bookingId, { bukti_url, nominal, catatan }, u
     const booking = bRes.rows[0];
     if (!booking) throw E.notFound('Booking tidak ditemukan.');
 
-    // Verifikasi kepemilikan jika user customer atau tamu dengan kontak (SEC-002)
-    const userCustomerId = user ? (user.customer_id || user.customerId) : null;
-    if (user && user.role === 'customer' && userCustomerId && Number(booking.customer_id) !== Number(userCustomerId)) {
-      throw E.forbidden('Anda tidak berhak mengunggah bukti bayar untuk booking ini.');
-    } else if (!user) {
-      if (!kontak || !String(kontak).trim()) {
-        throw E.unauthorized('Silakan login atau masukkan nomor WhatsApp pemesan (minimal 8 digit) untuk mengunggah bukti bayar.');
-      }
-      const cleanKontak = String(kontak).replace(/\D/g, '');
-      const cleanBookingKontak = (booking.kontak || '').replace(/\D/g, '');
-      if (cleanKontak.length < 8 || cleanBookingKontak.length < 8 || (!cleanBookingKontak.endsWith(cleanKontak.slice(-8)) && !cleanKontak.endsWith(cleanBookingKontak.slice(-8)))) {
-        throw E.forbidden('Nomor WhatsApp verifikasi tidak sesuai dengan pemesan (minimal 8 digit).');
-      }
-    }
+    verifyCustomerOrPhone(booking, user, kontak, 'mengunggah bukti pembayaran');
 
     const updated = (await client.query(`
       UPDATE bookings
@@ -152,9 +145,8 @@ async function uploadTransferProof(bookingId, { bukti_url, nominal, catatan }, u
           updated_at = now()
       WHERE id = $3
       RETURNING *
-    `, [bukti_url.trim(), catatan ? catatan.trim() : null, bookingId])).rows[0];
+    `, [resolvedUrl, catatan ? String(catatan).trim() : null, bookingId])).rows[0];
 
-    // Notifikasi ke Admin untuk verifikasi manual
     try {
       await notify({ query: (t, p) => client.query(t, p) }, {
         role: 'admin',
@@ -163,7 +155,7 @@ async function uploadTransferProof(bookingId, { bukti_url, nominal, catatan }, u
         message: `Customer telah mengunggah bukti pembayaran untuk booking ${booking.kode_booking} sebesar Rp ${nominalNum.toLocaleString('id-ID')}. Mohon verifikasi manual (BR-37).`,
         type: 'booking',
         bookingId: booking.id,
-        tautan: `/admin/bookings/${booking.id}`,
+        tautan: `/admin/bookings`,
         dedup: `proof_uploaded_${booking.id}_${Date.now()}`,
       });
     } catch (_) {}
@@ -171,14 +163,36 @@ async function uploadTransferProof(bookingId, { bukti_url, nominal, catatan }, u
     return {
       success: true,
       message: 'Bukti pembayaran berhasil diunggah dan sedang menunggu verifikasi manual admin (BR-37).',
+      bukti_pembayaran_url: resolvedUrl,
       booking: updated,
     };
   });
 }
 
-/**
- * Verifikasi manual bukti pembayaran oleh Admin (BR-37, BR-39, BR-40, BR-41)
- */
+async function getPaymentProofFile(bookingId, fileName, user = null, kontak = null) {
+  const safeName = path.basename(String(fileName || ''));
+  if (!safeName || safeName !== fileName) {
+    throw E.badRequest('Nama file bukti pembayaran tidak valid.');
+  }
+  const bRes = await query('SELECT * FROM bookings WHERE id = $1', [bookingId]);
+  const booking = bRes.rows[0];
+  if (!booking) throw E.notFound('Booking tidak ditemukan.');
+
+  verifyCustomerOrPhone(booking, user, kontak, 'melihat bukti pembayaran ini');
+
+  if (!booking.bukti_pembayaran_url || !booking.bukti_pembayaran_url.includes(safeName)) {
+    throw E.notFound('Bukti pembayaran tidak ditemukan untuk booking ini.');
+  }
+
+  const fullPath = path.join(UPLOAD_DIR, safeName);
+  if (!fs.existsSync(fullPath)) {
+    throw E.notFound('File bukti pembayaran tidak ditemukan di penyimpanan.');
+  }
+  const ext = path.extname(safeName).toLowerCase();
+  const mime = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+  return { fullPath, mime, safeName };
+}
+
 async function verifyPaymentProof(bookingId, { disetujui, catatan, nominal_disetujui }, adminUser) {
   if (typeof disetujui !== 'boolean') {
     throw E.badRequest('Status verifikasi disetujui (true/false) wajib ditentukan (BR-37).');
@@ -195,7 +209,6 @@ async function verifyPaymentProof(bookingId, { disetujui, catatan, nominal_diset
 
     let updated;
     if (disetujui) {
-      // Ambil items, pemakaian spare part, dan status member untuk kalkulasi invoice akurat (BR-02, BR-03)
       const itemsRes = await client.query(`
         SELECT bi.*, sc.nama_layanan
         FROM booking_items bi
@@ -244,11 +257,10 @@ async function verifyPaymentProof(bookingId, { disetujui, catatan, nominal_diset
         RETURNING *
       `, [totalDibayarBaru, isLunas ? 'paid' : 'pending', adminUser.id, catatan || 'Pembayaran telah diverifikasi admin.', bookingId])).rows[0];
 
-      // Kirim invoice otomatis melalui WhatsApp (BR-42)
       await queueAndDispatchWhatsAppInvoice(bookingId, {
         tipe_invoice: booking.status === 'done' ? 'final' : 'initial',
+        force: true,
       }, client);
-
     } else {
       if (!catatan || catatan.trim().length < 5) {
         throw E.badRequest('Alasan penolakan bukti pembayaran wajib dijelaskan minimal 5 karakter.');
@@ -274,9 +286,6 @@ async function verifyPaymentProof(bookingId, { disetujui, catatan, nominal_diset
   });
 }
 
-/**
- * Memproses pengembalian kelebihan pembayaran kepada customer (BR-41)
- */
 async function processRefund(bookingId, { nominal_refund, catatan }, adminUser) {
   const nominal = Number(nominal_refund);
   if (!nominal || nominal <= 0) {
@@ -306,15 +315,11 @@ async function processRefund(bookingId, { nominal_refund, catatan }, adminUser) 
   });
 }
 
-/**
- * Antrean dan pengiriman Invoice melalui WhatsApp (BR-42, BR-43)
- */
-async function queueAndDispatchWhatsAppInvoice(bookingId, { tipe_invoice = 'auto', simulatedFailure = false } = {}, userOrDbClient = null) {
+async function queueAndDispatchWhatsAppInvoice(bookingId, { tipe_invoice = 'auto', simulatedFailure = false, kontak = null, force = false } = {}, userOrDbClient = null) {
   const isDbClient = userOrDbClient && typeof userOrDbClient.query === 'function';
   const db = isDbClient ? userOrDbClient : { query };
   const callerUser = !isDbClient ? userOrDbClient : null;
 
-  // 1. Ambil detail booking & invoice
   const bRes = await db.query(`
     SELECT b.*, c.nama AS customer_nama, c.kontak AS customer_kontak,
            s.nama_layanan
@@ -327,15 +332,41 @@ async function queueAndDispatchWhatsAppInvoice(bookingId, { tipe_invoice = 'auto
   const booking = bRes.rows[0];
   if (!booking) throw E.notFound('Booking tidak ditemukan.');
 
-  // SEC-003: Jika dipanggil oleh customer, pastikan booking milik customer tersebut
-  if (callerUser && callerUser.role === 'customer') {
-    const callerCustId = callerUser.customer_id || callerUser.customerId;
-    if (callerCustId && Number(callerCustId) !== Number(booking.customer_id)) {
-      throw E.forbidden('Anda tidak berhak mengirim invoice untuk booking milik pelanggan lain.');
+  if (!isDbClient) {
+    if (callerUser && callerUser.role === 'customer') {
+      const callerCustId = callerUser.customer_id || callerUser.customerId;
+      if (callerCustId && Number(callerCustId) !== Number(booking.customer_id)) {
+        throw E.forbidden('Anda tidak berhak mengirim invoice untuk booking milik pelanggan lain.');
+      }
+    } else if (!callerUser) {
+      verifyCustomerOrPhone(booking, null, kontak, 'mengirim invoice ke WhatsApp');
     }
   }
 
-  // Ambil booking items, spare part, dan status member (BR-02, BR-03)
+  const determinedType = tipe_invoice === 'auto'
+    ? (booking.status === 'done' ? 'final' : 'initial')
+    : tipe_invoice;
+
+  if (!force && !simulatedFailure) {
+    try {
+      const recentRes = await db.query(`
+        SELECT * FROM whatsapp_invoice_logs
+        WHERE booking_id = $1 AND tipe_invoice = $2 AND status = 'sent'
+          AND waktu_kirim >= NOW() - INTERVAL '60 seconds'
+        ORDER BY id DESC LIMIT 1
+      `, [bookingId, determinedType]);
+      if (recentRes.rows[0]) {
+        return {
+          success: true,
+          status: 'sent',
+          deduplicated: true,
+          log: recentRes.rows[0],
+          message: 'Invoice sudah dikirim ke nomor WhatsApp Anda baru saja (mencegah pengiriman pesan ganda).',
+        };
+      }
+    } catch (_) {}
+  }
+
   const itemsRes = await db.query(`
     SELECT bi.*, sc.nama_layanan
     FROM booking_items bi
@@ -357,13 +388,8 @@ async function queueAndDispatchWhatsAppInvoice(bookingId, { tipe_invoice = 'auto
   booking.is_member = Boolean(memberRes.rows[0]);
 
   const invoice = calculateInvoice(booking);
-
-  const determinedType = tipe_invoice === 'auto'
-    ? (booking.status === 'done' ? 'final' : 'initial')
-    : tipe_invoice;
-
   const phone = (booking.kontak || booking.customer_kontak || '').trim();
-  const invoiceLink = `https://nara-ac.com/status/${booking.kode_booking}/invoice`;
+  const invoiceLink = `https://www.narateknindotama.com/status/${booking.kode_booking}`;
 
   const pesan = [
     `*NARA AC SERVICE - ${determinedType === 'final' ? 'INVOICE FINAL' : 'INVOICE AWAL'}*`,
@@ -381,10 +407,9 @@ async function queueAndDispatchWhatsAppInvoice(bookingId, { tipe_invoice = 'auto
     `----------------------------------------`,
     `Lihat / Cetak Invoice Resmi:`,
     invoiceLink,
-    `\nTerima kasih telah mempercayakan perawatan AC Anda kepada Nara AC.`,
+    `\nTerima kasih telah mempercayakan perawatan AC Anda kepada CV. Nara Teknindotama.`,
   ].filter(Boolean).join('\n');
 
-  // Simpan ke whatsapp_invoice_logs
   const logInsert = await db.query(`
     INSERT INTO whatsapp_invoice_logs (
       booking_id, tipe_invoice, nomor_whatsapp, pesan, tautan_invoice, status, percobaan, waktu_kirim
@@ -394,14 +419,11 @@ async function queueAndDispatchWhatsAppInvoice(bookingId, { tipe_invoice = 'auto
 
   const logId = logInsert.rows[0].id;
 
-  // Simulasi pengiriman atau integrasi WhatsApp API
-  // BR-43: Jika pengiriman gagal, sistem mencatat status gagal dan mendukung pengiriman ulang otomatis
   try {
     if (simulatedFailure) {
       throw new Error('Simulated WhatsApp Gateway Network Timeout (BR-43)');
     }
 
-    // Berhasil terkirim
     const updatedLog = (await db.query(`
       UPDATE whatsapp_invoice_logs
       SET status = 'sent',
@@ -416,10 +438,9 @@ async function queueAndDispatchWhatsAppInvoice(bookingId, { tipe_invoice = 'auto
       success: true,
       status: 'sent',
       log: updatedLog,
-      message: 'Invoice berhasil dikirim ke nomor WhatsApp customer (BR-42).',
+      message: 'Invoice berhasil dikirim ke nomor WhatsApp pelanggan (BR-42).',
     };
   } catch (err) {
-    // Pengiriman gagal -> simpan error & retry count
     const updatedLog = (await db.query(`
       UPDATE whatsapp_invoice_logs
       SET status = 'failed',
@@ -435,14 +456,11 @@ async function queueAndDispatchWhatsAppInvoice(bookingId, { tipe_invoice = 'auto
       status: 'failed',
       log: updatedLog,
       error: err.message,
-      message: 'Pengiriman WhatsApp gagal, dijadwalkan untuk pengiriman ulang otomatis (BR-43).',
+      message: 'Pengiriman WhatsApp gagal, dijadwalkan untuk pengiriman ulang otomatis (BR-42).',
     };
   }
 }
 
-/**
- * Pengiriman ulang otomatis untuk pesan WhatsApp yang gagal (BR-43)
- */
 async function retryFailedWhatsAppInvoices(maxLimit = 20) {
   const failedLogs = (await query(`
     SELECT * FROM whatsapp_invoice_logs
@@ -455,7 +473,6 @@ async function retryFailedWhatsAppInvoices(maxLimit = 20) {
 
   for (const log of failedLogs) {
     try {
-      // Mencoba mengirim ulang
       const updated = (await query(`
         UPDATE whatsapp_invoice_logs
         SET status = 'sent',
@@ -467,7 +484,7 @@ async function retryFailedWhatsAppInvoices(maxLimit = 20) {
         RETURNING *
       `, [log.id])).rows[0];
 
-      results.push({ id: log.id, status: 'sent', success: true });
+      results.push({ id: log.id, status: 'sent', success: true, booking_id: updated.booking_id });
     } catch (err) {
       const updated = (await query(`
         UPDATE whatsapp_invoice_logs
@@ -493,6 +510,7 @@ module.exports = {
   updatePaymentSettings,
   selectPaymentScheme,
   uploadTransferProof,
+  getPaymentProofFile,
   verifyPaymentProof,
   processRefund,
   queueAndDispatchWhatsAppInvoice,

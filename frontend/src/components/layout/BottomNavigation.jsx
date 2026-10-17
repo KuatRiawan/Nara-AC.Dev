@@ -6,15 +6,6 @@ import { getMobileNavItems, isActivePath } from './navConfig';
 import { AuthContext } from '../../AuthContext';
 import { X, Layers } from 'lucide-react';
 
-/**
- * Bottom Navigation Bar for Mobile (Gold-Standard 5 Tabs)
- * - Visible ONLY on mobile (< 768px via md:hidden)
- * - Fixed at bottom of viewport
- * - Respects iOS & Android safe area insets
- * - Touch-friendly (min 44x44 pixels)
- * - 5 equal tabs with high clarity
- * - Full-fidelity Mobile Bottom Sheet for "Lainnya"
- */
 export default function BottomNavigation() {
   const { user } = useContext(AuthContext);
   const location = useLocation();
@@ -26,7 +17,6 @@ export default function BottomNavigation() {
   const lainnyaItem = navItems.find(i => i.name === 'Lainnya');
   const lainnyaChildren = lainnyaItem?.children || [];
 
-  // Close dropdown when route changes
   useEffect(() => {
     setIsLainnyaOpen(false);
   }, [location.pathname]);
@@ -44,13 +34,9 @@ export default function BottomNavigation() {
 
   return (
     <>
-      {/* ============================================================== */}
-      {/* MOBILE BOTTOM SHEET FOR "LAINNYA" (< 768px)                   */}
-      {/* ============================================================== */}
       <AnimatePresence>
         {isLainnyaOpen && (
           <div className="fixed inset-0 z-50 md:hidden">
-            {/* Backdrop overlay */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -60,7 +46,6 @@ export default function BottomNavigation() {
               onClick={() => setIsLainnyaOpen(false)}
             />
 
-            {/* Bottom Sheet Drawer */}
             <motion.div
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
@@ -73,10 +58,8 @@ export default function BottomNavigation() {
               )}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Drag Handle Indicator */}
               <div className="w-12 h-1.5 bg-slate-300/80 rounded-full mx-auto mt-3 mb-1 shrink-0" />
 
-              {/* Sheet Header */}
               <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
@@ -101,7 +84,6 @@ export default function BottomNavigation() {
                 </button>
               </div>
 
-              {/* Sheet Content: Clean App Grid */}
               <div className="p-4 overflow-y-auto custom-scrollbar flex-1">
                 <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
                   {lainnyaChildren.map((child) => {
@@ -154,9 +136,6 @@ export default function BottomNavigation() {
         )}
       </AnimatePresence>
 
-      {/* ============================================================== */}
-      {/* BOTTOM NAVIGATION BAR - 5 EQUAL TABS (< 768px ONLY)           */}
-      {/* ============================================================== */}
       <nav 
         className={cn(
           "fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 md:hidden",

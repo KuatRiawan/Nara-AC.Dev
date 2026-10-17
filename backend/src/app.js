@@ -26,14 +26,13 @@ function createApp() {
         connectSrc: ["'self'", ...config.corsOrigins],
         fontSrc: ["'self'", "data:"],
         objectSrc: ["'none'"],
-        frameAncestors: ["'none'"],
+        frameAncestors: config.isProd ? ["'none'"] : ["'self'", "http://localhost:*", "http://127.0.0.1:*"],
         baseUri: ["'self'"],
         formAction: ["'self'"],
       },
     },
     crossOriginEmbedderPolicy: false, // diperlukan agar SPA dapat load gambar eksternal
   }));
-  // Staging environment protection - prevent search engine indexing on staging (FIND-18)
   if (process.env.APP_ENV === 'staging' || process.env.IS_STAGING === 'true') {
     app.use((_req, res, next) => {
       res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
@@ -44,22 +43,15 @@ function createApp() {
   app.use(cookieParser());
   app.use(cors({
     origin(origin, cb) {
-      // Jika origin kosong (non-browser request), izinkan
       if (!origin) return cb(null, true);
       
-      // Jika corsOrigins mengandung '*', harap di production tidak demikian
-      // Karena credentials: true tidak kompatibel dengan origin: '*'
       if (config.corsOrigins.includes('*')) {
-        // Di development, boleh untuk local testing
         if (!config.isProd) return cb(null, true);
-        // Di production, jangan pernah izinkan '*' dengan credentials
         return cb(null, false);
       }
       
-      // Izinkan jika origin ada di list
       if (config.corsOrigins.includes(origin)) return cb(null, true);
       
-      // Di development, izinkan local origins pada port umum dengan strict URL parsing (FIND-10)
       if (!config.isProd) {
         try {
           const parsed = new URL(origin);
@@ -86,16 +78,12 @@ function createApp() {
     skip: () => process.env.NODE_ENV === 'test',
   }));
 
-  // Request logging and correlation ID (BE-051, BE-054)
   app.use(requestLogger);
 
-  // CSRF protection for state-changing requests (AUD-004)
   app.use(csrfProtection);
 
-  // Health check with dependency checks (BE-052, BE-053)
   app.get('/health', wrap(healthCheckHandler));
 
-  // Legacy simple health check for backward compatibility
   app.get('/health-simple', async (_req, res) => {
     let db = 'ok';
     try { await pool.query('SELECT 1'); } catch { db = 'down'; }
@@ -122,7 +110,6 @@ function createApp() {
   });
   app.use('/api/v1', v1);
 
-  // Swagger UI (OpenAPI)
   try {
     const swaggerUi = require('swagger-ui-express');
     const YAML = require('yaml');

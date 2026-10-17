@@ -84,7 +84,7 @@ function executeMockQuery(sqlRaw, params = []) {
   }
   if (lower.includes("from settings where key = 'operating_hours'") || lower.includes("from settings where key='operating_hours'")) {
     return {
-      rows: [{ value: { open: '08:00', close: '17:00', days: [0, 1, 2, 3, 4, 5, 6], slot_minutes: 60, min_lead_minutes: 60, max_advance_days: 60, reminder_hour: 8 } }],
+      rows: [{ value: { open: '08:00', close: '19:00', days: [0, 1, 2, 3, 4, 5, 6], slot_minutes: 60, min_lead_minutes: 60, max_advance_days: 60, reminder_hour: 8 } }],
       rowCount: 1,
     };
   }
@@ -110,7 +110,7 @@ function executeMockQuery(sqlRaw, params = []) {
   }
 
   // technicians
-  if (lower.includes('select count(*)::int as n from technicians where aktif')) {
+  if (lower.includes('count(*)::int as n') && lower.includes('from technicians')) {
     const n = dbState.technicians.filter((t) => t.aktif).length;
     return { rows: [{ n }], rowCount: 1 };
   }
@@ -121,7 +121,7 @@ function executeMockQuery(sqlRaw, params = []) {
   }
 
   // technician_availability
-  if (lower.includes('from technician_availability where technician_id')) {
+  if (lower.includes('from technician_availability') && (lower.includes('where technician_id') || lower.includes('where teknisi_id'))) {
     const tid = Number(params[0]);
     const dt = String(params[1]);
     const av = dbState.technician_availability.find((a) => a.technician_id === tid && a.tanggal === dt && ['off', 'busy'].includes(a.status));
@@ -363,6 +363,26 @@ function executeMockQuery(sqlRaw, params = []) {
     const row = dbState.warranty_claims.find((c) => c.id === cid);
     return { rows: row ? [row] : [], rowCount: row ? 1 : 0 };
   }
+  if (lower.startsWith('select') && (lower.includes('from warranty_claims c') || lower.includes('from warranty_claims wc'))) {
+    const rows = dbState.warranty_claims.map((wc) => {
+      const b = dbState.bookings.find((x) => x.id === wc.booking_id) || dbState.bookings[0];
+      const cust = dbState.customers.find((x) => x.id === wc.customer_id) || dbState.customers[0];
+      const svc = dbState.service_catalog.find((x) => x.id === b.layanan_id) || dbState.service_catalog[0];
+      return {
+        ...wc,
+        kode_booking: b.kode_booking,
+        booking_kode: b.kode_booking,
+        jadwal_mulai: b.jadwal_mulai,
+        selesai_aktual: b.selesai_aktual,
+        nama_layanan: svc.nama_layanan,
+        nama_customer: cust.nama,
+        kontak_customer: cust.kontak,
+        kontak: cust.kontak,
+        alasan: wc.keluhan,
+      };
+    });
+    return { rows, rowCount: rows.length };
+  }
   if (lower.startsWith('insert into warranty_claims')) {
     const row = {
       id: ++nextId,
@@ -373,6 +393,7 @@ function executeMockQuery(sqlRaw, params = []) {
       keluhan: params[4],
       rating: params[5],
       review_komentar: params[6],
+      foto_bukti_url: params[7] ?? null,
       status: 'diajukan',
       is_gratis: true,
       biaya_tambahan: 0,
@@ -839,4 +860,74 @@ test('Scenario H & I: AI/DS Governed Predictions & WhatsApp Idempotency / Retry 
   const retryRes = await paymentService.retryFailedWhatsAppInvoices(10);
   assert.ok(retryRes.total_retried >= 1);
   assert.equal(retryRes.results[0].status, 'sent');
+});
+
+
+test('Scenario J: BUG-01 to BUG-16 & 13 Mandatory Acceptance Journeys Regression Verification', async () => {
+  // 1. BUG-06: Operating hours 08:00-19:00 -> 18:00 slot with 60m duration is VALID, while 18:00 slot with 90m duration (ends 19:30 > 19:00) is REJECTED with OUTSIDE_OPERATING_HOURS
+  const futureDate = new Date(Date.now() + 5 * 86400000);
+  if (futureDate.getDay() === 0) futureDate.setDate(futureDate.getDate() + 1); // Ensure Mon-Sat
+  const yyyy = futureDate.getFullYear();
+  const mm = String(futureDate.getMonth() + 1).padStart(2, '0');
+  const dd = String(futureDate.getDate()).padStart(2, '0');
+  const slot1800 = `${yyyy}-${mm}-${dd}T18:00:00+07:00`;
+
+  const avail60 = await bookingService.getAvailability(`${yyyy}-${mm}-${dd}`, 1, 1, new Date(), 60);
+  assert.equal(avail60.jam_operasional, '08:00–19:00');
+  const slot18Obj60 = avail60.slot.find((s) => (s.jam === '18:00' || s.jam_lokal === '18:00'));
+  assert.ok(slot18Obj60, '18:00 slot must be generated when closing hour is 19:00');
+  assert.equal(slot18Obj60.tersedia, true, '18:00 slot must be available for 60-minute service');
+
+  const avail90 = await bookingService.getAvailability(`${yyyy}-${mm}-${dd}`, 4, 1, new Date(), 90);
+  const slot18Obj90 = avail90.slot.find((s) => (s.jam === '18:00' || s.jam_lokal === '18:00'));
+  assert.equal(slot18Obj90.tersedia, false, '18:00 slot must be unavailable for 90-minute service ending at 19:30');
+  assert.equal(slot18Obj90.kode_alasan, 'DURATION_EXCEEDS_CLOSING');
+
+  // 2. BUG-09 & BUG-14: Public status endpoint returns synchronized technician progress (progres_teknisi) & WhatsApp delivery state
+  const pubStatus = await bookingService.publicStatusByCode('NARA-AC101-MEMBER');
+  assert.ok(pubStatus.progres_teknisi, 'publicStatusByCode must include progres_teknisi object');
+  assert.equal(typeof pubStatus.progres_teknisi.checklist_total, 'number');
+  assert.equal(typeof pubStatus.progres_teknisi.checklist_selesai, 'number');
+  assert.ok('foto_sebelum' in pubStatus.progres_teknisi);
+  assert.ok('foto_sesudah' in pubStatus.progres_teknisi);
+  assert.ok(Array.isArray(pubStatus.riwayat_status), 'publicStatusByCode must include full riwayat_status');
+
+  // 3. BUG-13: Masked phone string ("0812****8843") must be rejected by verifyPublicBookingOwnership
+  await assert.rejects(
+    async () => bookingService.verifyPublicBookingOwnership('NARA-AC101-MEMBER', '0812****8843'),
+    (err) => /disamarkan|tersamar/i.test(err.message)
+  );
+
+  // 4. BUG-15 & BUG-16: When a qualifying review already exists on booking 101, getWarrantyInfo returns has_qualifying_review = true and submitClaim succeeds WITHOUT re-supplying rating/review_komentar, and stores foto_bukti_url
+  const b101Ref = dbState.bookings.find((b) => b.id === 101);
+  if (b101Ref) b101Ref.selesai_aktual = new Date(Date.now() - 2 * 86400000).toISOString();
+  dbState.feedback.push({ id: 50, booking_id: 101, rating: 5, komentar: 'Sangat dingin dan bersih' });
+  const wInfoAfterReview = await warrantyService.getWarrantyInfo(101, { user: { id: 3, role: 'customer', customer_id: 1 } });
+  assert.equal(wInfoAfterReview.has_qualifying_review, true, 'BUG-15: Existing review must be recognized');
+
+  // Resolve claim2 first so we can test submitting claim3 without duplicate review
+  const activeClaim2 = dbState.warranty_claims.find((c) => c.booking_id === 101 && c.status === 'diajukan');
+  if (activeClaim2) activeClaim2.status = 'selesai';
+
+  const claim3 = await warrantyService.submitClaim({
+    booking_id: 101,
+    alasan: 'Remot dan sensor indoor kurang responsif setelah servis',
+    foto_bukti_url: '/api/v1/claims/999/photo-file/claim_proof.jpg',
+    user: { id: 3, role: 'customer', customer_id: 1 },
+  });
+  assert.equal(claim3.status, 'diajukan');
+  assert.equal(claim3.foto_bukti_url, '/api/v1/claims/999/photo-file/claim_proof.jpg');
+
+  const claimsList = await warrantyService.listClaims({});
+  assert.ok((claimsList.data || claimsList)[0].booking_kode, 'listClaims must include booking_kode alias for AdminClaims');
+  assert.ok((claimsList.data || claimsList)[0].kontak, 'listClaims must include kontak alias for AdminClaims');
+
+  // 5. BUG-11: Analytics summary returns all 5 required analytical categories
+  const summaryData = await analyticsService.summary();
+  assert.ok(summaryData.transaksi_pelanggan, 'Category 1: Customer transaction analytics');
+  assert.ok(Array.isArray(summaryData.layanan_terpopuler), 'Category 2: Most popular services');
+  assert.ok(summaryData.pendapatan, 'Category 3: Revenue analytics');
+  assert.ok(Array.isArray(summaryData.workload_teknisi), 'Category 4: Technician workload');
+  assert.ok(summaryData.booking_terjadwal, 'Category 5: Scheduled bookings');
+  assert.ok(summaryData.prediksi_ds, 'DS 14-day demand forecast');
 });

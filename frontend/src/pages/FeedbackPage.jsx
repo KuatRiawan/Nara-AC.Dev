@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
+import { useContextualBack } from '../hooks/useContextualBack';
 import { motion } from 'framer-motion';
 import api from '../api';
 import { Button } from '../components/ui/button';
@@ -10,6 +11,7 @@ import { useToast } from '../components/ui/toast';
 import { Star, MessageSquare, CheckCircle2, ArrowLeft, Loader2, ShieldCheck, User, Wrench, Sparkles, HeartHandshake, Check, AlertCircle, FileText, Clock } from 'lucide-react';
 
 export default function FeedbackPage() {
+  const handleBack = useContextualBack('/');
   const { kode } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -20,7 +22,6 @@ export default function FeedbackPage() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
 
-  // Form states
   const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
   const [selectedTags, setSelectedTags] = useState(['❄️ AC Dingin Maksimal', '👨‍🔧 Teknisi Ramah & Sopan', '🛠️ Kerja Rapi & Bersih']);
@@ -41,7 +42,6 @@ export default function FeedbackPage() {
     '🧹 Area Sekitar Tetap Kering'
   ];
 
-  // Fetch booking details on mount
   useEffect(() => {
     async function loadBookingData() {
       if (!kode) {
@@ -112,7 +112,6 @@ export default function FeedbackPage() {
     setSubmitError('');
 
     try {
-      // Format comment with selected tags
       const tagPrefix = selectedTags.length > 0 ? `[Apresiasi: ${selectedTags.join(', ')}] ` : '';
       const finalComment = `${tagPrefix}${komentar.trim()}`.trim();
 
@@ -138,9 +137,6 @@ export default function FeedbackPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50/60 via-slate-50 to-white font-sans flex flex-col text-slate-800">
       
-      {/* ============================================================== */}
-      {/* 1. TOP NAVBAR                                                 */}
-      {/* ============================================================== */}
       <header className="bg-white/90 backdrop-blur-md border-b border-sky-100/80 sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-18 flex justify-between items-center">
           <Link to="/" className="flex items-center hover:opacity-90 transition-opacity">
@@ -161,26 +157,20 @@ export default function FeedbackPage() {
               </Link>
             )}
 
-            <Link to="/">
-              <Button 
+            <Button onClick={handleBack} 
                 variant="outline" 
                 size="sm"
                 className="rounded-xl border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Beranda</span>
+                <span className="hidden sm:inline">Kembali</span>
               </Button>
-            </Link>
           </div>
         </div>
       </header>
 
-      {/* ============================================================== */}
-      {/* 2. MAIN CONTENT                                                */}
-      {/* ============================================================== */}
       <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-12 flex flex-col justify-center">
 
-        {/* LOADING STATE */}
         {loading && (
           <div className="text-center py-20 bg-white rounded-3xl shadow-xl border border-slate-200/80 p-8">
             <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto mb-4" />
@@ -189,7 +179,6 @@ export default function FeedbackPage() {
           </div>
         )}
 
-        {/* ERROR STATE */}
         {!loading && fetchError && (
           <div className="bg-white rounded-3xl p-8 sm:p-10 shadow-xl border border-rose-200 text-center max-w-lg mx-auto">
             <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4">
@@ -214,7 +203,6 @@ export default function FeedbackPage() {
           </div>
         )}
 
-        {/* ALREADY SUBMITTED FEEDBACK STATE */}
         {!loading && booking && booking.sudah_feedback && !isSuccess && (
           <div className="bg-white rounded-3xl p-8 sm:p-12 shadow-xl border border-emerald-200 text-center max-w-lg mx-auto">
             <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-5 shadow-inner">
@@ -249,7 +237,6 @@ export default function FeedbackPage() {
           </div>
         )}
 
-        {/* NOT DONE YET WARNING */}
         {!loading && booking && !booking.sudah_feedback && booking.status !== 'done' && (
           <div className="bg-white rounded-3xl p-8 sm:p-10 shadow-xl border border-amber-200 text-center max-w-lg mx-auto">
             <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-4">
@@ -277,7 +264,6 @@ export default function FeedbackPage() {
           </div>
         )}
 
-        {/* SUCCESS STATE AFTER SUBMISSION */}
         {isSuccess && (
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
@@ -334,14 +320,12 @@ export default function FeedbackPage() {
           </motion.div>
         )}
 
-        {/* MAIN FEEDBACK FORM */}
         {!loading && booking && !booking.sudah_feedback && booking.status === 'done' && !isSuccess && (
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
           >
-            {/* Header Title */}
             <div className="text-center max-w-xl mx-auto mb-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider border border-blue-200 mb-3">
                 <HeartHandshake className="w-3.5 h-3.5" /> Ulasan Kepuasan Servis
@@ -355,7 +339,6 @@ export default function FeedbackPage() {
               </p>
             </div>
 
-            {/* Service & Technician Context Summary Card */}
             <div className="bg-white/80 backdrop-blur-md rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3.5">
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-sky-400 text-white flex items-center justify-center font-black text-lg shadow-md shadow-blue-600/20 shrink-0">
@@ -381,7 +364,6 @@ export default function FeedbackPage() {
               </div>
             </div>
 
-            {/* Form Card */}
             <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-200/80">
               
               {submitError && (
@@ -393,7 +375,6 @@ export default function FeedbackPage() {
 
               <form onSubmit={handleSubmit} className="space-y-8">
                 
-                {/* 1. STAR RATING SECTION */}
                 <div className="text-center py-2">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-4">
                     Beri Penilaian Bintang
@@ -422,7 +403,6 @@ export default function FeedbackPage() {
                     ))}
                   </div>
 
-                  {/* Emotion Pill Badge */}
                   <div className="h-10 mt-4 flex items-center justify-center">
                     <span className={cn(
                       "inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold border transition-all duration-300 shadow-xs",
@@ -435,7 +415,6 @@ export default function FeedbackPage() {
                   </div>
                 </div>
 
-                {/* 2. QUICK APPRECIATION TAGS */}
                 <div className="pt-6 border-t border-slate-100" role="group" aria-labelledby="feedback-tags-label">
                   <label id="feedback-tags-label" className="text-xs font-bold text-slate-900 block mb-2">
                     Apa yang paling memuaskan dari servis kami? (Pilih satu atau lebih):
@@ -467,7 +446,6 @@ export default function FeedbackPage() {
                   </div>
                 </div>
 
-                {/* 3. COMMENT TEXTAREA */}
                 <div className="pt-6 border-t border-slate-100">
                   <label htmlFor="feedback-komentar" className="text-xs font-bold text-slate-900 flex items-center justify-between mb-2">
                     <span className="flex items-center gap-1.5">
@@ -489,7 +467,6 @@ export default function FeedbackPage() {
                   />
                 </div>
 
-                {/* 4. SECURITY VERIFICATION CONTACT */}
                 <div className="pt-6 border-t border-slate-100">
                   {feedbackToken ? (
                     <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center gap-3 text-emerald-800 text-xs">
@@ -522,7 +499,6 @@ export default function FeedbackPage() {
                   )}
                 </div>
 
-                {/* SUBMIT BUTTON */}
                 <div className="pt-4">
                   <Button
                     type="submit"
@@ -555,12 +531,9 @@ export default function FeedbackPage() {
 
       </main>
 
-      {/* ============================================================== */}
-      {/* 3. FOOTER                                                      */}
-      {/* ============================================================== */}
       <footer className="bg-white border-t border-slate-200/80 py-6 text-xs text-slate-500 mt-auto">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          <p>&copy; {new Date().getFullYear()} CV. Nara Teknindotama. Seluruh hak cipta dilindungi.</p>
+          <p>© 2026 CV. Nara Teknindotama. Seluruh hak cipta dilindungi.</p>
           <div className="flex items-center gap-3 font-medium">
             <Link to="/terms" className="hover:text-blue-600 transition-colors">
               Syarat &amp; Ketentuan

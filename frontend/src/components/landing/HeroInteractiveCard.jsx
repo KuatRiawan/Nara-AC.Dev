@@ -8,11 +8,9 @@ export default function HeroInteractiveCard({ services = [] }) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('estimator'); // 'estimator' | 'tracker'
 
-  // Tracker state
   const [trackingInput, setTrackingInput] = useState('');
   const [trackingError, setTrackingError] = useState('');
 
-  // Estimator state
   const [unitCount, setUnitCount] = useState(2);
   const [selectedService, setSelectedService] = useState('core'); // 'standard' | 'core' | 'core_freon'
 
@@ -59,7 +57,6 @@ export default function HeroInteractiveCard({ services = [] }) {
   const calculation = useMemo(() => {
     const s = serviceOptions[selectedService] || serviceOptions.core;
     const subtotal = s.basePrice * unitCount;
-    // Diskon eksklusif untuk Member: 10%
     const memberDiscount = Math.round(subtotal * 0.1);
     const total = subtotal;
     const estTime = Math.round((s.durationPerUnit * unitCount) * (unitCount > 1 ? 0.85 : 1));
@@ -101,7 +98,6 @@ export default function HeroInteractiveCard({ services = [] }) {
 
   return (
     <div className="relative">
-      {/* Ambient Pulsing Backing Glow */}
       <motion.div
         animate={{
           opacity: [0.3, 0.55, 0.3],
@@ -113,7 +109,6 @@ export default function HeroInteractiveCard({ services = [] }) {
 
       <div className="relative bg-white/95 backdrop-blur-2xl p-6 sm:p-7 rounded-3xl border border-sky-100 shadow-2xl shadow-blue-900/10 text-left overflow-hidden">
         
-        {/* Dual Tab Switcher */}
         <div className="flex p-1.5 bg-sky-50/80 rounded-2xl border border-sky-100 mb-6 gap-1.5">
           <button
             type="button"
@@ -144,7 +139,6 @@ export default function HeroInteractiveCard({ services = [] }) {
 
         <AnimatePresence mode="wait">
           {activeTab === 'estimator' ? (
-            /* TAB 1: KALKULATOR ESTIMASI HARGA & WAKTU */
             <motion.div
               key="estimator"
               initial={{ opacity: 0, y: 12 }}
@@ -153,7 +147,6 @@ export default function HeroInteractiveCard({ services = [] }) {
               transition={{ duration: 0.25 }}
               className="space-y-4"
             >
-              {/* Jumlah Unit Selector */}
               <div>
                 <div role="group" aria-labelledby="hero-unit-count-label" className="flex items-center justify-between mb-2">
                   <label id="hero-unit-count-label" className="text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -181,7 +174,6 @@ export default function HeroInteractiveCard({ services = [] }) {
                 </div>
               </div>
 
-              {/* Paket Pilihan */}
               <div>
                 <label id="hero-service-label" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                   Pilih Paket Servis
@@ -229,7 +221,6 @@ export default function HeroInteractiveCard({ services = [] }) {
                 </div>
               </div>
 
-              {/* Animated Live Summary Box */}
               <motion.div
                 layout
                 className="bg-gradient-to-br from-sky-50 to-blue-50/70 p-4 rounded-2xl border border-sky-200/80 mt-4 space-y-2.5"
@@ -278,7 +269,6 @@ export default function HeroInteractiveCard({ services = [] }) {
               </motion.div>
             </motion.div>
           ) : (
-            /* TAB 2: LACAK STATUS TIKET (QUICK TRACKER) */
             <motion.div
               key="tracker"
               initial={{ opacity: 0, y: 12 }}
@@ -330,7 +320,6 @@ export default function HeroInteractiveCard({ services = [] }) {
                 </Button>
               </form>
 
-              {/* Sample Ticket Mini Simulation */}
               <div className="pt-3 border-t border-sky-100">
                 <div className="bg-sky-50/80 rounded-xl p-3 border border-sky-100 flex items-center justify-between">
                   <div className="flex items-center gap-2.5">

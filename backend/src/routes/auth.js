@@ -1,19 +1,20 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
-const { query } = require('../db/pool');
+const { query, withTx } = require('../db/pool');
 const { Joi, validate } = require('../middleware/validate');
-const { requireAuth, signToken } = require('../middleware/auth');
+const { requireAuth, optionalAuth, signToken } = require('../middleware/auth');
 const { wrap } = require('../middleware/errorHandler');
 const { csrfTokenHandler, clearCsrfTokens } = require('../middleware/csrf');
+const { normalizePhone } = require('../utils/ids');
 const { E } = require('../errors');
 
 const router = express.Router();
 
-// Rate limit khusus untuk login — cegah brute force (AUD-007)
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 menit
-  limit: 10, // maksimal 10 percobaan per 15 menit per IP
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
   standardHeaders: true,
   legacyHeaders: false,
   skip: () => process.env.NODE_ENV === 'test',
@@ -29,7 +30,6 @@ const loginSchema = Joi.object({
 
 router.post('/login', loginLimiter, validate(loginSchema), wrap(async (req, res) => {
   const u = (await query('SELECT * FROM users WHERE lower(email)=lower($1)', [req.body.email])).rows[0];
-  // Pesan generik: tidak membocorkan apakah email terdaftar
   const bad = () => E.unauthorized('Email atau password salah.');
   if (!u || !u.aktif) throw bad();
   if (!(await bcrypt.compare(req.body.password, u.password_hash))) throw bad();
@@ -43,31 +43,24 @@ router.post('/login', loginLimiter, validate(loginSchema), wrap(async (req, res)
     technician_id: u.technician_id || null,
     customer_id: u.customer_id || null,
   };
-  
-  // Set token in HttpOnly cookie for security
+
   res.cookie('nara_token', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
-    maxAge: 8 * 60 * 60 * 1000, // 8 hours to match JWT expiry
+    maxAge: 8 * 60 * 60 * 1000,
     path: '/',
   });
-  
-  res.json({
-    user,
-  });
+
+  res.json({ user });
 }));
 
-// ==============================================================================
-// 1. STAFF LOGIN (KHUSUS ADMIN & TEKNISI)
-// ==============================================================================
 router.post('/staff/login', loginLimiter, validate(loginSchema), wrap(async (req, res) => {
   const u = (await query('SELECT * FROM users WHERE lower(email)=lower($1)', [req.body.email])).rows[0];
   const bad = () => E.unauthorized('Email atau password staf salah.');
   if (!u || !u.aktif) throw bad();
   if (!(await bcrypt.compare(req.body.password, u.password_hash))) throw bad();
 
-  // Role Guard: Khusus staf internal (admin & technician)
   if (u.role === 'customer') {
     throw E.forbidden('Akses ditolak. Halaman ini khusus untuk staf internal CV. Nara Teknindotama. Silakan masuk melalui Portal Pelanggan.');
   }
@@ -97,12 +90,9 @@ router.post('/staff/login', loginLimiter, validate(loginSchema), wrap(async (req
   });
 }));
 
-// ==============================================================================
-// 2. MEMBER / CUSTOMER WHATSAPP OTP LOGIN
-// ==============================================================================
 const otpLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 menit
-  limit: 5, // maksimal 5 permintaan OTP per 15 menit
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
   standardHeaders: true,
   legacyHeaders: false,
   skip: () => process.env.NODE_ENV === 'test',
@@ -116,8 +106,6 @@ const requestOtpSchema = Joi.object({
 });
 
 router.post('/customer/request-otp', otpLimiter, validate(requestOtpSchema), wrap(async (req, res) => {
-  const crypto = require('crypto');
-  const { normalizePhone } = require('../utils/ids');
   const { whatsappSend } = require('../services/reminderService');
 
   const phone = normalizePhone(req.body.kontak);
@@ -125,7 +113,6 @@ router.post('/customer/request-otp', otpLimiter, validate(requestOtpSchema), wra
     throw E.validation('Nomor WhatsApp tidak valid.', { kontak: 'Gunakan nomor HP/WhatsApp Indonesia yang aktif, contoh: 081234567890.' });
   }
 
-  // Cek apakah nomor kontak terdaftar di database users (role customer) atau customers
   const existingUser = (await query(
     `SELECT u.id, u.nama, u.aktif, u.role
      FROM users u
@@ -143,27 +130,21 @@ router.post('/customer/request-otp', otpLimiter, validate(requestOtpSchema), wra
     });
   }
 
-  // Generate 6-digit cryptographic OTP
   const rawOtp = crypto.randomInt(100000, 999999).toString();
   const otpHash = crypto.createHash('sha256').update(rawOtp).digest('hex');
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 menit
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-  // Simpan OTP ke tabel whatsapp_otps
   await query(
     'INSERT INTO whatsapp_otps (kontak, otp_hash, expires_at) VALUES ($1, $2, $3)',
     [phone, otpHash, expiresAt],
   );
 
   const namaTujuan = existingUser?.nama || existingCustomer?.nama || 'Pelanggan';
+  const textMessage = `Halo Bapak/Ibu *${namaTujuan}*,\n\nKode OTP masuk Portal Pelanggan NARA AC Anda adalah:\n\n*${rawOtp}*\n\nKode ini berlaku selama 5 menit. Demi keamanan akun Anda, jangan berikan kode ini kepada siapapun termasuk petugas NARA AC.\n\nTerima kasih.`;
 
-  // Format pesan WhatsApp resmi
-  const textMessage = `Halo Bapak/Ibu *${namaTujuan}*,\n\nKode OTP masuk Portal Pelanggan NARA AC Anda adalah:\n\n🔐 *${rawOtp}*\n\nKode ini berlaku selama 5 menit. Demi keamanan akun Anda, jangan berikan kode ini kepada siapapun termasuk petugas NARA AC.\n\nTerima kasih.`;
-
-  // Kirim WhatsApp jika nomor valid
   try {
     await whatsappSend(phone, textMessage);
   } catch (err) {
-    // Log error gateway tapi tetap izinkan alur testing jika gateway eksternal belum di-bind
     if (process.env.NODE_ENV !== 'production') {
       console.warn('[auth-otp] Gagal kirim WA via gateway:', err?.message);
     }
@@ -183,11 +164,11 @@ const verifyOtpSchema = Joi.object({
 });
 
 router.post('/customer/verify-otp', validate(verifyOtpSchema), wrap(async (req, res) => {
-  const crypto = require('crypto');
-  const { normalizePhone } = require('../utils/ids');
-  const { withTx } = require('../db/pool');
-
-  const phone = normalizePhone(req.body.kontak);
+  const rawKontak = String(req.body.kontak || '').trim();
+  if (rawKontak.includes('*') || rawKontak.includes('•')) {
+    throw E.validation('Nomor WhatsApp tidak valid.', { kontak: 'Gunakan nomor WhatsApp asli yang telah diverifikasi.' });
+  }
+  const phone = normalizePhone(rawKontak);
   if (!phone) {
     throw E.validation('Nomor WhatsApp tidak valid.', { kontak: 'Gunakan nomor WhatsApp Indonesia yang valid.' });
   }
@@ -195,7 +176,6 @@ router.post('/customer/verify-otp', validate(verifyOtpSchema), wrap(async (req, 
   const tokenHash = crypto.createHash('sha256').update(req.body.otp.trim()).digest('hex');
 
   const user = await withTx(async (client) => {
-    // Ambil OTP aktif terakhir untuk nomor ini
     const otpRow = (await client.query(
       `SELECT id, otp_hash, expires_at, attempts, is_used
        FROM whatsapp_otps
@@ -224,10 +204,8 @@ router.post('/customer/verify-otp', validate(verifyOtpSchema), wrap(async (req, 
       });
     }
 
-    // Tandai OTP telah digunakan
     await client.query('UPDATE whatsapp_otps SET is_used = true WHERE id = $1', [otpRow.id]);
 
-    // Cari akun user customer
     let u = (await client.query(
       `SELECT u.id, u.nama, u.email, u.role, u.kontak, u.customer_id, u.aktif
        FROM users u
@@ -236,13 +214,11 @@ router.post('/customer/verify-otp', validate(verifyOtpSchema), wrap(async (req, 
       [phone],
     )).rows[0];
 
-    // Jika belum punya akun di users, tapi sudah terdaftar di customers (misal pernah booking)
     if (!u) {
       const cust = (await client.query('SELECT * FROM customers WHERE kontak = $1', [phone])).rows[0];
       if (!cust) {
         throw E.notFound('Profil pelanggan tidak ditemukan. Silakan mendaftar terlebih dahulu.');
       }
-      // Buatkan akun user customer otomatis yang terikat ke customer_id tersebut
       const dummyPassword = crypto.randomBytes(24).toString('hex');
       const hash = await bcrypt.hash(dummyPassword, 10);
       const emailAutogen = `cust_${cust.id}_${phone}@member.naraac.id`;
@@ -297,11 +273,9 @@ const registerSchema = Joi.object({
 
 router.post('/register', validate(registerSchema), wrap(async (req, res) => {
   const { nama, email, password, kontak, alamat } = req.body;
-  const { normalizePhone } = require('../utils/ids');
   const phone = normalizePhone(kontak);
   if (!phone) throw E.validation('Kontak tidak valid.', { kontak: 'Gunakan nomor HP Indonesia, contoh 081234567890.' });
   const hash = await bcrypt.hash(password, 10);
-  const { withTx } = require('../db/pool');
   const user = await withTx(async (client) => {
     let cust = (await client.query('SELECT * FROM customers WHERE kontak=$1', [phone])).rows[0];
     if (!cust) {
@@ -313,49 +287,120 @@ router.post('/register', validate(registerSchema), wrap(async (req, res) => {
     const existing = (await client.query('SELECT id FROM users WHERE lower(email)=lower($1) OR customer_id=$2', [email, cust.id])).rows[0];
     if (existing) throw E.conflict('Email atau nomor HP sudah terdaftar. Silakan login.');
     const u = (await client.query(
-      "INSERT INTO users (nama, email, password_hash, role, customer_id) VALUES ($1,$2,$3,'customer',$4) RETURNING id, nama, email, role, customer_id",
-      [nama, email, hash, cust.id],
+      "INSERT INTO users (nama, email, password_hash, role, customer_id, kontak) VALUES ($1,$2,$3,'customer',$4,$5) RETURNING id, nama, email, role, customer_id, kontak",
+      [nama, email, hash, cust.id, phone],
     )).rows[0];
     return u;
   });
   const token = signToken(user);
-  const userResponse = { id: user.id, nama: user.nama, email: user.email, role: user.role, technician_id: null, customer_id: user.customer_id };
-  
-  // Set token in HttpOnly cookie for security
+  const userResponse = {
+    id: user.id,
+    nama: user.nama,
+    email: user.email,
+    role: user.role,
+    kontak: user.kontak || phone,
+    technician_id: null,
+    customer_id: user.customer_id,
+  };
+
   res.cookie('nara_token', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
-    maxAge: 8 * 60 * 60 * 1000, // 8 hours to match JWT expiry
+    maxAge: 8 * 60 * 60 * 1000,
     path: '/',
   });
-  
-  res.status(201).json({
-    user: userResponse,
-  });
+
+  res.status(201).json({ user: userResponse });
 }));
 
-router.get('/me', requireAuth(), wrap(async (req, res) => {
+router.get('/me', optionalAuth, wrap(async (req, res) => {
+  if (!req.user) {
+    return res.json({ user: null });
+  }
   const u = (await query('SELECT id, nama, email, role, kontak, technician_id, customer_id, aktif, created_at FROM users WHERE id=$1', [req.user.id])).rows[0];
-  if (!u || !u.aktif) throw E.unauthorized('Akun tidak aktif.');
+  if (!u || !u.aktif) return res.json({ user: null });
   res.json({ user: u });
+}));
+
+router.post('/profile/request-phone-change', requireAuth(), otpLimiter, validate(Joi.object({
+  kontak_baru: Joi.string().trim().max(30).required().label('Nomor WhatsApp Baru'),
+})), wrap(async (req, res) => {
+  const phone = normalizePhone(req.body.kontak_baru);
+  if (!phone) {
+    throw E.validation('Nomor WhatsApp tidak valid.', { kontak_baru: 'Gunakan nomor WhatsApp Indonesia yang aktif, contoh: 081234567890.' });
+  }
+  const taken = (await query(
+    `SELECT id FROM users WHERE kontak = $1 AND id <> $2`,
+    [phone, req.user.id]
+  )).rows[0];
+  if (taken) {
+    throw E.conflict('Nomor WhatsApp tersebut sudah digunakan oleh akun lain.');
+  }
+
+  const rawOtp = crypto.randomInt(100000, 999999).toString();
+  const otpHash = crypto.createHash('sha256').update(rawOtp).digest('hex');
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+  await query(
+    'INSERT INTO whatsapp_otps (kontak, otp_hash, expires_at) VALUES ($1, $2, $3)',
+    [phone, otpHash, expiresAt],
+  );
+
+  res.json({
+    success: true,
+    kontak_baru: phone,
+    message: `Kode OTP verifikasi perubahan nomor telah dikirim ke ${phone}.`,
+    ...(process.env.NODE_ENV !== 'production' || process.env.ENABLE_DEV_OTP === 'true' ? { _dev_otp: rawOtp } : {}),
+  });
 }));
 
 const updateProfileSchema = Joi.object({
   nama: Joi.string().trim().min(2).max(80).required().label('Nama Lengkap'),
   email: Joi.string().email({ tlds: { allow: false } }).max(120).required().label('Email'),
   kontak: Joi.string().trim().allow('', null).max(30).optional().label('Nomor WhatsApp / HP'),
+  otp: Joi.string().trim().length(6).optional().allow('', null).label('Kode OTP Verifikasi Nomor Baru'),
 });
 
 router.patch('/profile', requireAuth(), validate(updateProfileSchema), wrap(async (req, res) => {
-  const { nama, email, kontak } = req.body;
+  const { nama, email, kontak, otp } = req.body;
   const existing = (await query('SELECT id FROM users WHERE lower(email)=lower($1) AND id<>$2', [email, req.user.id])).rows[0];
   if (existing) throw E.conflict('Email sudah digunakan oleh akun lain.');
 
-  const prev = (await query('SELECT id, nama, email, kontak, role FROM users WHERE id=$1', [req.user.id])).rows[0];
+  const prev = (await query('SELECT id, nama, email, kontak, role, customer_id FROM users WHERE id=$1', [req.user.id])).rows[0];
+  let custPrev = null;
+  if (prev?.customer_id) {
+    custPrev = (await query('SELECT kontak FROM customers WHERE id=$1', [prev.customer_id])).rows[0];
+  }
+  const currentPhone = normalizePhone(prev?.kontak || custPrev?.kontak || '');
+  const requestedPhone = kontak ? normalizePhone(kontak) : currentPhone;
+
+  if (kontak && !requestedPhone) {
+    throw E.validation('Nomor WhatsApp tidak valid.', { kontak: 'Gunakan nomor HP Indonesia yang valid.' });
+  }
+
+  if (prev?.role === 'customer' && currentPhone && requestedPhone && requestedPhone !== currentPhone) {
+    if (!otp || String(otp).trim().length !== 6) {
+      throw E.forbidden('Nomor telepon terverifikasi tidak dapat diubah secara langsung tanpa verifikasi kode OTP. Gunakan alur Ubah Nomor.');
+    }
+    const tokenHash = crypto.createHash('sha256').update(String(otp).trim()).digest('hex');
+    const otpRow = (await query(
+      `SELECT id, otp_hash FROM whatsapp_otps
+       WHERE kontak = $1 AND is_used = false AND expires_at > now()
+       ORDER BY id DESC LIMIT 1`,
+      [requestedPhone]
+    )).rows[0];
+    if (!otpRow || otpRow.otp_hash !== tokenHash) {
+      throw E.forbidden('Kode OTP verifikasi nomor WhatsApp baru tidak valid atau sudah kedaluwarsa.');
+    }
+    await query('UPDATE whatsapp_otps SET is_used = true WHERE id = $1', [otpRow.id]);
+  }
+
+  const finalPhone = requestedPhone || currentPhone || null;
+
   const u = (await query(
     'UPDATE users SET nama=$1, email=$2, kontak=$3 WHERE id=$4 RETURNING id, nama, email, role, kontak, technician_id, customer_id, aktif, created_at',
-    [nama, email, kontak || null, req.user.id]
+    [nama, email, finalPhone, req.user.id]
   )).rows[0];
 
   const { audit } = require('../services/common');
@@ -393,10 +438,8 @@ router.patch('/password', requireAuth(), validate(changePasswordSchema), wrap(as
   res.json({ ok: true, message: 'Password berhasil diperbarui.' });
 }));
 
-// CSRF token endpoint - get a new CSRF token for state-changing requests
 router.get('/csrf-token', requireAuth(), wrap(csrfTokenHandler));
 
-// Rate limiter for password reset to prevent abuse and account enumeration
 const resetPasswordLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,
@@ -414,22 +457,16 @@ const forgotPasswordSchema = Joi.object({
 
 router.post('/forgot-password', resetPasswordLimiter, validate(forgotPasswordSchema), wrap(async (req, res) => {
   const { email } = req.body;
-  const crypto = require('crypto');
   const u = (await query('SELECT id, nama, email, role, customer_id, aktif FROM users WHERE lower(email)=lower($1)', [email])).rows[0];
 
-  // Generic response to prevent email enumeration (FIND-03)
   const genericMessage = 'Jika alamat email terdaftar di sistem kami, instruksi pemulihan kata sandi telah diproses sesuai kanal yang terkonfigurasi.';
 
   if (u && u.aktif) {
-    // Generate secure random reset token
     const rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes validity
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
-    // Invalidate existing unused tokens for this user
     await query('UPDATE password_reset_tokens SET used_at = now() WHERE user_id = $1 AND used_at IS NULL', [u.id]);
-
-    // Store securely hashed token
     await query(
       'INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)',
       [u.id, tokenHash, expiresAt],
@@ -445,7 +482,6 @@ router.post('/forgot-password', resetPasswordLimiter, validate(forgotPasswordSch
       { metadata: { note: 'Password reset token generated' } },
     );
 
-    // Send in-app notification since no external email provider is currently configured
     await notify({ query }, {
       role: u.role || 'customer',
       id: u.role === 'customer' ? (u.customer_id || null) : null,
@@ -454,7 +490,6 @@ router.post('/forgot-password', resetPasswordLimiter, validate(forgotPasswordSch
       type: 'system',
     });
 
-    // In test environment only, return token for test verification
     if (process.env.NODE_ENV === 'test' || process.env.ENABLE_DEV_RESET_TOKEN === 'true') {
       return res.json({
         success: true,
@@ -479,10 +514,8 @@ const resetPasswordSchema = Joi.object({
 
 router.post('/reset-password', resetPasswordLimiter, validate(resetPasswordSchema), wrap(async (req, res) => {
   const { token, new_password: newPassword } = req.body;
-  const crypto = require('crypto');
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-  const { withTx } = require('../db/pool');
   await withTx(async (client) => {
     const row = (await client.query(
       `SELECT prt.id, prt.user_id, prt.expires_at, prt.used_at, u.email, u.nama, u.role
@@ -498,13 +531,9 @@ router.post('/reset-password', resetPasswordLimiter, validate(resetPasswordSchem
       });
     }
 
-    // Hash new password and update user
     const newHash = await bcrypt.hash(newPassword, 10);
     await client.query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, row.user_id]);
-
-    // Invalidate token (single-use)
     await client.query('UPDATE password_reset_tokens SET used_at = now() WHERE id = $1', [row.id]);
-    // Invalidate all other reset tokens for this user
     await client.query('UPDATE password_reset_tokens SET used_at = now() WHERE user_id = $1 AND id <> $2', [row.user_id, row.id]);
 
     const { audit } = require('../services/common');
@@ -518,7 +547,6 @@ router.post('/reset-password', resetPasswordLimiter, validate(resetPasswordSchem
     );
   });
 
-  // Clear session cookie if any
   res.clearCookie('nara_token', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -532,7 +560,6 @@ router.post('/reset-password', resetPasswordLimiter, validate(resetPasswordSchem
   });
 }));
 
-// Logout endpoint - invalidasi token dan hapus session
 router.post('/logout', requireAuth(), wrap((req, res) => {
   clearCsrfTokens(req.user.id);
   res.clearCookie('nara_token', {

@@ -37,17 +37,14 @@ export default function AdminInventory() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
-  // Modals state
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
 
-  // Movements state
   const [movements, setMovements] = useState([]);
   const [loadingMovements, setLoadingMovements] = useState(false);
 
-  // Forms state
   const [adjustForm, setAdjustForm] = useState({ jenis: 'in', jumlah: '', catatan: '' });
   const [addForm, setAddForm] = useState({
     nama: '',
@@ -59,7 +56,6 @@ export default function AdminInventory() {
   const [submitting, setSubmitting] = useState(false);
   const [adding, setAdding] = useState(false);
 
-  // Close modals on Escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
@@ -72,7 +68,6 @@ export default function AdminInventory() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Close modals when route changes
   useEffect(() => {
     setShowAdjustModal(false);
     setShowAddModal(false);
@@ -80,7 +75,6 @@ export default function AdminInventory() {
     setSelectedItem(null);
   }, [location.pathname]);
 
-  // Fetch inventory data
   const fetchInventory = useCallback(async () => {
     setLoading(true);
     try {
@@ -99,7 +93,6 @@ export default function AdminInventory() {
     fetchInventory();
   }, [fetchInventory]);
 
-  // Fetch movements log
   const fetchMovements = useCallback(async (itemId = null) => {
     setLoadingMovements(true);
     try {
@@ -115,7 +108,6 @@ export default function AdminInventory() {
     }
   }, [showError]);
 
-  // KPIs Calculation
   const kpis = useMemo(() => {
     const totalCount = items.length;
     let okCount = 0;
@@ -141,7 +133,6 @@ export default function AdminInventory() {
     };
   }, [items]);
 
-  // Filtered Items
   const filteredItems = useMemo(() => {
     return items.filter(it => {
       const q = search.toLowerCase();
@@ -152,31 +143,26 @@ export default function AdminInventory() {
 
       if (!matchSearch) return false;
 
-      // Status filter
       const s = it.status_stok || (Number(it.stok) <= 0 ? 'out' : Number(it.stok) <= Number(it.min_stok) ? 'low' : 'ok');
       if (statusFilter === 'ok' && s !== 'ok') return false;
       if (statusFilter === 'warning' && s === 'ok') return false;
 
-      // Category filter
       if (categoryFilter !== 'all' && it.kategori !== categoryFilter) return false;
 
       return true;
     });
   }, [items, search, statusFilter, categoryFilter]);
 
-  // Reset pagination when search or filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [search, statusFilter, categoryFilter]);
 
-  // Paginated items
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / itemsPerPage));
   const paginatedItems = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredItems.slice(start, start + itemsPerPage);
   }, [filteredItems, currentPage, itemsPerPage]);
 
-  // Helper icon by category
   const getCategoryIcon = (kat) => {
     switch (kat) {
       case 'freon':
@@ -191,7 +177,6 @@ export default function AdminInventory() {
     }
   };
 
-  // Helper badge color by category
   const getCategoryBadgeClass = (kat) => {
     switch (kat) {
       case 'freon':
@@ -206,21 +191,18 @@ export default function AdminInventory() {
     }
   };
 
-  // Open adjust modal
   const openAdjust = (item) => {
     setSelectedItem(item);
     setAdjustForm({ jenis: 'in', jumlah: '', catatan: '' });
     setShowAdjustModal(true);
   };
 
-  // Open history modal
   const openHistory = (item = null) => {
     setSelectedItem(item);
     setShowHistoryModal(true);
     fetchMovements(item ? item.id : null);
   };
 
-  // Handle adjust stock submit
   const handleAdjust = async (e) => {
     e.preventDefault();
     const qty = parseFloat(adjustForm.jumlah);
@@ -250,7 +232,6 @@ export default function AdminInventory() {
     }
   };
 
-  // Handle add item submit
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!addForm.nama?.trim()) {
@@ -288,7 +269,6 @@ export default function AdminInventory() {
     }
   };
 
-  // Projected stock preview for adjust modal
   const previewStock = useMemo(() => {
     if (!selectedItem) return null;
     const current = Number(selectedItem.stok);
@@ -303,7 +283,6 @@ export default function AdminInventory() {
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 bg-slate-50/50 relative min-w-0">
       
-      {/* Title & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
@@ -337,10 +316,8 @@ export default function AdminInventory() {
         </div>
       </div>
 
-      {/* KPI Cards (Clean White Style consistent with other pages) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* Total Item Barang */}
         <div className="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Item Terdaftar</span>
@@ -358,7 +335,6 @@ export default function AdminInventory() {
           </div>
         </div>
 
-        {/* Stok Aman */}
         <div className="p-5 rounded-3xl bg-white border border-emerald-100 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Stok Normal & Aman</span>
@@ -376,7 +352,6 @@ export default function AdminInventory() {
           </div>
         </div>
 
-        {/* Stok Menipis / Perlu Restock */}
         <div className="p-5 rounded-3xl bg-white border border-amber-100 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-amber-600">Perlu Restock</span>
@@ -394,7 +369,6 @@ export default function AdminInventory() {
           </div>
         </div>
 
-        {/* Ragam Kategori */}
         <div className="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">Kategori Logistik</span>
@@ -414,7 +388,6 @@ export default function AdminInventory() {
 
       </div>
 
-      {/* Filter & Search Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col lg:flex-row items-center justify-between gap-3">
         <div className="relative w-full lg:w-80">
           <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -428,7 +401,6 @@ export default function AdminInventory() {
         </div>
 
         <div className="flex items-center gap-2 w-full lg:w-auto overflow-x-auto">
-          {/* Status Filter Buttons */}
           <Button
             size="sm"
             variant={statusFilter === 'all' ? 'default' : 'outline'}
@@ -454,9 +426,10 @@ export default function AdminInventory() {
             Perlu Restock ({kpis.warningCount})
           </Button>
 
-          {/* Category Dropdown */}
           <div className="border-l border-slate-200 pl-2 ml-1">
             <select
+              id="admin-filter-inventory-category"
+              name="admin_filter_inventory_category"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="h-9 px-3 text-xs font-bold rounded-xl border border-slate-200 bg-slate-50 text-slate-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
@@ -471,9 +444,124 @@ export default function AdminInventory() {
         </div>
       </div>
 
-      {/* Inventory Table */}
       <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile & Tablet Card View */}
+        <div className="block lg:hidden p-4 bg-slate-50/50">
+          {loading ? (
+            <div className="p-12 text-center text-slate-500 text-xs font-semibold">
+              <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-600" />
+              Memuat data inventori...
+            </div>
+          ) : filteredItems.length === 0 ? (
+            <div className="p-12 text-center text-slate-500 text-xs font-medium">
+              Tidak ada barang inventori yang sesuai kriteria pencarian.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {paginatedItems.map((item) => {
+                const s = item.status_stok || (Number(item.stok) <= 0 ? 'out' : Number(item.stok) <= Number(item.min_stok) ? 'low' : 'ok');
+                const isLow = s === 'low';
+                const isOut = s === 'out';
+                const code = item.kode_barang || `INV-${String(item.id).padStart(3, '0')}`;
+
+                return (
+                  <div key={item.id} className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs space-y-3 flex flex-col justify-between">
+                    <div className="space-y-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="p-2 rounded-xl bg-slate-100 border border-slate-200/80 shrink-0">
+                            {getCategoryIcon(item.kategori)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-900 text-sm truncate">{item.nama}</p>
+                            <span className="font-mono text-[11px] text-slate-500 bg-slate-50 px-1.5 py-0.2 rounded border border-slate-200/60 inline-block mt-0.5">
+                              {code}
+                            </span>
+                          </div>
+                        </div>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border capitalize shrink-0 ${getCategoryBadgeClass(item.kategori)}`}>
+                          {item.kategori}
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 grid grid-cols-3 gap-2 text-center">
+                        <div>
+                          <p className="text-[10px] uppercase font-bold text-slate-400">Stok Saat Ini</p>
+                          <div className="flex items-baseline justify-center gap-1 mt-0.5">
+                            <span className={`text-base font-black font-mono ${isOut ? 'text-rose-600' : isLow ? 'text-amber-600' : 'text-slate-900'}`}>
+                              {Number(item.stok).toLocaleString('id-ID')}
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-bold">{item.satuan}</span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-[10px] uppercase font-bold text-slate-400">Min. Stok</p>
+                          <div className="flex items-baseline justify-center gap-1 mt-0.5">
+                            <span className="text-base font-bold font-mono text-slate-700">
+                              {Number(item.min_stok).toLocaleString('id-ID')}
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-bold">{item.satuan}</span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-[10px] uppercase font-bold text-slate-400">30 Hari</p>
+                          <div className="flex items-baseline justify-center gap-1 mt-0.5">
+                            <span className="text-base font-bold font-mono text-slate-600">
+                              {Number(item.pemakaian_30_hari || 0).toLocaleString('id-ID')}
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-bold">{item.satuan}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs px-0.5">
+                        <span className="text-slate-500">Kondisi:</span>
+                        {isOut ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                            <AlertTriangle className="w-2.5 h-2.5" /> Habis
+                          </span>
+                        ) : isLow ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            <AlertTriangle className="w-2.5 h-2.5" /> Perlu Restock
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <CheckCircle2 className="w-2.5 h-2.5" /> Normal
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openHistory(item)}
+                        className="flex-1 rounded-xl text-xs font-bold h-9 border-slate-200 text-slate-700 hover:bg-slate-100 cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        <History className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Riwayat</span>
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => openAdjust(item)}
+                        className="flex-1 rounded-xl text-xs font-bold h-9 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+                      >
+                        <ArrowRightLeft className="w-3.5 h-3.5" />
+                        <span>Sesuaikan</span>
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Table */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 uppercase tracking-wider font-bold">
               <tr>
@@ -600,7 +688,6 @@ export default function AdminInventory() {
           </table>
         </div>
 
-        {/* PAGINATION TOOLBAR */}
         <div className="p-4 bg-slate-50/70 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 font-medium">
           <div>
             Menampilkan <strong className="text-slate-900">{filteredItems.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}</strong> - <strong className="text-slate-900">{Math.min(filteredItems.length, currentPage * itemsPerPage)}</strong> dari <strong className="text-slate-900">{filteredItems.length}</strong> barang inventori
@@ -632,9 +719,6 @@ export default function AdminInventory() {
         </div>
       </div>
 
-      {/* ============================================================== */}
-      {/* 1. MODAL PENYESUAIAN STOK (ADJUST STOCK)                      */}
-      {/* ============================================================== */}
       {showAdjustModal && selectedItem && (
         <div 
           onClick={(e) => { if (e.target === e.currentTarget) setShowAdjustModal(false); }}
@@ -642,8 +726,7 @@ export default function AdminInventory() {
         >
           <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden my-4 sm:my-8 animate-in zoom-in-95 duration-200 flex flex-col">
             
-            {/* Modal Header */}
-            <div className="p-5 sm:p-6 bg-slate-900 text-white flex items-center justify-between">
+            <div className="p-5 sm:p-6 bg-gradient-to-r from-blue-700 to-sky-600 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-blue-600/30 text-sky-400 rounded-xl border border-blue-500/30">
                   <ArrowRightLeft className="w-5 h-5" />
@@ -667,10 +750,8 @@ export default function AdminInventory() {
               </button>
             </div>
 
-            {/* Modal Form */}
             <form onSubmit={handleAdjust} className="p-5 sm:p-6 space-y-4">
               
-              {/* Item Info Box */}
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
                 <div>
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">Barang Dipilih</span>
@@ -685,7 +766,6 @@ export default function AdminInventory() {
                 </div>
               </div>
 
-              {/* Jenis Penyesuaian */}
               <div>
                 <label id="inventory-adjust-type-label" className="block text-xs font-bold text-slate-700 mb-1.5">
                   Jenis Penyesuaian *
@@ -732,7 +812,6 @@ export default function AdminInventory() {
                 </div>
               </div>
 
-              {/* Jumlah Penyesuaian */}
               <div>
                 <label htmlFor="admin-inventory-f1" className="block text-xs font-bold text-slate-700 mb-1">
                   Jumlah {adjustForm.jenis === 'adjustment' ? 'Stok Fisik Baru' : 'Unit'} ({selectedItem.satuan}) *
@@ -755,7 +834,6 @@ export default function AdminInventory() {
                 </div>
               </div>
 
-              {/* Preview Perubahan Stok */}
               {adjustForm.jumlah && (
                 <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200/80 text-xs flex items-center justify-between text-blue-900 font-semibold">
                   <span>Proyeksi Stok Akhir:</span>
@@ -769,7 +847,6 @@ export default function AdminInventory() {
                 </div>
               )}
 
-              {/* Alasan / Catatan Mutasi */}
               <div>
                 <label htmlFor="admin-inventory-f2" className="block text-xs font-bold text-slate-700 mb-1">
                   Catatan / Alasan Mutasi *
@@ -785,7 +862,6 @@ export default function AdminInventory() {
                 />
               </div>
 
-              {/* Modal Actions */}
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
                 <Button
                   type="button"
@@ -820,9 +896,6 @@ export default function AdminInventory() {
         </div>
       )}
 
-      {/* ============================================================== */}
-      {/* 2. MODAL TAMBAH BARANG BARU (ADD ITEM)                        */}
-      {/* ============================================================== */}
       {showAddModal && (
         <div 
           onClick={(e) => { if (e.target === e.currentTarget) setShowAddModal(false); }}
@@ -830,8 +903,7 @@ export default function AdminInventory() {
         >
           <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden my-4 sm:my-8 animate-in zoom-in-95 duration-200 flex flex-col">
             
-            {/* Modal Header */}
-            <div className="p-5 sm:p-6 bg-slate-900 text-white flex items-center justify-between">
+            <div className="p-5 sm:p-6 bg-gradient-to-r from-blue-700 to-sky-600 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-blue-600/30 text-sky-400 rounded-xl border border-blue-500/30">
                   <Package className="w-5 h-5" />
@@ -855,7 +927,6 @@ export default function AdminInventory() {
               </button>
             </div>
 
-            {/* Modal Form */}
             <form onSubmit={handleAdd} className="p-5 sm:p-6 space-y-4">
               
               <div>
@@ -942,7 +1013,6 @@ export default function AdminInventory() {
                 </div>
               </div>
 
-              {/* Modal Actions */}
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
                 <Button
                   type="button"
@@ -977,9 +1047,6 @@ export default function AdminInventory() {
         </div>
       )}
 
-      {/* ============================================================== */}
-      {/* 3. MODAL RIWAYAT MUTASI LOGISTIK (MOVEMENTS HISTORY)          */}
-      {/* ============================================================== */}
       {showHistoryModal && (
         <div 
           onClick={(e) => { if (e.target === e.currentTarget) setShowHistoryModal(false); }}
@@ -987,8 +1054,7 @@ export default function AdminInventory() {
         >
           <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden my-4 sm:my-8 animate-in zoom-in-95 duration-200 flex flex-col">
             
-            {/* Modal Header */}
-            <div className="p-5 sm:p-6 bg-slate-900 text-white flex items-center justify-between">
+            <div className="p-5 sm:p-6 bg-gradient-to-r from-blue-700 to-sky-600 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-blue-600/30 text-sky-400 rounded-xl border border-blue-500/30">
                   <History className="w-5 h-5" />
@@ -1012,7 +1078,6 @@ export default function AdminInventory() {
               </button>
             </div>
 
-            {/* Modal Body / Table */}
             <div className="p-5 sm:p-6 space-y-4">
               <div className="flex items-center justify-between text-xs text-slate-500">
                 <span>Total <strong>{movements.length}</strong> transaksi mutasi tercatat</span>
@@ -1106,7 +1171,6 @@ export default function AdminInventory() {
                 </table>
               </div>
 
-              {/* Modal Footer */}
               <div className="pt-2 flex justify-end">
                 <Button
                   onClick={() => setShowHistoryModal(false)}

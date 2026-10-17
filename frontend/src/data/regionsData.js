@@ -1,8 +1,3 @@
-/**
- * Master Data Regional Wilayah Operasional NARA AC (Jabodetabek & Sekitarnya)
- * Menyediakan struktur berjenjang: Provinsi -> Kota/Kabupaten -> Kecamatan -> Kelurahan
- * Lengkap dengan kode pos estimasi untuk mempermudah pengisian alamat presisi.
- */
 
 export const JABODETABEK_REGIONS = [
   {
@@ -202,7 +197,6 @@ export const JABODETABEK_REGIONS = [
   }
 ];
 
-// Helper untuk daftar unik kota yang dikelompokkan
 export const GROUPED_CITIES = JABODETABEK_REGIONS.reduce((acc, curr) => {
   if (!acc[curr.province]) {
     acc[curr.province] = [];
@@ -211,7 +205,6 @@ export const GROUPED_CITIES = JABODETABEK_REGIONS.reduce((acc, curr) => {
   return acc;
 }, {});
 
-// Helper untuk mencari data kota
 export const findCityData = (cityName) => {
   return JABODETABEK_REGIONS.find(r => r.city === cityName) || null;
 };

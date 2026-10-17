@@ -153,7 +153,6 @@ class FallbackMultinomialNB:
         jll = jll - np.max(jll, axis=1, keepdims=True)
         exp_jll = np.exp(jll)
         probs = exp_jll / np.sum(exp_jll, axis=1, keepdims=True)
-        # If input has zero known vocabulary tokens, return uniform low-confidence distribution
         for r_idx, rn in enumerate(row_norms):
             if rn == 0.0:
                 probs[r_idx] = 1.0 / len(self.classes_)

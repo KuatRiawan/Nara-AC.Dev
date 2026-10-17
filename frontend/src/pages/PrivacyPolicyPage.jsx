@@ -1,28 +1,22 @@
 import { Link } from 'react-router-dom';
+import { useContextualBack } from '../hooks/useContextualBack';
 import { ArrowLeft, ShieldCheck, CheckCircle2, Phone, Mail, Building2, Lock, Bot, Database } from 'lucide-react';
 import CompanyLogo from '../components/CompanyLogo';
 
 export default function PrivacyPolicyPage() {
+  const handleBack = useContextualBack('/');
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
-      {/* Navbar Header */}
       <header className="bg-white/90 backdrop-blur-md sticky top-0 z-40 border-b border-slate-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center hover:opacity-90 transition-opacity">
             <CompanyLogo dark={false} iconSize="h-9 sm:h-10" />
           </Link>
-          <Link
-            to="/"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3.5 py-1.5 rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Kembali ke Beranda</span>
-          </Link>
+          <button type="button" onClick={handleBack} className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3.5 py-1.5 rounded-full transition-colors cursor-pointer"><ArrowLeft className="w-4 h-4" /><span>Kembali</span></button>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="bg-gradient-to-b from-blue-900 via-blue-800 to-slate-900 text-white py-16 px-4 sm:px-6">
+      <section className="bg-gradient-to-b from-blue-700 via-blue-600 to-sky-600 text-white py-16 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto text-center space-y-4">
           <div className="inline-flex items-center gap-2 bg-blue-700/60 border border-blue-400/30 px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold text-blue-100 backdrop-blur-sm">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
@@ -40,11 +34,9 @@ export default function PrivacyPolicyPage() {
         </div>
       </section>
 
-      {/* Main Content Body */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-12 flex-1 w-full">
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-6 sm:p-10 space-y-10 text-slate-700 leading-relaxed">
           
-          {/* Section 1 */}
           <section className="space-y-3">
             <div className="flex items-center gap-3 text-slate-900">
               <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm shrink-0">
@@ -57,7 +49,6 @@ export default function PrivacyPolicyPage() {
             </p>
           </section>
 
-          {/* Section 2 */}
           <section className="space-y-3">
             <div className="flex items-center gap-3 text-slate-900">
               <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm shrink-0">
@@ -87,7 +78,6 @@ export default function PrivacyPolicyPage() {
             </div>
           </section>
 
-          {/* Section 3 */}
           <section className="space-y-3">
             <div className="flex items-center gap-3 text-slate-900">
               <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm shrink-0">
@@ -122,7 +112,6 @@ export default function PrivacyPolicyPage() {
             </div>
           </section>
 
-          {/* Section 4 */}
           <section className="space-y-3">
             <div className="flex items-center gap-3 text-slate-900">
               <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm shrink-0">
@@ -148,7 +137,6 @@ export default function PrivacyPolicyPage() {
             </div>
           </section>
 
-          {/* Section 5 */}
           <section className="space-y-3">
             <div className="flex items-center gap-3 text-slate-900">
               <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm shrink-0">
@@ -167,7 +155,6 @@ export default function PrivacyPolicyPage() {
             </div>
           </section>
 
-          {/* Section 6 */}
           <section className="space-y-3">
             <div className="flex items-center gap-3 text-slate-900">
               <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm shrink-0">
@@ -188,7 +175,6 @@ export default function PrivacyPolicyPage() {
             </div>
           </section>
 
-          {/* Section 7 - Kontak DPO */}
           <section className="space-y-3 bg-blue-50/60 border border-blue-200/80 p-6 rounded-2xl">
             <div className="flex items-center gap-3 text-blue-900">
               <Building2 className="w-6 h-6 text-blue-600" />
@@ -221,10 +207,9 @@ export default function PrivacyPolicyPage() {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="bg-white border-t border-slate-200 py-6 text-xs text-slate-500">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          <p>&copy; {new Date().getFullYear()} CV. Nara Teknindotama (NIB: 2805250066735). Seluruh hak cipta dilindungi.</p>
+          <p>© 2026 CV. Nara Teknindotama. Seluruh hak cipta dilindungi.</p>
           <div className="flex items-center gap-3 font-medium">
             <Link to="/terms" className="hover:text-blue-600 transition-colors">
               Syarat &amp; Ketentuan

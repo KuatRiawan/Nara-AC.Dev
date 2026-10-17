@@ -25,20 +25,7 @@
     <meta name="twitter:description" content="Layanan Service, Maintenance & Instalasi AC Profesional. Booking online, garansi resmi hingga 45 hari." />
     <meta name="twitter:image" content="https://nara-ac.id/images/logo.png" />
 
-    <!-- noindex dinamis untuk halaman privat (SPA) — AUD-022 -->
-    <script>
-      (function() {
-        var path = window.location.pathname;
-        var privatePaths = ['/admin', '/technician', '/customer', '/login'];
-        var isPrivate = privatePaths.some(function(p) { return path.startsWith(p); });
-        if (isPrivate) {
-          var meta = document.createElement('meta');
-          meta.name = 'robots';
-          meta.content = 'noindex, nofollow';
-          document.head.appendChild(meta);
-        }
-      })();
-    </script>
+    <link rel="shortcut icon" href="/favicon.ico" />
   </head>
   <body>
     <div id="root"></div>

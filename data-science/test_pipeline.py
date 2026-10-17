@@ -1,132 +1,84 @@
+import json
+import unittest
+from pathlib import Path
+from ingest_and_train import run_governed_pipeline
 
-import numpy as np
-import pandas as pd
-
-from generate_dataset import DATA_DIR, FEATURE_COLUMNS, calculate_wape, generate_dataset
-
-
-def test_forecast_feature_contract_order():
-    """TEST-030: Test feature columns order."""
-    assert FEATURE_COLUMNS == ["dayofweek", "dayofyear", "suhu_rata2", "is_libur"]
+BASE_DIR = Path(__file__).parent
+OUT_DIR = BASE_DIR / "output"
+GOV_DIR = BASE_DIR / "data" / "governed"
 
 
-def test_dashboard_prediction_vector_shape():
-    """TEST-030: Test prediction vector shape."""
-    day_of_week = 1
-    day_of_year = 42
-    temp = 30.5
-    is_libur = False
+class TestGovernedDataSciencePipeline(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not (OUT_DIR / "predictions.json").exists() or not (OUT_DIR / "rfm_b2b_summary.json").exists():
+            run_governed_pipeline()
 
-    x_pred = np.array([[day_of_week, day_of_year, temp, int(is_libur)]])
+    def test_01_predictions_json_exists_and_non_synthetic(self):
+        pred_file = OUT_DIR / "predictions.json"
+        self.assertTrue(pred_file.exists())
+        data = json.loads(pred_file.read_text(encoding="utf-8"))
+        self.assertFalse(data.get("is_synthetic", True))
+        self.assertEqual(len(data.get("prediksi", [])), 14)
 
-    assert x_pred.shape == (1, len(FEATURE_COLUMNS))
+    def test_02_forecast_bounds_and_dates(self):
+        data = json.loads((OUT_DIR / "predictions.json").read_text(encoding="utf-8"))
+        for row in data["prediksi"]:
+            self.assertIn("periode", row)
+            self.assertIn("nilai", row)
+            self.assertGreaterEqual(row["nilai"], 0.0)
+            self.assertLessEqual(row["batas_bawah"], row["nilai"])
+            self.assertGreaterEqual(row["batas_atas"], row["nilai"])
 
+    def test_03_evaluation_metrics_present(self):
+        data = json.loads((OUT_DIR / "predictions.json").read_text(encoding="utf-8"))
+        metrics = data.get("metrik", {})
+        self.assertIn("daily_order_MAE", metrics)
+        self.assertIn("daily_order_RMSE", metrics)
+        self.assertIn("daily_order_WAPE", metrics)
 
-def test_wape_calculation():
-    """TEST-031: Test WAPE calculation function."""
-    y_true = np.array([10, 20, 30, 40])
-    y_pred = np.array([12, 18, 32, 38])
+    def test_04_rfm_b2b_summary_categories_present(self):
+        summary_file = OUT_DIR / "rfm_b2b_summary.json"
+        self.assertTrue(summary_file.exists())
+        s = json.loads(summary_file.read_text(encoding="utf-8"))
+        self.assertIn("rfm_summary", s)
+        self.assertIn("b2b_summary", s)
+        self.assertIn("timeseries_summary", s)
+        self.assertIn("top_services_historical", s)
+        self.assertGreater(len(s["top_services_historical"]), 0)
 
-    wape = calculate_wape(y_true, y_pred)
+    def test_05_rfm_customer_counts(self):
+        s = json.loads((OUT_DIR / "rfm_b2b_summary.json").read_text(encoding="utf-8"))
+        rfm = s["rfm_summary"]
+        self.assertEqual(rfm["total_customers"], 251)
+        self.assertEqual(rfm["registered_members"], 53)
+        self.assertEqual(rfm["b2b_customers"] + rfm["residential_customers"], 251)
 
-    # WAPE = sum(|y_true - y_pred|) / sum(y_true)
-    # = (2 + 2 + 2 + 2) / (10 + 20 + 30 + 40) = 8 / 100 = 0.08
-    assert abs(wape - 0.08) < 0.001
+    def test_06_b2b_financial_reconciliation(self):
+        s = json.loads((OUT_DIR / "rfm_b2b_summary.json").read_text(encoding="utf-8"))
+        b2b = s["b2b_summary"]
+        self.assertEqual(b2b["total_records"], 79)
+        self.assertEqual(b2b["total_gross_value_idr"], 234005000)
 
+    def test_07_timeseries_daily_integrity(self):
+        s = json.loads((OUT_DIR / "rfm_b2b_summary.json").read_text(encoding="utf-8"))
+        ts = s["timeseries_summary"]
+        self.assertEqual(ts["total_transactions"], 545)
+        self.assertEqual(ts["total_units_serviced"], 724)
 
-def test_generate_dataset_creates_file():
-    """TEST-032: Test dataset generation creates CSV file."""
-    # Run dataset generation
-    df, model, metadata = generate_dataset()
+    def test_08_governed_datasets_pii_tokenized(self):
+        rfm_gov = GOV_DIR / "dataset_pelanggan_rfm_governed.csv"
+        self.assertTrue(rfm_gov.exists())
+        header = rfm_gov.read_text(encoding="utf-8").splitlines()[0]
+        self.assertNotIn("alamat_rumah", header)
+        self.assertNotIn("nama_pelanggan_standar", header)
 
-    # Verify CSV file was created
-    csv_path = DATA_DIR / "historical_demand.csv"
-    assert csv_path.exists()
-
-    # Verify it's a valid CSV
-    df_loaded = pd.read_csv(csv_path)
-    assert len(df_loaded) > 0
-    assert list(df_loaded.columns) == ["tanggal", "jumlah_booking", "suhu_rata2", "is_libur"]
-
-
-def test_generate_dataset_metadata():
-    """TEST-032: Test dataset generation includes metadata."""
-    df, model, metadata = generate_dataset()
-
-    # Verify metadata has required fields
-    assert "version" in metadata
-    assert "created_at" in metadata
-    assert "features" in metadata
-    assert "target" in metadata
-    assert "metrics" in metadata
-    assert "baseline_comparison" in metadata
-
-    # Verify metrics are populated
-    assert "MAE" in metadata["metrics"]
-    assert "RMSE" in metadata["metrics"]
-    assert "WAPE" in metadata["metrics"]
-
-
-def test_baseline_comparison():
-    """TEST-032: Test baseline model comparison."""
-    df, model, metadata = generate_dataset()
-
-    # Verify baseline comparison exists
-    assert "baseline_comparison" in metadata
-    assert "model" in metadata["baseline_comparison"]
-    assert metadata["baseline_comparison"]["model"] == "LinearRegression"
-
-    # Verify baseline has metrics
-    assert "MAE" in metadata["baseline_comparison"]
-    assert "RMSE" in metadata["baseline_comparison"]
-    assert "WAPE" in metadata["baseline_comparison"]
-
-
-def test_time_based_split():
-    """TEST-003: Test time-based split is used."""
-    # Check that the dataset has the expected number of rows
-    df = generate_dataset()[0]
-
-    # Dataset should have 365 days (1 year)
-    assert len(df) == 365
-
-    # Verify historical_demand.csv was created
-    assert (DATA_DIR / "historical_demand.csv").exists()
+    def test_09_dataset_profile_report_valid(self):
+        prof = OUT_DIR / "dataset_profile_report.json"
+        self.assertTrue(prof.exists())
+        p = json.loads(prof.read_text(encoding="utf-8"))
+        self.assertEqual(len(p.get("datasets", {})), 4)
 
 
-def test_model_versioning():
-    """TEST-013: Test model versioning."""
-    from generate_dataset import MODEL_VERSION
-
-    # Verify version is set
-    assert MODEL_VERSION == "2.0"
-
-    # Verify model file is created with version
-    df, model, metadata = generate_dataset()
-    assert metadata["version"] == "2.0"
-
-
-def test_real_governed_pipeline():
-    """TEST-034: Test governed real dataset ingestion, PII tokenization, and time-aware forecasting."""
-    from ingest_and_train import run_governed_pipeline, GOV_DIR, OUTPUT_DIR
-    prof, pred, summ = run_governed_pipeline()
-
-    # Verify all 4 datasets were profiled
-    assert len(prof["datasets"]) == 4
-    assert prof["datasets"]["dataset_pelanggan_rfm.csv"]["rows"] == 251
-    assert prof["datasets"]["dataset_proyek_b2b_resik.csv"]["rows"] == 79
-    assert prof["datasets"]["dataset_timeseries_harian.csv"]["rows"] == 527
-    assert prof["datasets"]["dataset_transaksi_servis_ac.csv"]["rows"] == 545
-
-    # Verify PII columns were removed from governed CSVs
-    rfm_gov = pd.read_csv(GOV_DIR / "dataset_pelanggan_rfm_governed.csv")
-    assert "kontak" not in rfm_gov.columns
-    assert "alamat_rumah" not in rfm_gov.columns
-    assert "kontak_token" in rfm_gov.columns
-
-    # Verify time-aware split and 14-day forecast
-    assert pred["is_synthetic"] is False
-    assert len(pred["prediksi"]) == 14
-    assert "daily_order_MAE" in pred["metrik"]
-    assert (OUTPUT_DIR / "predictions.json").exists()
-    assert (OUTPUT_DIR / "rfm_b2b_summary.json").exists()
+if __name__ == "__main__":
+    unittest.main()

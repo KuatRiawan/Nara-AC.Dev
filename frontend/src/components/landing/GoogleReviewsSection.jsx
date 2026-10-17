@@ -84,13 +84,11 @@ export default function GoogleReviewsSection() {
 
   return (
     <section id="ulasan" className="py-24 bg-gradient-to-b from-white via-sky-50/30 to-white relative border-t border-sky-100/60 overflow-hidden">
-      {/* Background soft glow accents */}
       <div className="absolute top-1/4 -left-20 w-80 h-80 bg-blue-100/40 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-10 -right-20 w-96 h-96 bg-amber-100/30 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
-        {/* Header with Google Rating Badge */}
         <div className="text-center max-w-3xl mx-auto mb-16">
           <motion.div
             initial={{ opacity: 0, y: 15 }}
@@ -125,7 +123,6 @@ export default function GoogleReviewsSection() {
             Ulasan nyata dan terverifikasi langsung dari pelanggan hunian residensial serta perkantoran di Google Maps.
           </motion.p>
 
-          {/* Rating Summary Card */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
@@ -167,7 +164,6 @@ export default function GoogleReviewsSection() {
           </motion.div>
         </div>
 
-        {/* Reviews Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {reviewsData.map((rev, index) => (
             <motion.div
@@ -180,17 +176,16 @@ export default function GoogleReviewsSection() {
               className={`relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 hover:border-blue-300 hover:shadow-xl shadow-blue-900/5 transition-all duration-300 flex flex-col justify-between ${index === 0 ? 'md:col-span-2 lg:col-span-1 border-blue-100 bg-gradient-to-b from-sky-50/40 via-white to-white' : ''
                 }`}
             >
-              {/* Quote watermark */}
               <Quote className="absolute top-5 right-5 w-8 h-8 text-sky-100 -rotate-12 pointer-events-none" />
 
               <div>
-                {/* Author Info Header */}
                 <div className="flex items-center gap-3.5 mb-4 relative z-10">
                   {rev.avatar && !imageErrors[rev.id] ? (
                     <img
                       src={rev.avatar}
                       alt={rev.name}
-                      loading="lazy"
+                      width={44}
+                      height={44}
                       referrerPolicy="no-referrer"
                       onError={() => handleImageError(rev.id)}
                       className="w-11 h-11 rounded-full object-cover border border-slate-200 shadow-2xs shrink-0"
@@ -216,7 +211,6 @@ export default function GoogleReviewsSection() {
                   <GoogleIcon className="w-4 h-4 shrink-0 opacity-80" />
                 </div>
 
-                {/* Stars and Relative Date */}
                 <div className="flex items-center justify-between gap-2 mb-3.5">
                   <div className="flex items-center gap-0.5">
                     {[...Array(rev.rating)].map((_, i) => (
@@ -228,13 +222,11 @@ export default function GoogleReviewsSection() {
                   </span>
                 </div>
 
-                {/* Comment Text */}
                 <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal whitespace-pre-line">
                   "{rev.comment}"
                 </p>
               </div>
 
-              {/* Bottom footer badge */}
               <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
                 <span className="flex items-center gap-1 text-emerald-700 font-semibold">
                   <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Ulasan Terverifikasi
@@ -244,7 +236,6 @@ export default function GoogleReviewsSection() {
             </motion.div>
           ))}
 
-          {/* Interactive Card: Write a Review / View All */}
           <motion.div
             initial={{ opacity: 0, y: 25 }}
             whileInView={{ opacity: 1, y: 0 }}

@@ -1,16 +1,10 @@
 const { query } = require('../db/pool');
 const { E } = require('../errors');
 
-/**
- * Menghitung estimasi jadwal perawatan berikutnya & status perawatan unit AC (BR-15, BR-16, BR-17)
- * BR-17: Booking yang dibatalkan TIDAK dihitung sebagai servis selesai.
- */
 async function getUnitMaintenanceInfo(unitId) {
-  // Ambil data unit AC
   const unit = (await query('SELECT * FROM ac_units WHERE id = $1', [unitId])).rows[0];
   if (!unit) return null;
 
-  // Ambil riwayat booking dengan status = 'done' saja (BR-17)
   const historyRes = await query(`
     SELECT b.id, b.kode_booking, b.jadwal_mulai, b.selesai_aktual, b.status,
            s.id AS layanan_id, s.nama_layanan, s.interval_maintenance_hari,
@@ -27,7 +21,6 @@ async function getUnitMaintenanceInfo(unitId) {
   const totalServis = history.length;
   const servisTerakhir = history[0] || null;
 
-  // Cek apakah ada booking aktif / mendatang untuk unit ini
   const upcomingRes = await query(`
     SELECT b.id, b.kode_booking, b.jadwal_mulai, b.status, s.nama_layanan
     FROM bookings b
@@ -45,12 +38,10 @@ async function getUnitMaintenanceInfo(unitId) {
     const intervalDays = servisTerakhir.interval_maintenance_hari || 90; // Default perawatan berkala 90 hari / 3 bulan
     jadwalPerawatanBerikutnya = new Date(lastDate.getTime() + intervalDays * 86400000);
   } else if (unit.tanggal_pasang) {
-    // Jika belum pernah servis, hitung dari tanggal pasang + 90 hari
     const pasangDate = new Date(unit.tanggal_pasang);
     jadwalPerawatanBerikutnya = new Date(pasangDate.getTime() + 90 * 86400000);
   }
 
-  // Tentukan status perawatan
   let statusPerawatan = 'optimal';
   let hariMenujuPerawatan = null;
 

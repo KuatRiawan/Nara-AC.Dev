@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mode Offline — CV. NARA TEKNINDOTAMA</title>
+  <link rel="icon" type="image/png" href="/images/logo.png" />
+  <link rel="shortcut icon" href="/favicon.ico" />
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --sky-50: #f0f9ff;
+      --sky-100: #e0f2fe;
+      --sky-200: #bae6fd;
+      --sky-600: #0284c7;
+      --slate-900: #0f172a;
+      --slate-800: #1e293b;
+      --slate-700: #334155;
+      --slate-600: #475569;
+      --slate-500: #64748b;
+      --slate-400: #94a3b8;
+      --slate-200: #e2e8f0;
+      --slate-100: #f1f5f9;
+      --slate-50: #f8fafc;
+      --white: #ffffff;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: #f8fafc;
+      background-image: 
+        radial-gradient(circle at 10% 15%, rgba(186, 230, 253, 0.5) 0%, transparent 40%),
+        radial-gradient(circle at 90% 85%, rgba(224, 242, 254, 0.6) 0%, transparent 45%),
+        radial-gradient(circle at 50% 50%, rgba(240, 249, 255, 0.8) 0%, transparent 60%);
+      color: var(--slate-900);
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Ambient Subtle Grid */
+    .bg-grid {
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle at 1px 1px, #cbd5e1 1px, transparent 0);
+      background-size: 32px 32px;
+      opacity: 0.25;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Header Bar */
+    header {
+      position: relative;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--sky-100);
+      padding: 0.85rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
+
+    .brand-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      text-decoration: none;
+    }
+
+    .brand-logo img {
+      width: 34px;
+      height: 34px;
+      object-fit: contain;
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      color: #032b69;
+      font-family: "Arial Black", Impact, sans-serif;
+    }
+
+    .brand-sub {
+      font-size: 0.58rem;
+      font-weight: 800;
+      letter-spacing: 0.22em;
+      color: var(--primary);
+      margin-top: 2px;
+      font-family: "Arial Black", Impact, sans-serif;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #64748b;
+    }
+
+    /* Main Container */
+    main {
+      position: relative;
+      z-index: 10;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.25rem;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 460px;
+      background: #ffffff;
+      border: 1px solid var(--sky-100);
+      border-radius: 24px;
+      padding: 2.25rem 1.75rem;
+      text-align: center;
+      box-shadow: 
+        0 20px 45px -12px rgba(14, 165, 233, 0.14),
+        0 4px 16px -2px rgba(15, 23, 42, 0.04);
+      transition: transform 0.3s ease;
+    }
+
+    /* Cooling Wind Icon Wrapper */
+    .icon-box {
+      width: 76px;
+      height: 76px;
+      margin: 0 auto 1.25rem;
+      border-radius: 22px;
+      background: linear-gradient(135deg, #e0f2fe, #f0f9ff);
+      border: 1px solid #bae6fd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      box-shadow: 0 8px 20px -4px rgba(56, 189, 248, 0.25);
+      position: relative;
+    }
+
+    .icon-box svg {
+      width: 38px;
+      height: 38px;
+      stroke-width: 2.2;
+      animation: windFloat 3s ease-in-out infinite;
+    }
+
+    @keyframes windFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+
+    h1 {
+      font-size: 1.45rem;
+      font-weight: 900;
+      color: var(--slate-900);
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+
+    p.desc {
+      font-size: 0.9rem;
+      color: var(--slate-600);
+      line-height: 1.55;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Primary Reconnect Button */
+    .btn-retry {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.85rem 1.25rem;
+      background: var(--primary);
+      color: white;
+      font-size: 0.92rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      box-shadow: 0 8px 20px -4px rgba(37, 99, 235, 0.35);
+      transition: all 0.2s ease;
+    }
+
+    .btn-retry:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1.5px);
+      box-shadow: 0 12px 24px -4px rgba(37, 99, 235, 0.45);
+    }
+
+    .btn-retry:active {
+      transform: translateY(0);
+    }
+
+    .btn-retry.loading svg {
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Emergency Contact Box */
+    .contact-box {
+      margin-top: 1.25rem;
+      padding: 0.85rem 1rem;
+      background: var(--slate-50);
+      border-radius: 14px;
+      border: 1px solid var(--slate-200);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      color: var(--slate-700);
+    }
+
+    .contact-link {
+      color: var(--primary);
+      font-weight: 800;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: color 0.15s ease;
+    }
+
+    .contact-link:hover {
+      color: var(--primary-hover);
+      text-decoration: underline;
+    }
+
+    /* Mini Game Section */
+    .game-section {
+      margin-top: 1.25rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--slate-100);
+    }
+
+    .game-toggle-btn {
+      background: #f0f9ff;
+      border: 1px solid var(--sky-200);
+      color: var(--sky-600);
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s ease;
+    }
+
+    .game-toggle-btn:hover {
+      background: #e0f2fe;
+      color: var(--primary);
+    }
+
+    #gameCanvas {
+      display: none;
+      width: 100%;
+      max-width: 400px;
+      height: 180px;
+      background: #f8fafc;
+      border-radius: 16px;
+      margin: 1rem auto 0;
+      border: 1px solid var(--sky-200);
+      cursor: pointer;
+      touch-action: none;
+    }
+
+    .game-controls {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--slate-500);
+      font-weight: 600;
+    }
+
+    /* Reconnect Toast Notification */
+    .toast-online {
+      position: fixed;
+      top: 1.25rem;
+      left: 50%;
+      transform: translate(-50%, -100px);
+      background: #059669;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 9999px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      box-shadow: 0 10px 25px rgba(5, 150, 105, 0.35);
+      opacity: 0;
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .toast-online.show {
+      transform: translate(-50%, 0);
+      opacity: 1;
+    }
+
+    /* Footer */
+    footer {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      padding: 1rem 1.5rem;
+      font-size: 0.75rem;
+      color: var(--slate-400);
+      border-top: 1px solid rgba(226, 232, 240, 0.6);
+      background: rgba(255, 255, 255, 0.6);
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+
+  <div id="toastOnline" class="toast-online">
+    <span>✓</span> Terhubung Kembali! Memuat halaman...
+  </div>
+
+  <header>
+    <a href="/" class="brand-logo" title="NARA AC">
+      <img src="/images/logo.png" alt="NARA AC Logo" onerror="this.style.display='none'" />
+      <div class="brand-text">
+        <span class="brand-title">NARA</span>
+        <span class="brand-sub">TEKNINDOTAMA</span>
+      </div>
+    </a>
+    <div class="status-badge">
+      <span class="status-dot"></span>
+      <span>Mode Offline</span>
+    </div>
+  </header>
+
+  <main role="main">
+    <div class="card">
+      <div class="icon-box">
+        <!-- Modern AC Wind/Cooling Wave SVG -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/>
+          <path d="M9.6 4.6A2 2 0 1 1 11 8H2"/>
+          <path d="M12.6 19.4A2 2 0 1 0 14 16H2"/>
+        </svg>
+      </div>
+
+      <h1>Koneksi Sedang Terputus</h1>
+      <p class="desc">
+        Tenang, AC Anda tetap dingin! Sinyal internet sedang tidak stabil atau offline. Coba sambungkan kembali atau mainkan mini-game pendingin di bawah sambil menunggu sinyal kembali.
+      </p>
+
+      <button id="retryBtn" class="btn-retry" onclick="checkConnection()">
+        <svg id="retryIcon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+          <path d="M16 16h5v5"/>
+        </svg>
+        <span id="retryText">Coba Hubungkan Kembali</span>
+      </button>
+
+      <div class="contact-box">
+        <span>Butuh Servis Darurat?</span>
+        <a href="tel:081385293137" class="contact-link">
+          📞 0813-8529-3137
+        </a>
+      </div>
+
+      <div class="game-section">
+        <button id="gameToggleBtn" class="game-toggle-btn" onclick="toggleGame()">
+          ❄️ Mainkan "Frosty AC Catch"
+        </button>
+
+        <canvas id="gameCanvas" width="380" height="180"></canvas>
+        <div id="gameControls" class="game-controls">
+          <span>Geser untuk menggerakkan Unit AC</span>
+          <span id="gameScore" style="color:var(--primary); font-weight:800;">Skor: 0</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>© 2026 CV. Nara Teknindotama. Seluruh hak cipta dilindungi.</p>
+  </footer>
+
+  <script>
+    // Auto-detect online event
+    window.addEventListener('online', () => {
+      showOnlineToast();
+    });
+
+    function showOnlineToast() {
+      const toast = document.getElementById('toastOnline');
+      toast.classList.add('show');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    }
+
+    async function checkConnection() {
+      const btn = document.getElementById('retryBtn');
+      const text = document.getElementById('retryText');
+      btn.classList.add('loading');
+      text.textContent = 'Memeriksa Jaringan...';
+
+      if (navigator.onLine) {
+        try {
+          const res = await fetch('/images/logo.png?t=' + Date.now(), { method: 'HEAD', cache: 'no-store' });
+          if (res.ok) {
+            showOnlineToast();
+            return;
+          }
+        } catch (_) {}
+      }
+
+      setTimeout(() => {
+        btn.classList.remove('loading');
+        text.textContent = 'Belum Ada Koneksi, Coba Lagi';
+      }, 750);
+    }
+
+    // Mini-game "Frosty AC Catch"
+    let gameRunning = false;
+    let canvas, ctx, player, items, score, animId;
+
+    function toggleGame() {
+      const canvasEl = document.getElementById('gameCanvas');
+      const controlsEl = document.getElementById('gameControls');
+      const toggleBtn = document.getElementById('gameToggleBtn');
+
+      if (canvasEl.style.display === 'block') {
+        canvasEl.style.display = 'none';
+        controlsEl.style.display = 'none';
+        toggleBtn.textContent = '❄️ Mainkan "Frosty AC Catch"';
+        gameRunning = false;
+        cancelAnimationFrame(animId);
+      } else {
+        canvasEl.style.display = 'block';
+        controlsEl.style.display = 'flex';
+        toggleBtn.textContent = 'Tutup Mini-Game';
+        startGame();
+      }
+    }
+
+    function startGame() {
+      canvas = document.getElementById('gameCanvas');
+      ctx = canvas.getContext('2d');
+      score = 0;
+      document.getElementById('gameScore').textContent = 'Skor: 0';
+
+      player = {
+        x: canvas.width / 2 - 28,
+        y: canvas.height - 24,
+        width: 56,
+        height: 16,
+        speed: 8
+      };
+
+      items = [];
+      gameRunning = true;
+
+      const updatePlayerPos = (clientX) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const targetX = (clientX - rect.left) * scaleX - player.width / 2;
+        player.x = Math.max(0, Math.min(canvas.width - player.width, targetX));
+      };
+
+      let isDragging = false;
+      canvas.onpointerdown = (e) => {
+        isDragging = true;
+        updatePlayerPos(e.clientX);
+      };
+      window.onpointermove = (e) => {
+        if (isDragging) updatePlayerPos(e.clientX);
+      };
+      window.onpointerup = () => { isDragging = false; };
+
+      lastSpawn = Date.now();
+      loop();
+    }
+
+    let lastSpawn = 0;
+    function loop() {
+      if (!gameRunning) return;
+
+      if (Date.now() - lastSpawn > 600) {
+        items.push({
+          x: Math.random() * (canvas.width - 24) + 12,
+          y: -10,
+          size: Math.random() * 8 + 8,
+          speed: Math.random() * 2 + 2,
+          isCold: Math.random() > 0.2
+        });
+        lastSpawn = Date.now();
+      }
+
+      // Background Canvas (Ice-Tech clean slate)
+      ctx.fillStyle = '#f0f9ff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Arena border
+      ctx.strokeStyle = '#bae6fd';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
+
+      // Draw AC Unit Player
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = 'rgba(2, 132, 199, 0.2)';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.roundRect(player.x, player.y, player.width, player.height, 4);
+      ctx.fill();
+
+      // AC Unit Front Ledge & Power LED
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#0284c7';
+      ctx.fillRect(player.x + 8, player.y + 4, player.width - 16, 2);
+      ctx.fillStyle = '#10b981'; // Green LED
+      ctx.beginPath();
+      ctx.arc(player.x + player.width - 8, player.y + 8, 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Update & Draw Items
+      for (let i = items.length - 1; i >= 0; i--) {
+        const item = items[i];
+        item.y += item.speed;
+
+        if (
+          item.y + item.size >= player.y &&
+          item.y <= player.y + player.height &&
+          item.x + item.size >= player.x &&
+          item.x <= player.x + player.width
+        ) {
+          if (item.isCold) {
+            score += 10;
+          } else {
+            score = Math.max(0, score - 5);
+          }
+          document.getElementById('gameScore').textContent = 'Skor: ' + score;
+          items.splice(i, 1);
+          continue;
+        }
+
+        if (item.isCold) {
+          ctx.fillStyle = '#0284c7';
+          ctx.beginPath();
+          ctx.arc(item.x, item.y, item.size / 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = '#f59e0b';
+          ctx.fillRect(item.x, item.y, item.size * 0.8, item.size * 0.8);
+        }
+
+        if (item.y > canvas.height + 20) {
+          items.splice(i, 1);
+        }
+      }
+
+      animId = requestAnimationFrame(loop);
+    }
+  </script>
+</body>
+</html>

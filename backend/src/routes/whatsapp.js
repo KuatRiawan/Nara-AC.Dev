@@ -9,7 +9,6 @@ const config = require('../config');
 
 const router = express.Router();
 
-// GET /api/v1/whatsapp/webhook - Webhook Verification Challenge (BR-44)
 router.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
@@ -23,7 +22,6 @@ router.get('/webhook', (req, res) => {
   return res.sendStatus(403);
 });
 
-// POST /api/v1/whatsapp/webhook & POST /api/v1/whatsapp/message - Terima Pesan Masuk WhatsApp CS (BR-44, BR-45, BR-46, SEC-004)
 const crypto = require('crypto');
 const { E } = require('../errors');
 
@@ -62,7 +60,6 @@ const handleIncoming = async (req, res) => {
 router.post('/webhook', validate(messageSchema), wrap(handleIncoming));
 router.post('/message', validate(messageSchema), wrap(handleIncoming));
 
-// POST /api/v1/whatsapp/check-availability - Pemeriksaan Jadwal Slot Nyata (BR-45)
 router.post('/check-availability', validate(Joi.object({
   tanggal: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional().label('Tanggal Servis (YYYY-MM-DD)'),
   pesan: Joi.string().trim().optional().label('Pesan Pelanggan'),
@@ -78,7 +75,6 @@ router.post('/check-availability', validate(Joi.object({
   });
 }));
 
-// POST /api/v1/whatsapp/handoff - Eskalasi ke Admin Manusia (BR-46)
 router.post('/handoff', validate(Joi.object({
   sender: Joi.string().trim().required().label('Nomor WhatsApp'),
   pesan: Joi.string().trim().min(1).max(1000).required().label('Keluhan / Pesan'),
@@ -91,7 +87,6 @@ router.post('/handoff', validate(Joi.object({
   });
 }));
 
-// POST /api/v1/whatsapp/dispatch-reminders - Kirim Pengingat WhatsApp H-1 & Perawatan Berkala (BR-47)
 router.post('/dispatch-reminders', requireAuth(['admin']), validate(Joi.object({
   days: Joi.number().integer().min(1).max(90).default(7),
   force: Joi.boolean().default(true),
@@ -110,7 +105,6 @@ router.post('/dispatch-reminders', requireAuth(['admin']), validate(Joi.object({
   });
 }));
 
-// GET /api/v1/whatsapp/conversations - Riwayat Percakapan WhatsApp AI & Eskalasi Admin (BR-44, BR-46)
 router.get('/conversations', requireAuth(['admin']), validate(Joi.object({
   sender: Joi.string().trim().optional(),
   is_handoff: Joi.boolean().optional(),
@@ -146,7 +140,6 @@ router.get('/conversations', requireAuth(['admin']), validate(Joi.object({
   });
 }));
 
-// GET /api/v1/whatsapp/config - Konfigurasi AI WhatsApp CS
 router.get('/config', wrap(async (_req, res) => {
   const row = (await query("SELECT value FROM settings WHERE key='ai_whatsapp_config'")).rows[0];
   res.json({
@@ -155,7 +148,6 @@ router.get('/config', wrap(async (_req, res) => {
   });
 }));
 
-// GET /api/v1/whatsapp/gateway-config - Ambil Konfigurasi Gateway WhatsApp (Admin)
 router.get('/gateway-config', requireAuth(['admin']), wrap(async (_req, res) => {
   const row = (await query("SELECT value FROM settings WHERE key='whatsapp_gateway_config'")).rows[0];
   const aiRow = (await query("SELECT value FROM settings WHERE key='ai_whatsapp_config'")).rows[0];
@@ -173,7 +165,6 @@ router.get('/gateway-config', requireAuth(['admin']), wrap(async (_req, res) => 
   };
 
   const current = row ? { ...defaultConfig, ...row.value } : defaultConfig;
-  // Normalize old fonnte url if saved with /send_message
   if (current.api_url && current.api_url.includes('fonnte.com/send_message')) {
     current.api_url = 'https://api.fonnte.com/send';
   }
@@ -184,7 +175,6 @@ router.get('/gateway-config', requireAuth(['admin']), wrap(async (_req, res) => 
   });
 }));
 
-// PUT /api/v1/whatsapp/gateway-config - Simpan Konfigurasi Gateway WhatsApp (Admin)
 router.put('/gateway-config', requireAuth(['admin']), validate(Joi.object({
   provider: Joi.string().valid('fonnte', 'wablas', 'twilio', 'custom').default('fonnte'),
   api_url: Joi.string().uri().allow('', null).optional(),
@@ -197,7 +187,6 @@ router.put('/gateway-config', requireAuth(['admin']), validate(Joi.object({
   ai_bot_enabled: Joi.boolean().default(true),
 })), wrap(async (req, res) => {
   const val = req.body;
-  // Normalize Fonnte endpoint
   if (val.provider === 'fonnte' && (!val.api_url || val.api_url.includes('/send_message'))) {
     val.api_url = 'https://api.fonnte.com/send';
   }
@@ -208,7 +197,6 @@ router.put('/gateway-config', requireAuth(['admin']), validate(Joi.object({
     ON CONFLICT (key) DO UPDATE SET value = $1
   `, [JSON.stringify(val)]);
 
-  // Sync admin_whatsapp and ai_bot_enabled to ai_whatsapp_config
   const aiRow = (await query("SELECT value FROM settings WHERE key='ai_whatsapp_config'")).rows[0];
   const aiVal = aiRow?.value || {};
   aiVal.admin_whatsapp = val.admin_whatsapp;
@@ -226,7 +214,6 @@ router.put('/gateway-config', requireAuth(['admin']), validate(Joi.object({
   });
 }));
 
-// POST /api/v1/whatsapp/test-connection - Uji Coba Kirim Pesan / Verifikasi API (Admin)
 router.post('/test-connection', requireAuth(['admin']), validate(Joi.object({
   phone: Joi.string().trim().required().label('Nomor WhatsApp Penerima'),
   message: Joi.string().trim().min(1).max(500).required().label('Pesan Tes'),
@@ -314,7 +301,6 @@ router.post('/test-connection', requireAuth(['admin']), validate(Joi.object({
       });
     }
 
-    // Auto-save the token and config if provided in test request so user doesn't lose it
     if (api_token) {
       const updatedConfig = {
         ...cfg,

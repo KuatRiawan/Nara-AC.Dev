@@ -11,9 +11,6 @@ const CANDIDATE_MODELS = [
 
 const rupiah = (n) => `Rp${Number(n).toLocaleString('id-ID')}`;
 
-/**
- * Builds live business context from database
- */
 async function getBusinessContext() {
   try {
     const services = (await query('SELECT kode, nama_layanan, kategori, harga, durasi_menit, deskripsi FROM service_catalog WHERE aktif ORDER BY id')).rows;
@@ -48,9 +45,6 @@ PANDUAN MASALAH AC & SOLUSI:
   }
 }
 
-/**
- * Generate an informative and conversational response using Google Gemini
- */
 async function generateGeminiAnswer(userMessage, conversationHistory = []) {
   const apiKey = config.geminiApiKey;
   if (!apiKey) {
@@ -77,7 +71,6 @@ ATURAN PENTING & INTEGRITAS (ANTI-HALUSINASI):
 ${businessContext}
 `;
 
-  // Build message sequence with conversation history (last 4 turns)
   const contents = [];
   if (Array.isArray(conversationHistory)) {
     for (const h of conversationHistory.slice(-4)) {
@@ -90,7 +83,6 @@ ${businessContext}
   }
   contents.push({ role: 'user', parts: [{ text: userMessage }] });
 
-  // Try candidate models with fallback
   let lastError = null;
   const modelsToTry = [...new Set(CANDIDATE_MODELS)];
 
@@ -119,7 +111,6 @@ ${businessContext}
         const errBody = await response.json().catch(() => ({}));
         const status = response.status;
         console.warn(`[geminiService] Model ${model} mengembalikan status ${status}:`, errBody?.error?.message || response.statusText);
-        // If 503 or 404 or 429, try next candidate model
         if ([503, 404, 429].includes(status)) {
           lastError = new Error(`Model ${model} unavailable (${status})`);
           continue;
@@ -130,7 +121,6 @@ ${businessContext}
       const data = await response.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (text) {
-        // Detect action recommendations based on user question and answer
         const lower = (userMessage + ' ' + text).toLowerCase();
         const aksi = [];
         const quickReplies = [];

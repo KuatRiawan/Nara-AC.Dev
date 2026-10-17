@@ -47,9 +47,6 @@ export default function AdminSettings() {
 
   const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'security' | 'operations' | 'payment' | 'business'
 
-  // ==========================================
-  // 1. Profile State
-  // ==========================================
   const [profileForm, setProfileForm] = useState(() => ({
     nama: user?.nama || '',
     email: user?.email || '',
@@ -57,7 +54,6 @@ export default function AdminSettings() {
   }));
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // Sync profileForm with fresh data from /auth/me
   useEffect(() => {
     let isMounted = true;
     api.get('/auth/me')
@@ -77,9 +73,6 @@ export default function AdminSettings() {
     return () => { isMounted = false; };
   }, [updateUser]);
 
-  // ==========================================
-  // 2. Security / Password State
-  // ==========================================
   const [passwordForm, setPasswordForm] = useState({
     current_password: '',
     new_password: '',
@@ -90,12 +83,9 @@ export default function AdminSettings() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
 
-  // ==========================================
-  // 3. Operating Hours State
-  // ==========================================
   const [opsForm, setOpsForm] = useState({
     open: '08:00',
-    close: '17:00',
+    close: '19:00',
     days: [1, 2, 3, 4, 5, 6],
     slot_minutes: 60,
     min_lead_minutes: 60,
@@ -105,9 +95,6 @@ export default function AdminSettings() {
   const [loadingOps, setLoadingOps] = useState(false);
   const [savingOps, setSavingOps] = useState(false);
 
-  // ==========================================
-  // 4. Payment Accounts State
-  // ==========================================
   const [paymentSettings, setPaymentSettings] = useState({
     accounts: [
       { id: '1', bank_name: 'BCA', account_number: '8720-9182-33', account_holder: 'CV NARA TEKNINDOTAMA' },
@@ -118,29 +105,22 @@ export default function AdminSettings() {
   const [loadingPayment, setLoadingPayment] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
 
-  // ==========================================
-  // 5. Business Profile State
-  // ==========================================
   const [businessForm, setBusinessForm] = useState({
     name: 'CV. NARA TEKNINDOTAMA',
     tagline: 'Spesialis Layanan Service, Maintenance & Instalasi AC Profesional',
     address: 'Jl. Raya Industri No. 45, Kawasan Sentra Bisnis',
     phone: '+62 812-3456-7890',
-    hours: 'Senin - Sabtu: 08.00 - 17.00 WIB',
+    hours: 'Senin - Sabtu: 08:00 - 19:00 WIB',
     guarantee: 'Garansi Pengerjaan Resmi 30 Hari'
   });
   const [loadingBusiness, setLoadingBusiness] = useState(false);
   const [savingBusiness, setSavingBusiness] = useState(false);
 
-  // ==========================================
-  // Fetch All Settings on Mount
-  // ==========================================
   const fetchAllSettings = useCallback(async () => {
     setLoadingOps(true);
     setLoadingPayment(true);
     setLoadingBusiness(true);
 
-    // 1. Operating Hours
     try {
       const resOps = await api.get('/settings/operating-hours');
       const opsData = (resOps && resOps.open) ? resOps : (resOps?.data?.open ? resOps.data : null);
@@ -156,12 +136,10 @@ export default function AdminSettings() {
         });
       }
     } catch {
-      // Keep defaults
     } finally {
       setLoadingOps(false);
     }
 
-    // 2. Payment Accounts
     try {
       const resPay = await api.get('/settings/payment-accounts');
       const payData = (resPay && Array.isArray(resPay.accounts)) 
@@ -176,12 +154,10 @@ export default function AdminSettings() {
         });
       }
     } catch {
-      // Keep defaults
     } finally {
       setLoadingPayment(false);
     }
 
-    // 3. Business Profile
     try {
       const resBiz = await api.get('/settings/business-profile');
       const bizData = (resBiz && resBiz.name) ? resBiz : (resBiz?.data?.name ? resBiz.data : null);
@@ -189,7 +165,6 @@ export default function AdminSettings() {
         setBusinessForm(bizData);
       }
     } catch {
-      // Jika API gagal, biarkan form kosong — tidak perlu fallback ke localStorage (AUD-005)
     } finally {
       setLoadingBusiness(false);
     }
@@ -199,11 +174,6 @@ export default function AdminSettings() {
     fetchAllSettings();
   }, [fetchAllSettings]);
 
-  // ==========================================
-  // Handlers
-  // ==========================================
-
-  // 1. Save Profile
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     if (!profileForm.nama.trim()) {
@@ -236,7 +206,6 @@ export default function AdminSettings() {
     }
   };
 
-  // 2. Save Password
   const handleSavePassword = async (e) => {
     e.preventDefault();
     if (!passwordForm.current_password) {
@@ -272,7 +241,6 @@ export default function AdminSettings() {
     }
   };
 
-  // 3. Save Operating Hours
   const handleToggleDay = (dayVal) => {
     setOpsForm(prev => {
       const exists = prev.days.includes(dayVal);
@@ -319,7 +287,6 @@ export default function AdminSettings() {
     }
   };
 
-  // 4. Payment Accounts
   const handleAddAccount = () => {
     setPaymentSettings(prev => ({
       ...prev,
@@ -373,7 +340,6 @@ export default function AdminSettings() {
 
       await api.put('/settings/payment-accounts', payload);
       
-      // Data sudah tersimpan di backend via API — tidak perlu sync ke localStorage (AUD-005)
       showSuccess('Rekening pembayaran berhasil disimpan dan tersinkronisasi ke seluruh E-Invoice.');
     } catch (err) {
       const msg = getErrorMessage(err, 'Gagal menyimpan rekening pembayaran');
@@ -383,7 +349,6 @@ export default function AdminSettings() {
     }
   };
 
-  // 5. Business Profile
   const handleSaveBusiness = async (e) => {
     e.preventDefault();
     if (!businessForm.name.trim()) {
@@ -404,7 +369,6 @@ export default function AdminSettings() {
 
       await api.put('/settings/business-profile', payload);
 
-      // Data sudah tersimpan di backend — tidak perlu cache di localStorage (AUD-005)
       showSuccess('Profil badan usaha & operasional berhasil disimpan secara permanen.');
     } catch (err) {
       const msg = getErrorMessage(err, 'Gagal menyimpan informasi usaha');
@@ -417,7 +381,6 @@ export default function AdminSettings() {
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 bg-slate-50/50 relative min-w-0">
       
-      {/* Title & Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
@@ -440,10 +403,8 @@ export default function AdminSettings() {
         </div>
       </div>
 
-      {/* 4 Clean Top Status Cards (Consistent UI standard) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* Card 1: Hak Akses */}
         <div className="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Hak Akses Sistem</span>
@@ -461,7 +422,6 @@ export default function AdminSettings() {
           </div>
         </div>
 
-        {/* Card 2: Keamanan Sesi */}
         <div className="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Status Keamanan</span>
@@ -479,7 +439,6 @@ export default function AdminSettings() {
           </div>
         </div>
 
-        {/* Card 3: Jam Operasional Servis */}
         <div className="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-amber-600">Jam Operasional</span>
@@ -497,7 +456,6 @@ export default function AdminSettings() {
           </div>
         </div>
 
-        {/* Card 4: Rekening Invoice */}
         <div className="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Rekening Resmi</span>
@@ -517,7 +475,6 @@ export default function AdminSettings() {
 
       </div>
 
-      {/* Tab Navigation Pill Bar */}
       <div className="flex items-center gap-2 overflow-x-auto p-1.5 bg-slate-100/80 rounded-2xl border border-slate-200/80 w-full sm:w-fit">
         <button
           type="button"
@@ -590,13 +547,9 @@ export default function AdminSettings() {
         </button>
       </div>
 
-      {/* ============================================================== */}
-      {/* TAB 1: PROFIL ADMINISTRATOR                                   */}
-      {/* ============================================================== */}
       {activeTab === 'profile' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* Left: Avatar & Identity Card */}
           <div className="p-6 bg-white rounded-3xl border border-slate-200/80 shadow-sm flex flex-col items-center text-center space-y-4">
             <div className="w-24 h-24 rounded-full bg-blue-600 text-white flex items-center justify-center text-3xl font-black shadow-md shadow-blue-600/20 border-4 border-white">
               {profileForm.nama ? profileForm.nama.charAt(0).toUpperCase() : (user?.nama ? user.nama.charAt(0).toUpperCase() : 'A')}
@@ -638,7 +591,6 @@ export default function AdminSettings() {
             </div>
           </div>
 
-          {/* Right: Profile Edit Form */}
           <div className="lg:col-span-2 p-6 sm:p-7 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-5">
             <div>
               <h3 className="text-base font-black text-slate-900">
@@ -730,13 +682,9 @@ export default function AdminSettings() {
         </div>
       )}
 
-      {/* ============================================================== */}
-      {/* TAB 2: KEAMANAN & KATA SANDI                                  */}
-      {/* ============================================================== */}
       {activeTab === 'security' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* Left: Security Guidance */}
           <div className="p-6 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
             <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl w-fit border border-emerald-100">
               <Shield className="w-6 h-6" />
@@ -761,7 +709,6 @@ export default function AdminSettings() {
             </div>
           </div>
 
-          {/* Right: Password Change Form */}
           <div className="lg:col-span-2 p-6 sm:p-7 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-5">
             <div>
               <h3 className="text-base font-black text-slate-900">
@@ -773,7 +720,6 @@ export default function AdminSettings() {
             </div>
 
             <form onSubmit={handleSavePassword} className="space-y-4">
-              {/* Current Password */}
               <div className="space-y-1.5">
                 <label htmlFor="admin-settings-f4" className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Kata Sandi Saat Ini
@@ -799,7 +745,6 @@ export default function AdminSettings() {
                 </div>
               </div>
 
-              {/* New Password */}
               <div className="space-y-1.5">
                 <label htmlFor="admin-settings-f5" className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Kata Sandi Baru
@@ -825,7 +770,6 @@ export default function AdminSettings() {
                 </div>
               </div>
 
-              {/* Confirm Password */}
               <div className="space-y-1.5">
                 <label htmlFor="admin-settings-f6" className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Konfirmasi Kata Sandi Baru
@@ -871,9 +815,6 @@ export default function AdminSettings() {
         </div>
       )}
 
-      {/* ============================================================== */}
-      {/* TAB 3: JAM & JADWAL OPERASIONAL                                */}
-      {/* ============================================================== */}
       {activeTab === 'operations' && (
         <div className="p-6 sm:p-7 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
@@ -892,7 +833,6 @@ export default function AdminSettings() {
           </div>
 
           <form onSubmit={handleSaveOps} className="space-y-6">
-            {/* Working Hours & Slots */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               <div className="space-y-1.5">
                 <label htmlFor="admin-settings-f7" className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
@@ -946,7 +886,6 @@ export default function AdminSettings() {
               </div>
             </div>
 
-            {/* Days Selection */}
             <div role="group" aria-labelledby="settings-days-label" className="space-y-2.5">
               <label id="settings-days-label" className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-blue-600" />
@@ -978,7 +917,6 @@ export default function AdminSettings() {
               </p>
             </div>
 
-            {/* Advance Limits & Reminder */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 pt-2 border-t border-slate-100">
               <div className="space-y-1.5">
                 <label htmlFor="admin-settings-f10" className="text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -1065,9 +1003,6 @@ export default function AdminSettings() {
         </div>
       )}
 
-      {/* ============================================================== */}
-      {/* TAB 4: REKENING & KAS PEMBAYARAN                              */}
-      {/* ============================================================== */}
       {activeTab === 'payment' && (
         <div className="space-y-6">
           <div className="p-6 bg-white rounded-3xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1119,8 +1054,7 @@ export default function AdminSettings() {
                     )}
                   </div>
 
-                  {/* Bank Card Visual Preview */}
-                  <div className="p-4 rounded-2xl bg-gradient-to-tr from-slate-900 via-slate-800 to-slate-900 text-white space-y-3 shadow-md relative overflow-hidden">
+                  <div className="p-4 rounded-2xl bg-gradient-to-tr from-blue-700 via-blue-600 to-sky-600 text-white space-y-3 shadow-md relative overflow-hidden">
                     <div className="absolute right-0 top-0 w-28 h-28 bg-blue-500/10 rounded-full blur-xl pointer-events-none" />
                     
                     <div className="flex justify-between items-center">
@@ -1146,7 +1080,6 @@ export default function AdminSettings() {
                     </div>
                   </div>
 
-                  {/* Inputs */}
                   <div className="space-y-3 text-xs">
                     <div>
                       <label htmlFor="admin-settings-f13" className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
@@ -1194,7 +1127,6 @@ export default function AdminSettings() {
               ))}
             </div>
 
-            {/* Instruction Note */}
             <div className="p-6 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-3">
               <label htmlFor="admin-settings-f16" className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
                 Catatan Petunjuk Pembayaran Invoice (Dicetak Pada Lembar Invoice)
@@ -1229,13 +1161,9 @@ export default function AdminSettings() {
         </div>
       )}
 
-      {/* ============================================================== */}
-      {/* TAB 5: INFORMASI BISNIS & WORKSHOP                             */}
-      {/* ============================================================== */}
       {activeTab === 'business' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* Left: Business Summary Preview */}
           <div className="p-6 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
             <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl w-fit border border-purple-100">
               <Building2 className="w-6 h-6" />
@@ -1270,7 +1198,6 @@ export default function AdminSettings() {
             </div>
           </div>
 
-          {/* Right: Business Settings Form */}
           <div className="lg:col-span-2 p-6 sm:p-7 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-5">
             <div>
               <h3 className="text-base font-black text-slate-900">
@@ -1349,7 +1276,7 @@ export default function AdminSettings() {
                     id="admin-settings-f21"
                     value={businessForm.hours}
                     onChange={(e) => setBusinessForm(prev => ({ ...prev, hours: e.target.value }))}
-                    placeholder="Contoh: Senin - Sabtu: 08.00 - 17.00 WIB"
+                    placeholder="Contoh: Senin - Sabtu: 08:00 - 19:00 WIB"
                     className="h-11 rounded-xl border-slate-200 text-xs"
                     required
                   />

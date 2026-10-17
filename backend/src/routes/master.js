@@ -36,7 +36,6 @@ const phoneField = (label) => Joi.string().trim().max(20).custom((v, h) => {
   return n || h.error('any.invalid');
 }).messages({ 'any.invalid': `${label} tidak valid. Gunakan nomor HP Indonesia, contoh 081234567890.` }).label(label);
 
-// ---------- Customers ----------
 const custCreate = Joi.object({
   nama: Joi.string().trim().min(2).max(80).required().label('Nama'),
   kontak: phoneField('Kontak').required(),
@@ -73,7 +72,6 @@ router.patch('/customers/:id', requireAuth(['admin']), validate(idParam, 'params
   }
 }));
 
-// ---------- Technicians ----------
 const techCreate = Joi.object({
   nama: Joi.string().trim().min(2).max(80).required().label('Nama'),
   kontak: phoneField('Kontak').required(),
@@ -118,22 +116,18 @@ router.patch('/technicians/:id', requireAuth(['admin']), validate(idParam, 'para
 
 router.delete('/technicians/:id', requireAuth(['admin']), validate(idParam, 'params'), wrap(async (req, res) => {
   await withTx(async (c) => {
-    // 1. Update references to NULL to satisfy foreign key constraints
     await c.query('UPDATE bookings SET teknisi_id = NULL WHERE teknisi_id = $1', [req.params.id]);
     await c.query('UPDATE inventory_usage SET teknisi_id = NULL WHERE teknisi_id = $1', [req.params.id]);
     await c.query('UPDATE schedule_history SET teknisi_lama_id = NULL WHERE teknisi_lama_id = $1', [req.params.id]);
     await c.query('UPDATE schedule_history SET teknisi_baru_id = NULL WHERE teknisi_baru_id = $1', [req.params.id]);
     
-    // 2. Delete related user account if exists
     await c.query('DELETE FROM users WHERE technician_id = $1', [req.params.id]);
     
-    // 3. Delete the technician (availability will cascade)
     await c.query('DELETE FROM technicians WHERE id = $1', [req.params.id]);
   });
   res.json({ message: 'Teknisi berhasil dihapus' });
 }));
 
-// ---------- Inventory ----------
 const KAT = ['freon', 'pipa', 'kabel', 'komponen'];
 const invCreate = Joi.object({
   nama: Joi.string().trim().min(2).max(80).required().label('Nama'),
@@ -228,13 +222,11 @@ router.post('/service-catalog', requireAuth(['admin']), validate(svcCreate), wra
   }
 }));
 router.patch('/service-catalog/:id', requireAuth(['admin']), validate(idParam, 'params'), validate(svcPatch), wrap(async (req, res) => {
-  // Perubahan manual oleh admin = data resmi usaha, bukan lagi sintetis
   const row = await patchTable('service_catalog', req.params.id, req.body, ['nama_layanan', 'kategori', 'deskripsi', 'harga', 'durasi_menit', 'garansi_hari', 'interval_maintenance_hari', 'aktif']);
   await query('UPDATE service_catalog SET updated_at=now(), is_synthetic=false WHERE id=$1', [req.params.id]);
   res.json({ ...row, is_synthetic: false });
 }));
 
-// ---------- Pengaturan jam operasional ----------
 const opsSchema = Joi.object({
   open: Joi.string().pattern(/^([01]\d|2[0-3]):[0-5]\d$/).required().label('Jam buka'),
   close: Joi.string().pattern(/^([01]\d|2[0-3]):[0-5]\d$/).required().label('Jam tutup'),
@@ -254,7 +246,6 @@ router.put('/settings/operating-hours', requireAuth(['admin']), validate(opsSche
   res.json(req.body);
 }));
 
-// ---------- Pengaturan Rekening Bank Pembayaran ----------
 const defaultPaymentSettings = {
   accounts: [
     { id: '1', bank_name: 'BCA', account_number: '8720-9182-33', account_holder: 'CV NARA TEKNINDOTAMA' },
@@ -287,7 +278,6 @@ router.put('/settings/payment-accounts', requireAuth(['admin']), validate(paymen
   res.json(req.body);
 }));
 
-// ---------- Pengaturan Profil Bisnis & Operasional (CV. Nara Teknindotama) ----------
 const defaultBusinessProfile = {
   name: 'CV. Nara Teknindotama',
   brand: 'NARA AC',

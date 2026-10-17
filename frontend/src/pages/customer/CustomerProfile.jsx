@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { AuthContext } from '../../AuthContext';
 import {
   User,
-  Settings,
   Lock,
   ShieldCheck,
   Bell,
@@ -15,10 +14,11 @@ import {
   Sparkles,
   Eye,
   EyeOff,
-  Check,
   Smartphone,
-  Shield,
-  HelpCircle
+  Edit3,
+  X,
+  KeyRound,
+  Loader2
 } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -31,19 +31,25 @@ export default function CustomerProfile() {
   const { user, updateUser } = useContext(AuthContext);
   const { error: showError, success: showSuccess } = useToast();
 
-  const [activeTab, setActiveTab] = useState('profile'); // 'profile', 'security', 'preferences', 'benefits'
+  const [activeTab, setActiveTab] = useState('profile');
 
-  // Profile Form state
   const [profileForm, setProfileForm] = useState({
     nama: user?.nama || user?.name || '',
     email: user?.email || '',
     kontak: user?.kontak || '',
     alamat: ''
   });
+  const [verifiedPhone, setVerifiedPhone] = useState(user?.kontak || '');
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // Password Form state
+  const [isChangingPhone, setIsChangingPhone] = useState(false);
+  const [phoneStep, setPhoneStep] = useState('input'); // 'input' | 'otp'
+  const [newPhoneInput, setNewPhoneInput] = useState('');
+  const [phoneOtpCode, setPhoneOtpCode] = useState('');
+  const [sendingPhoneOtp, setSendingPhoneOtp] = useState(false);
+  const [verifyingPhoneOtp, setVerifyingPhoneOtp] = useState(false);
+
   const [passwordForm, setPasswordForm] = useState({
     current_password: '',
     new_password: '',
@@ -53,36 +59,36 @@ export default function CustomerProfile() {
   const [showNewPass, setShowNewPass] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
 
-  // Preferences toggles (saved locally / simulated)
   const [preferences, setPreferences] = useState({
     waReminders: true,
     waTechnicianStatus: true,
-    waInvoice: true,
-    emailPromo: false
+    waInvoice: true
   });
 
-  // Fetch complete customer profile (including address) from API
   useEffect(() => {
     async function fetchProfile() {
       try {
         const res = await api.get('/customer/profile');
-        const data = res.data?.data || res.data || {};
+        const data = res.data?.data || res.data || res || {};
         const u = data.user || user || {};
         const c = data.customer || {};
+        const currentPhone = u.kontak || c.kontak || '';
         setProfileForm({
           nama: u.nama || u.name || '',
           email: u.email || '',
-          kontak: u.kontak || c.kontak || '',
+          kontak: currentPhone,
           alamat: c.alamat || ''
         });
+        setVerifiedPhone(currentPhone);
       } catch {
-        // Fallback to AuthContext user
+        const fallbackPhone = user?.kontak || '';
         setProfileForm({
           nama: user?.nama || user?.name || '',
           email: user?.email || '',
-          kontak: user?.kontak || '',
+          kontak: fallbackPhone,
           alamat: ''
         });
+        setVerifiedPhone(fallbackPhone);
       } finally {
         setLoadingProfile(false);
       }
@@ -94,11 +100,17 @@ export default function CustomerProfile() {
     e.preventDefault();
     setSavingProfile(true);
     try {
-      const res = await api.patch('/customer/profile', profileForm);
-      const updatedUser = res.data?.data?.user || res.data?.user || {
+      const payload = {
         nama: profileForm.nama,
         email: profileForm.email,
-        kontak: profileForm.kontak
+        kontak: verifiedPhone,
+        alamat: profileForm.alamat
+      };
+      const res = await api.patch('/customer/profile', payload);
+      const updatedUser = res?.data?.user || res?.user || {
+        nama: profileForm.nama,
+        email: profileForm.email,
+        kontak: verifiedPhone
       };
       updateUser(updatedUser);
       showSuccess('Profil Anda berhasil diperbarui.');
@@ -106,6 +118,63 @@ export default function CustomerProfile() {
       showError('Gagal memperbarui profil: ' + (err.response?.data?.error?.message || err.message));
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  const handleRequestPhoneChangeOtp = async (e) => {
+    e.preventDefault();
+    const cleaned = String(newPhoneInput || '').replace(/\D/g, '');
+    if (cleaned.length < 9) {
+      showError('Masukkan nomor WhatsApp baru yang valid (minimal 9 digit).');
+      return;
+    }
+    setSendingPhoneOtp(true);
+    try {
+      const res = await api.post('/customer/profile/request-phone-change', {
+        new_kontak: newPhoneInput.trim()
+      });
+      setPhoneStep('otp');
+      if (res?._dev_otp) {
+        setPhoneOtpCode(String(res._dev_otp));
+      }
+      showSuccess(res?.message || 'Kode OTP verifikasi nomor baru telah dikirim ke WhatsApp Anda.');
+    } catch (err) {
+      showError(err?.response?.data?.error?.message || err?.message || 'Gagal meminta kode OTP perubahan nomor.');
+    } finally {
+      setSendingPhoneOtp(false);
+    }
+  };
+
+  const handleConfirmPhoneChangeOtp = async (e) => {
+    e.preventDefault();
+    if (!phoneOtpCode || phoneOtpCode.trim().length !== 6) {
+      showError('Masukkan 6 digit kode OTP verifikasi.');
+      return;
+    }
+    setVerifyingPhoneOtp(true);
+    try {
+      const res = await api.patch('/customer/profile', {
+        nama: profileForm.nama,
+        email: profileForm.email,
+        alamat: profileForm.alamat,
+        kontak: newPhoneInput.trim(),
+        phone_otp_code: phoneOtpCode.trim()
+      });
+      const updatedPhone = res?.user?.kontak || res?.data?.user?.kontak || newPhoneInput.trim();
+      setVerifiedPhone(updatedPhone);
+      setProfileForm((prev) => ({ ...prev, kontak: updatedPhone }));
+      if (res?.user || res?.data?.user) {
+        updateUser(res.user || res.data.user);
+      }
+      setIsChangingPhone(false);
+      setPhoneStep('input');
+      setNewPhoneInput('');
+      setPhoneOtpCode('');
+      showSuccess('Nomor WhatsApp berhasil diverifikasi dan diperbarui.');
+    } catch (err) {
+      showError(err?.response?.data?.error?.message || err?.message || 'Verifikasi OTP gagal.');
+    } finally {
+      setVerifyingPhoneOtp(false);
     }
   };
 
@@ -146,9 +215,6 @@ export default function CustomerProfile() {
 
   return (
     <div className="space-y-6">
-      {/* ============================================================== */}
-      {/* 1. HEADER SECTION                                              */}
-      {/* ============================================================== */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
@@ -159,19 +225,15 @@ export default function CustomerProfile() {
           </p>
         </div>
 
-        {/* Member Status Pill */}
         <div className="flex items-center gap-2 self-start sm:self-auto bg-gradient-to-r from-blue-50 to-sky-50 border border-blue-200/80 px-3.5 py-1.5 rounded-2xl shadow-2xs">
           <Sparkles className="w-4 h-4 text-amber-500" />
           <div className="text-left">
             <p className="text-[10px] font-black uppercase text-blue-700 tracking-wider">Member Aktif</p>
-            <p className="text-xs font-bold text-slate-800">Diskon 10% Otomatis</p>
+            <p className="text-xs font-bold text-slate-800">Diskon Jasa 10% Otomatis</p>
           </div>
         </div>
       </div>
 
-      {/* ============================================================== */}
-      {/* 2. TAB NAVIGATION                                              */}
-      {/* ============================================================== */}
       <div className="flex flex-wrap gap-2 border-b border-slate-200/80 pb-3">
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -181,22 +243,19 @@ export default function CustomerProfile() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer",
+                'inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer',
                 isActive
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
-                  : "bg-white text-slate-600 hover:text-blue-600 hover:bg-sky-50/60 border border-slate-200/70"
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                  : 'bg-white text-slate-600 hover:text-blue-600 hover:bg-sky-50/60 border border-slate-200/70'
               )}
             >
-              <Icon className={cn("w-4 h-4", isActive ? "text-white" : "text-slate-400")} />
+              <Icon className={cn('w-4 h-4', isActive ? 'text-white' : 'text-slate-400')} />
               <span>{tab.label}</span>
             </button>
           );
         })}
       </div>
 
-      {/* ============================================================== */}
-      {/* 3. TAB 1: INFORMASI PROFIL & KONTAK                            */}
-      {/* ============================================================== */}
       {activeTab === 'profile' && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -204,43 +263,41 @@ export default function CustomerProfile() {
           transition={{ duration: 0.2 }}
           className="grid gap-6 lg:grid-cols-3"
         >
-          {/* Member Card Summary (Left Col) */}
           <div className="space-y-4">
-            <Card className="rounded-3xl border-slate-200/80 shadow-xs overflow-hidden bg-white">
-              <div className="p-6 bg-gradient-to-br from-slate-900 to-blue-950 text-white relative">
-                <div className="w-16 h-16 rounded-2xl bg-blue-600 text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-blue-600/40 mb-3">
+            <Card className="rounded-3xl border-sky-200/80 shadow-xs overflow-hidden bg-white">
+              <div className="p-6 bg-gradient-to-br from-blue-700 via-blue-600 to-sky-600 text-white relative">
+                <div className="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 text-white font-black text-2xl flex items-center justify-center shadow-lg mb-3">
                   {(profileForm.nama || 'P').charAt(0).toUpperCase()}
                 </div>
                 <h3 className="font-black text-lg text-white leading-tight">{profileForm.nama || 'Pelanggan'}</h3>
-                <p className="text-xs text-sky-300 font-medium mt-0.5">{profileForm.email || 'Email belum diatur'}</p>
+                <p className="text-xs text-sky-100 font-medium mt-0.5">{profileForm.email || 'Email belum diatur'}</p>
 
-                <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between text-xs">
-                  <span className="text-slate-300">ID Member</span>
-                  <span className="font-mono font-bold text-sky-300">#MBR-{String(user?.id || 1).padStart(4, '0')}</span>
+                <div className="mt-4 pt-4 border-t border-white/15 flex items-center justify-between text-xs">
+                  <span className="text-sky-100">ID Member</span>
+                  <span className="font-mono font-bold text-white">#MBR-{String(user?.id || 1).padStart(4, '0')}</span>
                 </div>
                 <div className="mt-1.5 flex items-center justify-between text-xs">
-                  <span className="text-slate-300">Status Akun</span>
-                  <span className="inline-flex items-center gap-1 font-bold text-emerald-400">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span className="text-sky-100">Status Nomor WA</span>
+                  <span className="inline-flex items-center gap-1 font-bold text-emerald-200">
+                    <span className="w-2 h-2 rounded-full bg-emerald-300" />
                     Terverifikasi
                   </span>
                 </div>
               </div>
-              <CardContent className="p-5 text-xs text-slate-600 space-y-3 bg-slate-50/50">
+              <CardContent className="p-5 text-xs text-slate-600 space-y-3 bg-sky-50/40">
                 <div className="flex items-start gap-2.5">
                   <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                   <p>Data profil digunakan teknisi untuk konfirmasi kunjungan servis &amp; penerbitan faktur.</p>
                 </div>
                 <div className="flex items-start gap-2.5">
                   <Smartphone className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <p>Nomor WhatsApp digunakan untuk pengiriman OTP login cepat &amp; info status servis real-time.</p>
+                  <p>Nomor WhatsApp terverifikasi dikunci demi keamanan akun. Gunakan fitur Ubah Nomor untuk verifikasi ulang OTP.</p>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Form Edit Profile (Right Col - Span 2) */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-4">
             <Card className="rounded-3xl border-slate-200/80 shadow-xs overflow-hidden bg-white">
               <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-blue-100/80 text-blue-700 flex items-center justify-center">
@@ -253,7 +310,6 @@ export default function CustomerProfile() {
 
               <CardContent className="p-6">
                 <form onSubmit={handleProfileSubmit} className="space-y-4">
-                  {/* Nama Lengkap */}
                   <div>
                     <label htmlFor="customer-nama" className="block text-xs font-bold text-slate-700 mb-1">
                       Nama Lengkap *
@@ -274,9 +330,7 @@ export default function CustomerProfile() {
                     </div>
                   </div>
 
-                  {/* Email & Kontak WhatsApp Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Email */}
                     <div>
                       <label htmlFor="customer-email" className="block text-xs font-bold text-slate-700 mb-1">
                         Alamat Email *
@@ -297,11 +351,25 @@ export default function CustomerProfile() {
                       </div>
                     </div>
 
-                    {/* WhatsApp */}
                     <div>
-                      <label htmlFor="customer-kontak" className="block text-xs font-bold text-slate-700 mb-1">
-                        Nomor WhatsApp / HP
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label htmlFor="customer-kontak" className="block text-xs font-bold text-slate-700">
+                          Nomor WhatsApp Terverifikasi
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsChangingPhone((prev) => !prev);
+                            setPhoneStep('input');
+                            setNewPhoneInput('');
+                            setPhoneOtpCode('');
+                          }}
+                          className="text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          <span>{isChangingPhone ? 'Batal Ubah' : 'Ubah Nomor'}</span>
+                        </button>
+                      </div>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                           <Phone className="w-4 h-4" />
@@ -309,16 +377,19 @@ export default function CustomerProfile() {
                         <input
                           id="customer-kontak"
                           type="text"
-                          value={profileForm.kontak}
-                          onChange={(e) => setProfileForm({ ...profileForm, kontak: e.target.value })}
-                          placeholder="081234567890"
-                          className="block w-full pl-10 pr-4 py-2.5 rounded-2xl border border-slate-200 bg-white text-xs sm:text-sm font-medium focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-mono"
+                          readOnly
+                          aria-readonly="true"
+                          value={verifiedPhone || '-'}
+                          className="block w-full pl-10 pr-24 py-2.5 rounded-2xl border border-slate-200 bg-slate-100 text-slate-700 text-xs sm:text-sm font-bold font-mono cursor-not-allowed select-all"
                         />
+                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          Terverifikasi
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Alamat Utama */}
                   <div>
                     <label htmlFor="customer-alamat" className="block text-xs font-bold text-slate-700 mb-1">
                       Alamat Utama Servis (Rumah / Kantor)
@@ -332,16 +403,12 @@ export default function CustomerProfile() {
                         rows="3"
                         value={profileForm.alamat}
                         onChange={(e) => setProfileForm({ ...profileForm, alamat: e.target.value })}
-                        placeholder="Contoh: Jl. Diponegoro No. 45, RT 02 / RW 05, Menteng, Jakarta Pusat (Patokan: Depan Taman)"
+                        placeholder="Contoh: Jl. Teluk Langsa RT 02 / RW 16, Ciangsana, Gunung Putri, Kab. Bogor"
                         className="block w-full pl-10 pr-4 py-2.5 rounded-2xl border border-slate-200 bg-white text-xs sm:text-sm font-medium focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all leading-relaxed"
                       />
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      Alamat ini akan otomatis terisi saat Anda membuat booking baru agar proses pemesanan lebih cepat.
-                    </p>
                   </div>
 
-                  {/* Submit Button */}
                   <div className="pt-3 border-t border-slate-100 flex justify-end">
                     <Button
                       type="submit"
@@ -353,15 +420,121 @@ export default function CustomerProfile() {
                     </Button>
                   </div>
                 </form>
+
+                {isChangingPhone && (
+                  <div className="mt-5 pt-5 border-t border-sky-100 bg-sky-50/60 p-4 sm:p-5 rounded-2xl border space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <KeyRound className="w-4 h-4 text-blue-600" />
+                        <h3 className="text-xs sm:text-sm font-black text-slate-900">
+                          Verifikasi Perubahan Nomor WhatsApp
+                        </h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsChangingPhone(false)}
+                        className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {phoneStep === 'input' ? (
+                      <form onSubmit={handleRequestPhoneChangeOtp} className="space-y-3">
+                        <div>
+                          <label htmlFor="new-phone-input" className="block text-xs font-bold text-slate-700 mb-1">
+                            Nomor WhatsApp Baru *
+                          </label>
+                          <input
+                            id="new-phone-input"
+                            type="tel"
+                            required
+                            value={newPhoneInput}
+                            onChange={(e) => setNewPhoneInput(e.target.value)}
+                            placeholder="Contoh: 081385293137"
+                            className="block w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-mono font-bold focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20"
+                          />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            type="submit"
+                            disabled={sendingPhoneOtp}
+                            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold h-9 px-4"
+                          >
+                            {sendingPhoneOtp ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                                Mengirim OTP...
+                              </>
+                            ) : (
+                              'Kirim Kode OTP Verifikasi'
+                            )}
+                          </Button>
+                        </div>
+                      </form>
+                    ) : (
+                      <form onSubmit={handleConfirmPhoneChangeOtp} className="space-y-3">
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label htmlFor="readonly-target-phone" className="block text-xs font-bold text-slate-700">
+                              Nomor WhatsApp Tujuan (Terkunci Selama Verifikasi)
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPhoneStep('input');
+                                setPhoneOtpCode('');
+                              }}
+                              className="text-[11px] font-bold text-blue-600 hover:underline cursor-pointer"
+                            >
+                              Ganti Nomor
+                            </button>
+                          </div>
+                          <input
+                            id="readonly-target-phone"
+                            type="text"
+                            readOnly
+                            aria-readonly="true"
+                            value={newPhoneInput}
+                            className="block w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-100 text-slate-700 text-xs font-mono font-bold cursor-not-allowed"
+                          />
+                        </div>
+
+                        <div>
+                          <label htmlFor="phone-change-otp-code" className="block text-xs font-bold text-slate-700 mb-1">
+                            Kode Verifikasi OTP (6 Digit) *
+                          </label>
+                          <input
+                            id="phone-change-otp-code"
+                            type="text"
+                            maxLength={6}
+                            required
+                            value={phoneOtpCode}
+                            onChange={(e) => setPhoneOtpCode(e.target.value.replace(/\D/g, ''))}
+                            placeholder="123456"
+                            className="block w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-center tracking-[0.35em] text-sm font-mono font-black focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20"
+                          />
+                        </div>
+
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            type="submit"
+                            disabled={verifyingPhoneOtp || phoneOtpCode.length !== 6}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold h-9 px-4"
+                          >
+                            {verifyingPhoneOtp ? 'Memverifikasi...' : 'Verifikasi & Simpan Nomor Baru'}
+                          </Button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
         </motion.div>
       )}
 
-      {/* ============================================================== */}
-      {/* 4. TAB 2: KEAMANAN & PASSWORD                                  */}
-      {/* ============================================================== */}
       {activeTab === 'security' && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -381,7 +554,6 @@ export default function CustomerProfile() {
 
             <CardContent className="p-6">
               <form onSubmit={handlePasswordSubmit} className="space-y-4">
-                {/* Current Password */}
                 <div>
                   <label htmlFor="customer-current-pass" className="block text-xs font-bold text-slate-700 mb-1">
                     Password Saat Ini *
@@ -409,7 +581,6 @@ export default function CustomerProfile() {
                   </div>
                 </div>
 
-                {/* New Password */}
                 <div>
                   <label htmlFor="customer-new-pass" className="block text-xs font-bold text-slate-700 mb-1">
                     Password Baru * (Minimal 8 karakter)
@@ -438,7 +609,6 @@ export default function CustomerProfile() {
                   </div>
                 </div>
 
-                {/* Confirm New Password */}
                 <div>
                   <label htmlFor="customer-confirm-pass" className="block text-xs font-bold text-slate-700 mb-1">
                     Ulangi Password Baru *
@@ -460,11 +630,6 @@ export default function CustomerProfile() {
                   </div>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 space-y-1">
-                  <p className="font-bold text-slate-800">Tips Keamanan Sandi:</p>
-                  <p>Gunakan kombinasi huruf besar, huruf kecil, angka, dan simbol untuk melindungi akun portal Anda.</p>
-                </div>
-
                 <div className="pt-3 border-t border-slate-100 flex justify-end">
                   <Button
                     type="submit"
@@ -481,9 +646,6 @@ export default function CustomerProfile() {
         </motion.div>
       )}
 
-      {/* ============================================================== */}
-      {/* 5. TAB 3: PREFERENSI & NOTIFIKASI WHATSAPP                      */}
-      {/* ============================================================== */}
       {activeTab === 'preferences' && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -502,11 +664,6 @@ export default function CustomerProfile() {
             </div>
 
             <CardContent className="p-6 space-y-5">
-              <p className="text-xs text-slate-500">
-                Atur bagaimana Anda menerima pembaruan status servis, pengingat cuci berkala, dan nota faktur resmi.
-              </p>
-
-              {/* Setting 1: Pengingat Cuci Berkala */}
               <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/80 border border-slate-200/70">
                 <div className="space-y-0.5 max-w-md">
                   <h3 className="font-black text-xs sm:text-sm text-slate-900">Pengingat Perawatan Berkala (3-4 Bulan)</h3>
@@ -521,20 +678,19 @@ export default function CustomerProfile() {
                     showSuccess('Pengaturan pengingat berhasil disimpan.');
                   }}
                   className={cn(
-                    "w-12 h-7 rounded-full p-1 transition-colors cursor-pointer shrink-0",
-                    preferences.waReminders ? "bg-blue-600" : "bg-slate-300"
+                    'w-12 h-7 rounded-full p-1 transition-colors cursor-pointer shrink-0',
+                    preferences.waReminders ? 'bg-blue-600' : 'bg-slate-300'
                   )}
                 >
                   <div
                     className={cn(
-                      "w-5 h-5 rounded-full bg-white transition-transform shadow-xs",
-                      preferences.waReminders ? "translate-x-5" : "translate-x-0"
+                      'w-5 h-5 rounded-full bg-white transition-transform shadow-xs',
+                      preferences.waReminders ? 'translate-x-5' : 'translate-x-0'
                     )}
                   />
                 </button>
               </div>
 
-              {/* Setting 2: Update Status Teknisi */}
               <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/80 border border-slate-200/70">
                 <div className="space-y-0.5 max-w-md">
                   <h3 className="font-black text-xs sm:text-sm text-slate-900">Pemberitahuan Status Teknisi</h3>
@@ -549,20 +705,19 @@ export default function CustomerProfile() {
                     showSuccess('Pengaturan notifikasi teknisi berhasil disimpan.');
                   }}
                   className={cn(
-                    "w-12 h-7 rounded-full p-1 transition-colors cursor-pointer shrink-0",
-                    preferences.waTechnicianStatus ? "bg-blue-600" : "bg-slate-300"
+                    'w-12 h-7 rounded-full p-1 transition-colors cursor-pointer shrink-0',
+                    preferences.waTechnicianStatus ? 'bg-blue-600' : 'bg-slate-300'
                   )}
                 >
                   <div
                     className={cn(
-                      "w-5 h-5 rounded-full bg-white transition-transform shadow-xs",
-                      preferences.waTechnicianStatus ? "translate-x-5" : "translate-x-0"
+                      'w-5 h-5 rounded-full bg-white transition-transform shadow-xs',
+                      preferences.waTechnicianStatus ? 'translate-x-5' : 'translate-x-0'
                     )}
                   />
                 </button>
               </div>
 
-              {/* Setting 3: E-Invoice Otomatis */}
               <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/80 border border-slate-200/70">
                 <div className="space-y-0.5 max-w-md">
                   <h3 className="font-black text-xs sm:text-sm text-slate-900">E-Invoice &amp; Kartu Garansi Digital</h3>
@@ -577,14 +732,14 @@ export default function CustomerProfile() {
                     showSuccess('Pengaturan invoice digital berhasil disimpan.');
                   }}
                   className={cn(
-                    "w-12 h-7 rounded-full p-1 transition-colors cursor-pointer shrink-0",
-                    preferences.waInvoice ? "bg-blue-600" : "bg-slate-300"
+                    'w-12 h-7 rounded-full p-1 transition-colors cursor-pointer shrink-0',
+                    preferences.waInvoice ? 'bg-blue-600' : 'bg-slate-300'
                   )}
                 >
                   <div
                     className={cn(
-                      "w-5 h-5 rounded-full bg-white transition-transform shadow-xs",
-                      preferences.waInvoice ? "translate-x-5" : "translate-x-0"
+                      'w-5 h-5 rounded-full bg-white transition-transform shadow-xs',
+                      preferences.waInvoice ? 'translate-x-5' : 'translate-x-0'
                     )}
                   />
                 </button>
@@ -594,9 +749,6 @@ export default function CustomerProfile() {
         </motion.div>
       )}
 
-      {/* ============================================================== */}
-      {/* 6. TAB 4: KEUNTUNGAN MEMBER & GARANSI                          */}
-      {/* ============================================================== */}
       {activeTab === 'benefits' && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -605,59 +757,29 @@ export default function CustomerProfile() {
           className="space-y-6 max-w-3xl"
         >
           <div className="grid gap-4 sm:grid-cols-2">
-            {/* Benefit 1: Diskon 10% */}
-            <div className="p-5 rounded-3xl bg-gradient-to-br from-blue-50 to-indigo-50/80 border border-blue-200/80 shadow-2xs space-y-2">
+            <div className="p-5 rounded-3xl bg-gradient-to-br from-blue-50 to-sky-50/80 border border-blue-200/80 shadow-2xs space-y-2">
               <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
                 <Sparkles className="w-5 h-5 text-amber-300" />
               </div>
-              <h3 className="font-black text-base text-slate-900">Diskon 10% Otomatis</h3>
+              <h3 className="font-black text-base text-slate-900">Diskon Jasa 10% Otomatis</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Khusus akun member, setiap pemesanan cuci AC, perbaikan pipa, maupun pengisian freon mendapatkan potongan langsung 10% dari total jasa servis.
+                Khusus akun member, setiap pemesanan layanan mendapatkan potongan langsung 10% dari biaya jasa servis (tidak termasuk suku cadang).
               </p>
               <div className="pt-2">
                 <Badge variant="success" className="font-bold text-[10px]">TERAPLIKASI OTOMATIS</Badge>
               </div>
             </div>
 
-            {/* Benefit 2: Garansi 30 Hari */}
             <div className="p-5 rounded-3xl bg-gradient-to-br from-emerald-50 to-teal-50/80 border border-emerald-200/80 shadow-2xs space-y-2">
               <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
                 <ShieldCheck className="w-5 h-5 text-emerald-200" />
               </div>
-              <h3 className="font-black text-base text-slate-900">Garansi Purna Jual 30 Hari</h3>
+              <h3 className="font-black text-base text-slate-900">Garansi Resmi 14 / 30 / 45 Hari</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Jaminan garansi dingin 30 hari penuh. Jika AC bocor kembali atau tidak dingin, teknisi Nara AC akan melakukan kunjungan ulang gratis tanpa biaya inspeksi.
+                Jaminan garansi pengerjaan sesuai paket layanan. Jika AC mengalami kendala yang sama, teknisi NARA AC melakukan kunjungan pemeriksaan gratis.
               </p>
               <div className="pt-2">
                 <Badge variant="success" className="font-bold text-[10px]">PERLINDUNGAN PENUH</Badge>
-              </div>
-            </div>
-
-            {/* Benefit 3: Prioritas Penugasan */}
-            <div className="p-5 rounded-3xl bg-gradient-to-br from-amber-50 to-orange-50/80 border border-amber-200/80 shadow-2xs space-y-2">
-              <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
-                <CheckCircle2 className="w-5 h-5 text-white" />
-              </div>
-              <h3 className="font-black text-base text-slate-900">Prioritas Antrean Dispatcher</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Booking Anda langsung mendapatkan slot prioritas teknisi senior terdekat pada jam kerja sibuk tanpa antrean lama.
-              </p>
-              <div className="pt-2">
-                <Badge variant="warning" className="font-bold text-[10px]">SLOT PRIORITAS</Badge>
-              </div>
-            </div>
-
-            {/* Benefit 4: Database Telemetri AC */}
-            <div className="p-5 rounded-3xl bg-gradient-to-br from-sky-50 to-blue-50/80 border border-sky-200/80 shadow-2xs space-y-2">
-              <div className="w-10 h-10 rounded-2xl bg-sky-600 text-white flex items-center justify-center shadow-xs">
-                <Smartphone className="w-5 h-5 text-white" />
-              </div>
-              <h3 className="font-black text-base text-slate-900">Pencatatan Telemetri Unit AC</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Data tekanan freon (PSI), suhu hembusan dingin, arus ampere listrik, dan jenis kerusakan tersimpan rapi untuk histori masa pakai AC Anda.
-              </p>
-              <div className="pt-2">
-                <Badge variant="info" className="font-bold text-[10px]">HISTORI DIGITAL</Badge>
               </div>
             </div>
           </div>

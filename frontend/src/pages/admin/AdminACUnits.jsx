@@ -12,7 +12,6 @@ export default function AdminACUnits() {
   const { error: showError, success: showSuccess } = useToast();
   const navigate = useNavigate();
 
-  // State List
   const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -21,11 +20,9 @@ export default function AdminACUnits() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
-  // Quick View Detail State
   const [quickViewUnit, setQuickViewUnit] = useState(null);
   const [loadingQuickView, setLoadingQuickView] = useState(false);
 
-  // Add AC Modal State
   const [showAddModal, setShowAddModal] = useState(false);
   const [customersList, setCustomersList] = useState([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
@@ -42,10 +39,8 @@ export default function AdminACUnits() {
     catatan: ''
   });
 
-  // Copied indicator
   const [copiedId, setCopiedId] = useState(null);
 
-  // WhatsApp Helper
   const getWhatsAppLink = (rawPhone, customerName, unitName) => {
     if (!rawPhone) return null;
     let clean = String(rawPhone).replace(/\D/g, '');
@@ -55,7 +50,6 @@ export default function AdminACUnits() {
     return `https://wa.me/${clean}?text=${text}`;
   };
 
-  // Fetch Units
   const fetchUnits = useCallback(async () => {
     setLoading(true);
     try {
@@ -74,7 +68,6 @@ export default function AdminACUnits() {
     fetchUnits();
   }, [fetchUnits]);
 
-  // Fetch customers for Add AC dropdown
   const loadCustomersForDropdown = async () => {
     if (customersList.length > 0) return;
     setLoadingCustomers(true);
@@ -146,7 +139,6 @@ export default function AdminACUnits() {
     }
   };
 
-  // Quick view detail AC with history
   const viewUnit = async (id) => {
     setLoadingQuickView(true);
     try {
@@ -160,7 +152,6 @@ export default function AdminACUnits() {
     }
   };
 
-  // Filtered units
   const filteredUnits = useMemo(() => {
     return units.filter(u => {
       if (selectedType !== 'all') {
@@ -179,19 +170,16 @@ export default function AdminACUnits() {
     });
   }, [units, selectedType, selectedPk]);
 
-  // Reset pagination when search or filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [search, selectedType, selectedPk]);
 
-  // Paginated units
   const totalPages = Math.max(1, Math.ceil(filteredUnits.length / itemsPerPage));
   const paginatedUnits = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredUnits.slice(start, start + itemsPerPage);
   }, [filteredUnits, currentPage, itemsPerPage]);
 
-  // Summary Metrics
   const metrics = useMemo(() => {
     const total = units.length;
     const active = units.filter(u => u.aktif !== false).length;
@@ -199,7 +187,6 @@ export default function AdminACUnits() {
     return { total, active, withHistory };
   }, [units]);
 
-  // Copy text helper
   const handleCopy = (text, id) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
@@ -208,7 +195,6 @@ export default function AdminACUnits() {
 
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 bg-slate-50/50 relative min-w-0 font-sans">
-      {/* HEADER: Standard Clean Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Database & Unit AC Pelanggan</h1>
@@ -240,7 +226,6 @@ export default function AdminACUnits() {
         </div>
       </div>
 
-      {/* KPI METRIC CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
@@ -276,13 +261,13 @@ export default function AdminACUnits() {
         </div>
       </div>
 
-      {/* FILTER & SEARCH TOOLBAR */}
       <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row gap-4 justify-between items-stretch lg:items-center">
-          {/* Search Bar */}
           <div className="relative flex-1">
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
+              id="admin-search-ac-units"
+              name="admin_search_ac_units"
               type="text"
               placeholder="Cari brand, model, nama pelanggan, no. seri, atau lokasi kamar..."
               aria-label="Cari unit AC"
@@ -300,11 +285,12 @@ export default function AdminACUnits() {
             )}
           </div>
 
-          {/* Quick Filters */}
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tipe:</span>
               <select
+                id="admin-filter-ac-type"
+                name="admin_filter_ac_type"
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
                 className="text-xs font-semibold px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 cursor-pointer"
@@ -320,6 +306,8 @@ export default function AdminACUnits() {
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Kapasitas:</span>
               <select
+                id="admin-filter-ac-pk"
+                name="admin_filter_ac_pk"
                 value={selectedPk}
                 onChange={(e) => setSelectedPk(e.target.value)}
                 className="text-xs font-semibold px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 cursor-pointer"
@@ -337,7 +325,6 @@ export default function AdminACUnits() {
         </div>
       </div>
 
-      {/* UNIT AC GRID / LIST */}
       <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-16 text-center space-y-3">
@@ -377,7 +364,97 @@ export default function AdminACUnits() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* Mobile & Tablet Card View */}
+            <div className="block lg:hidden p-4 sm:p-5 bg-slate-50/50">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {paginatedUnits.map((u) => {
+                  const waLink = getWhatsAppLink(u.kontak_customer, u.nama_customer, `${u.brand} (${u.lokasi})`);
+                  return (
+                    <div key={u.id} className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs hover:shadow-sm transition-all flex flex-col justify-between gap-3">
+                      <div className="space-y-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
+                              <AirVent className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
+                                <span>{u.brand}</span>
+                                {u.model && <span className="text-slate-500 font-medium text-xs">({u.model})</span>}
+                              </div>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200/80">
+                                  {u.kapasitas_pk != null ? `${u.kapasitas_pk} PK` : '1 PK'}
+                                </span>
+                                <span className="text-xs text-slate-500 font-medium">• {u.tipe || 'Split Wall'}</span>
+                              </div>
+                            </div>
+                          </div>
+                          {u.nomor_seri && (
+                            <span className="text-[11px] font-mono text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-200/60 truncate max-w-[120px]">
+                              SN: {u.nomor_seri}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="bg-slate-50/80 rounded-xl p-2.5 border border-slate-100 space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 font-bold text-slate-900 truncate">
+                              <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span className="truncate">{u.nama_customer}</span>
+                            </div>
+                            {waLink && (
+                              <a
+                                href={waLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200/60 shrink-0"
+                              >
+                                <MessageSquare className="w-3 h-3" />
+                                <span>WA</span>
+                              </a>
+                            )}
+                          </div>
+                          <div className="flex items-start gap-1.5 text-slate-600">
+                            <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
+                            <span className="line-clamp-1">{u.lokasi || '-'}</span>
+                          </div>
+                        </div>
+
+                        <div className="text-xs flex items-center justify-between text-slate-500 px-0.5">
+                          <span>Servis Terakhir:</span>
+                          <span className="font-semibold text-slate-700">
+                            {u.servis_terakhir
+                              ? new Date(u.servis_terakhir).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' })
+                              : 'Belum ada'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+                        <button
+                          onClick={() => viewUnit(u.id)}
+                          className="flex-1 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 py-2 rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <History className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Riwayat</span>
+                        </button>
+                        <button
+                          onClick={() => navigate(`/admin/customers?viewId=${u.customer_id}&tab=units`)}
+                          className="flex-1 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 py-2 rounded-xl transition-colors flex items-center justify-center gap-1.5 border border-blue-200/60 cursor-pointer"
+                        >
+                          <span>Kelola Profil</span>
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider font-bold">
@@ -393,7 +470,6 @@ export default function AdminACUnits() {
                   const waLink = getWhatsAppLink(u.kontak_customer, u.nama_customer, `${u.brand} (${u.lokasi})`);
                   return (
                     <tr key={u.id} className="hover:bg-blue-50/30 transition-colors group">
-                      {/* Spesifikasi Unit */}
                       <td className="py-4 px-5">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
@@ -419,7 +495,6 @@ export default function AdminACUnits() {
                         </div>
                       </td>
 
-                      {/* Pelanggan */}
                       <td className="py-4 px-6">
                         <div className="space-y-1">
                           <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
@@ -444,7 +519,6 @@ export default function AdminACUnits() {
                         </div>
                       </td>
 
-                      {/* Lokasi Pemasangan */}
                       <td className="py-4 px-5">
                         <div className="flex items-start gap-1.5 text-xs text-slate-700 font-medium">
                           <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
@@ -457,7 +531,6 @@ export default function AdminACUnits() {
                         )}
                       </td>
 
-                      {/* Servis Terakhir */}
                       <td className="py-4 px-5">
                         {u.servis_terakhir ? (
                           <div className="space-y-0.5">
@@ -473,7 +546,6 @@ export default function AdminACUnits() {
                         )}
                       </td>
 
-                      {/* Aksi Terintegrasi */}
                       <td className="py-4 px-5 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
@@ -502,7 +574,6 @@ export default function AdminACUnits() {
             </table>
           </div>
 
-          {/* PAGINATION TOOLBAR */}
           <div className="p-4 bg-slate-50/70 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 font-medium">
             <div>
               Menampilkan <strong className="text-slate-900">{filteredUnits.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}</strong> - <strong className="text-slate-900">{Math.min(filteredUnits.length, currentPage * itemsPerPage)}</strong> dari <strong className="text-slate-900">{filteredUnits.length}</strong> unit AC
@@ -536,12 +607,10 @@ export default function AdminACUnits() {
       )}
       </div>
 
-      {/* MODAL QUICK VIEW RIWAYAT UNIT AC */}
       {quickViewUnit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
-            {/* Header */}
-            <div className="p-5 sm:p-6 bg-slate-900 text-white flex justify-between items-start shrink-0">
+            <div className="p-5 sm:p-6 bg-gradient-to-r from-blue-700 to-sky-600 text-white flex justify-between items-start shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
                   <AirVent className="w-6 h-6 text-white" />
@@ -563,9 +632,7 @@ export default function AdminACUnits() {
               </button>
             </div>
 
-            {/* Content Body */}
             <div className="p-6 overflow-y-auto space-y-6 flex-1">
-              {/* Info Pelanggan & Lokasi */}
               <div className="bg-slate-50 rounded-xl p-4 border border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div>
                   <span className="text-slate-500 font-semibold block uppercase tracking-wider text-xs">Pemilik Pelanggan:</span>
@@ -581,7 +648,6 @@ export default function AdminACUnits() {
                 </div>
               </div>
 
-              {/* Riwayat Servis */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="font-black text-slate-900 text-sm flex items-center gap-2">
@@ -640,7 +706,6 @@ export default function AdminACUnits() {
               </div>
             </div>
 
-            {/* Footer */}
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between shrink-0">
               <Button
                 variant="outline"
@@ -665,11 +730,10 @@ export default function AdminACUnits() {
         </div>
       )}
 
-      {/* MODAL TAMBAH UNIT AC CEPAT */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
-            <div className="p-5 bg-slate-900 text-white flex items-center justify-between shrink-0">
+            <div className="p-5 bg-gradient-to-r from-blue-700 to-sky-600 text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <AirVent className="w-5 h-5 text-blue-400" />
                 <h3 className="font-bold text-lg text-white">Daftarkan Unit AC Baru</h3>

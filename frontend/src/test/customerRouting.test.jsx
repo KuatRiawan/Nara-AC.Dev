@@ -4,7 +4,6 @@ import { MemoryRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthContext } from '../AuthContext';
 import CustomerPortal from '../pages/customer/CustomerPortal';
 
-// Mock sub-pages
 vi.mock('../pages/customer/CustomerDashboard', () => ({
   default: () => <div data-testid="customer-dashboard">Customer Dashboard Content</div>,
 }));

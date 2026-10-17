@@ -20,17 +20,13 @@ export default function AdminCreateBookingModal({
   const [successBooking, setSuccessBooking] = useState(null);
   const [copiedCode, setCopiedCode] = useState(false);
   
-  // Ref untuk focus trap
   const modalRef = useRef(null);
   
-  // Focus trap untuk aksesibilitas
   useFocusTrap(modalRef, isOpen, onClose);
 
-  // Search existing customer
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
   const [isSearchingCust, setIsSearchingCust] = useState(false);
 
-  // Form State
   const [sumber, setSumber] = useState('WhatsApp'); // 'WhatsApp' | 'Telepon' | 'Walk-in'
   const [nama, setNama] = useState('');
   const [kontak, setKontak] = useState('');
@@ -42,7 +38,6 @@ export default function AdminCreateBookingModal({
   const [teknisiId, setTeknisiId] = useState('');
   const [keluhan, setKeluhan] = useState('');
 
-  // Helper for reliable local date string YYYY-MM-DD
   const getLocalDate = (d = new Date()) => {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -50,7 +45,6 @@ export default function AdminCreateBookingModal({
     return `${year}-${month}-${day}`;
   };
 
-  // Default date to today in YYYY-MM-DD
   useEffect(() => {
     if (isOpen) {
       setTanggal(getLocalDate());
@@ -61,7 +55,6 @@ export default function AdminCreateBookingModal({
     }
   }, [isOpen]);
 
-  // Fetch Service Catalog
   useEffect(() => {
     if (!isOpen) return;
     const fetchServices = async () => {
@@ -82,7 +75,6 @@ export default function AdminCreateBookingModal({
     fetchServices();
   }, [isOpen, layananId]);
 
-  // Search existing customers debounce
   useEffect(() => {
     if (!kontak || kontak.length < 4 || successBooking) {
       setCustomerSuggestions([]);
@@ -112,7 +104,6 @@ export default function AdminCreateBookingModal({
     setCustomerSuggestions([]);
   };
 
-  // Pricing calculation
   const selectedServiceObj = useMemo(() => {
     return services.find(s => String(s.id) === String(layananId));
   }, [services, layananId]);
@@ -244,7 +235,6 @@ export default function AdminCreateBookingModal({
         className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200"
         tabIndex={-1}
       >
-        {/* Header Modal */}
         <div className="p-5 sm:p-6 border-b border-slate-100 bg-gradient-to-r from-blue-50/70 via-white to-slate-50 flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
@@ -271,9 +261,7 @@ export default function AdminCreateBookingModal({
           </button>
         </div>
 
-        {/* Content Body */}
         {successBooking ? (
-          /* SUCCESS STATE VIEW */
           <div className="p-6 sm:p-8 space-y-6 text-center animate-in fade-in">
             <div className="w-16 h-16 rounded-3xl bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center shadow-inner">
               <CheckCircle2 className="w-9 h-9" />
@@ -288,7 +276,6 @@ export default function AdminCreateBookingModal({
               </p>
             </div>
 
-            {/* Ticket Card Box */}
             <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-5 text-left space-y-3 max-w-lg mx-auto">
               <div className="flex items-center justify-between border-b border-slate-200/70 pb-3">
                 <span className="text-xs font-semibold text-slate-500">Kode Tiket Servis:</span>
@@ -333,7 +320,6 @@ export default function AdminCreateBookingModal({
               </div>
             </div>
 
-            {/* Actions for Success */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
               <Button
                 onClick={handleOpenWhatsAppConfirmation}
@@ -361,7 +347,6 @@ export default function AdminCreateBookingModal({
             </div>
           </div>
         ) : (
-          /* BOOKING FORM */
           <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5 max-h-[80vh] overflow-y-auto">
             {errorMsg && (
               <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2">
@@ -370,7 +355,6 @@ export default function AdminCreateBookingModal({
               </div>
             )}
 
-            {/* Sumber Pesanan Badges */}
             <div role="group" aria-labelledby="booking-source-label" className="space-y-1.5">
               <label id="booking-source-label" className="text-xs font-bold text-slate-700 block">
                 Saluran Masuk Pesanan:
@@ -402,7 +386,6 @@ export default function AdminCreateBookingModal({
               </div>
             </div>
 
-            {/* Section 1: Data Pelanggan */}
             <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80 space-y-3.5">
               <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-600">
                 <User className="w-3.5 h-3.5 text-blue-600" />
@@ -410,7 +393,6 @@ export default function AdminCreateBookingModal({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Kontak WA/Telp */}
                 <div className="relative">
                   <label htmlFor="admin-create-booking-modal-f1" className="text-xs font-bold text-slate-600 block mb-1">
                     No. WhatsApp / HP <span className="text-rose-500">*</span>
@@ -428,7 +410,6 @@ export default function AdminCreateBookingModal({
                     <Phone className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
 
-                  {/* Customer Autocomplete Dropdown */}
                   {customerSuggestions.length > 0 && (
                     <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-blue-200 rounded-xl shadow-lg p-1.5 space-y-1">
                       <div className="text-xs font-bold text-slate-500 px-2 py-0.5">
@@ -452,7 +433,6 @@ export default function AdminCreateBookingModal({
                   )}
                 </div>
 
-                {/* Nama Pelanggan */}
                 <div>
                   <label htmlFor="admin-create-booking-modal-f2" className="text-xs font-bold text-slate-600 block mb-1">
                     Nama Lengkap Pelanggan <span className="text-rose-500">*</span>
@@ -472,7 +452,6 @@ export default function AdminCreateBookingModal({
                 </div>
               </div>
 
-              {/* Alamat Lengkap Terstruktur Berjenjang */}
               <AddressSelector
                 value={alamat}
                 onChange={(assembled) => setAlamat(assembled)}
@@ -480,7 +459,6 @@ export default function AdminCreateBookingModal({
               />
             </div>
 
-            {/* Section 2: Detail Servis & Biaya */}
             <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80 space-y-3.5">
               <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-600">
                 <Wrench className="w-3.5 h-3.5 text-blue-600" />
@@ -488,7 +466,6 @@ export default function AdminCreateBookingModal({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {/* Layanan Select */}
                 <div className="sm:col-span-2">
                   <label htmlFor="admin-create-booking-modal-f3" className="text-xs font-bold text-slate-600 block mb-1">
                     Jenis Paket Servis <span className="text-rose-500">*</span>
@@ -509,7 +486,6 @@ export default function AdminCreateBookingModal({
                   </select>
                 </div>
 
-                {/* Jumlah Unit Stepper */}
                 <div>
                   <label id="booking-unit-label" className="text-xs font-bold text-slate-600 block mb-1">
                     Jumlah Unit AC
@@ -536,7 +512,6 @@ export default function AdminCreateBookingModal({
                 </div>
               </div>
 
-              {/* Price Calculation Preview */}
               <div className="p-3 bg-white rounded-xl border border-blue-100 flex items-center justify-between text-xs">
                 <div>
                   <span className="text-slate-500 font-medium">Estimasi Tarif Resmi:</span>
@@ -548,7 +523,6 @@ export default function AdminCreateBookingModal({
               </div>
             </div>
 
-            {/* Section 3: Jadwal & Teknisi */}
             <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80 space-y-3.5">
               <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-600">
                 <Clock className="w-3.5 h-3.5 text-blue-600" />
@@ -556,7 +530,6 @@ export default function AdminCreateBookingModal({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {/* Tanggal */}
                 <div>
                   <label htmlFor="admin-create-booking-modal-f4" className="text-xs font-bold text-slate-600 block mb-1">
                     Tanggal Servis <span className="text-rose-500">*</span>
@@ -571,7 +544,6 @@ export default function AdminCreateBookingModal({
                   />
                 </div>
 
-                {/* Jam Slot */}
                 <div>
                   <label htmlFor="admin-create-booking-modal-f5" className="text-xs font-bold text-slate-600 block mb-1">
                     Jam Mulai <span className="text-rose-500">*</span>
@@ -583,7 +555,7 @@ export default function AdminCreateBookingModal({
                     className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 font-medium"
                     required
                   >
-                    {['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'].map(slot => (
+                    {['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'].map(slot => (
                       <option key={slot} value={slot}>
                         {slot} WIB
                       </option>
@@ -591,7 +563,6 @@ export default function AdminCreateBookingModal({
                   </select>
                 </div>
 
-                {/* Teknisi (Opsional) */}
                 <div>
                   <label htmlFor="admin-create-booking-modal-f6" className="text-xs font-bold text-slate-600 block mb-1">
                     Tugaskan Teknisi (Opsional)
@@ -613,7 +584,6 @@ export default function AdminCreateBookingModal({
               </div>
             </div>
 
-            {/* Section 4: Keluhan / Catatan Khusus */}
             <div>
               <label htmlFor="admin-create-booking-modal-f7" className="text-xs font-bold text-slate-700 block mb-1">
                 Keluhan / Catatan Tambahan (Opsional)
@@ -628,7 +598,6 @@ export default function AdminCreateBookingModal({
               />
             </div>
 
-            {/* Modal Footer Controls */}
             <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
               <Button
                 type="button"

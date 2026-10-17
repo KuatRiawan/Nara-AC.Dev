@@ -22,28 +22,42 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
   const itemsPerPage = 15;
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.location) return;
+    const params = new URLSearchParams(window.location.search);
+    const targetBookingId = params.get('bookingId') || params.get('id');
+    if (!targetBookingId || bookings.length === 0) return;
+    const found = bookings.find(b => String(b.id) === String(targetBookingId) || String(b.kode_booking || '').toUpperCase() === String(targetBookingId).toUpperCase());
+    if (found) {
+      setSelectedInvoice(found);
+      setIsModalOpen(true);
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('bookingId');
+        url.searchParams.delete('id');
+        window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+      } catch {}
+    }
+  }, [bookings]);
   const [paidStatusMap, setPaidStatusMap] = useState({});
   const [updatingPaymentId, setUpdatingPaymentId] = useState(null);
 
-  // BR-37: Verification Modal State
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
   const [selectedVerifyBooking, setSelectedVerifyBooking] = useState(null);
   const [verifyNominal, setVerifyNominal] = useState('');
   const [verifyCatatan, setVerifyCatatan] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // BR-41: Refund Modal State
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
   const [selectedRefundBooking, setSelectedRefundBooking] = useState(null);
   const [refundNominal, setRefundNominal] = useState('');
   const [refundCatatan, setRefundCatatan] = useState('');
   const [isRefunding, setIsRefunding] = useState(false);
 
-  // BR-42 & BR-43: WhatsApp Invoice Sending States
   const [sendingWaBookingId, setSendingWaBookingId] = useState(null);
   const [isRetryingWhatsApp, setIsRetryingWhatsApp] = useState(false);
 
-  // Escape key to close invoice modal
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
@@ -57,13 +71,11 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isModalOpen, isVerifyModalOpen, isRefundModalOpen]);
 
-  // Payment settings state (Bank accounts for invoice)
   const [paymentSettings, setPaymentSettings] = useState(() => {
     try {
       const saved = localStorage.getItem('nara_payment_accounts');
       if (saved) return JSON.parse(saved);
     } catch {
-      // Fallback silently if localStorage is restricted
     }
     return {
       accounts: [
@@ -77,7 +89,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
   const [bankFormData, setBankFormData] = useState({ accounts: [], instruction_note: '' });
   const [isSavingBank, setIsSavingBank] = useState(false);
 
-  // Fetch payment settings from backend
   useEffect(() => {
     const fetchPaymentSettings = async () => {
       try {
@@ -88,17 +99,14 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
           try {
             localStorage.setItem('nara_payment_accounts', JSON.stringify(data));
           } catch {
-            // Ignore storage quota error
           }
         }
       } catch {
-        // Fallback to initial state
       }
     };
     fetchPaymentSettings();
   }, []);
 
-  // Fetch bookings data
   const fetchInvoices = useCallback(async (searchQuery = '') => {
     setLoading(true);
     try {
@@ -147,7 +155,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
     }
   }, [propBookings]);
 
-  // Toggle paid status manually
   const togglePaidStatus = async (bookingId) => {
     const currentStatus = paidStatusMap[bookingId] !== undefined ? paidStatusMap[bookingId] : false;
     const newStatus = !currentStatus;
@@ -178,14 +185,12 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
     }
   };
 
-  // Helper calculations with Strict BR-02/BR-03 discount adherence
   const invoicesData = useMemo(() => {
     return bookings.map(b => {
       const unit = b.jumlah_unit || 1;
       const basePrice = b.layanan?.harga || 75000;
       const subtotal = basePrice * unit;
       
-      // BR-02 & BR-03: 10% discount exclusively for registered members on service fee
       const isMember = Boolean(b.is_member || b.customer_is_member || b.customer?.has_account);
       let discount = 0;
       if (b.diskon !== undefined && b.diskon !== null) {
@@ -217,7 +222,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
     });
   }, [bookings, paidStatusMap]);
 
-  // Financial KPIs
   const kpis = useMemo(() => {
     let totalOmzet = 0;
     let totalLunas = 0;
@@ -246,7 +250,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
     };
   }, [invoicesData]);
 
-  // Filtered invoices
   const filteredInvoices = useMemo(() => {
     const q = search.trim().toLowerCase();
     return invoicesData.filter(inv => {
@@ -311,7 +314,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
     }, 1000);
   };
 
-  // BR-37: Open & submit verify payment proof
   const openVerifyModal = (booking) => {
     setSelectedVerifyBooking(booking);
     setVerifyNominal(booking.total || booking.total_biaya || '');
@@ -344,7 +346,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
     }
   };
 
-  // Open & submit refund
   const openRefundModal = (booking) => {
     setSelectedRefundBooking(booking);
     setRefundNominal(booking.refund_nominal || Math.max(0, (booking.total_dibayar || 0) - (booking.total || 0)));
@@ -377,7 +378,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
     }
   };
 
-  // Kirim Invoice via WhatsApp
   const handleSendWhatsAppInvoice = async (bookingId) => {
     setSendingWaBookingId(bookingId);
     try {
@@ -392,7 +392,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
     }
   };
 
-  // Retry Failed WhatsApp Invoices
   const handleRetryFailedWhatsApp = async () => {
     setIsRetryingWhatsApp(true);
     try {
@@ -406,7 +405,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
     }
   };
 
-  // Open & manage edit bank modal
   const openEditBankModal = () => {
     setBankFormData({
       accounts: (paymentSettings.accounts || []).map((a, i) => ({
@@ -482,7 +480,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
       try {
         localStorage.setItem('nara_payment_accounts', JSON.stringify(savedData));
       } catch {
-        // Silently skip
       }
 
       showSuccess('Rekening bank berhasil disimpan dan otomatis masuk ke semua invoice!');
@@ -497,7 +494,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 bg-slate-50/50 relative min-w-0">
       
-      {/* Title & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
@@ -510,41 +506,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
 
         <div className="flex items-center gap-2.5 flex-wrap">
           <Button
-            onClick={openEditBankModal}
-            variant="outline"
-            className="rounded-xl border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs"
-          >
-            <Building2 className="w-4 h-4 text-blue-600" />
-            <span>Ubah Rekening Bank</span>
-          </Button>
-
-          {/* Retry WhatsApp Invoices */}
-          <Button
-            onClick={handleRetryFailedWhatsApp}
-            disabled={isRetryingWhatsApp}
-            variant="outline"
-            className="rounded-xl border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs"
-            title="Coba kirim ulang pesan invoice WhatsApp yang tertunda / gagal"
-          >
-            <Send className="w-4 h-4 text-emerald-600" />
-            <span>{isRetryingWhatsApp ? 'Memproses...' : 'Retry WhatsApp'}</span>
-          </Button>
-
-          <Button
-            onClick={() => {
-              fetchInvoices(search);
-              if (onBookingUpdated) onBookingUpdated();
-              showSuccess('Data faktur dan kas pembayaran berhasil diperbarui.');
-            }}
-            variant="outline"
-            className="rounded-xl border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-2xs"
-            title="Segarkan Data Invoice"
-          >
-            <RefreshCw className={cn("w-4 h-4 text-slate-600", loading && "animate-spin text-blue-600")} />
-            <span>Segarkan</span>
-          </Button>
-
-          <Button
             onClick={() => window.print()}
             variant="outline"
             className="rounded-xl border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-2xs"
@@ -555,10 +516,8 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
         </div>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* Total Omzet */}
         <div className="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Omzet Servis</span>
@@ -576,7 +535,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
           </div>
         </div>
 
-        {/* Lunas */}
         <div className="p-5 rounded-3xl bg-white border border-emerald-100 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Pembayaran Lunas</span>
@@ -594,7 +552,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
           </div>
         </div>
 
-        {/* Perlu Verifikasi Bukti Transfer */}
         <div className="p-5 rounded-3xl bg-white border border-amber-200 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-amber-700">Perlu Verifikasi Bukti</span>
@@ -612,7 +569,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
           </div>
         </div>
 
-        {/* Rekening Resmi Invoice */}
         <div className="p-5 rounded-3xl bg-white border border-sky-100 shadow-sm flex flex-col justify-between hover:border-blue-200 transition-all">
           <div className="flex justify-between items-start mb-2">
             <div>
@@ -644,7 +600,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
 
       </div>
 
-      {/* Filter & Search Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -696,9 +651,121 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
         </div>
       </div>
 
-      {/* Invoices Table */}
       <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile & Tablet Card View */}
+        <div className="block lg:hidden p-4 sm:p-5">
+          {loading ? (
+            <div className="py-12 text-center text-slate-500 font-semibold text-xs">
+              Memuat data invoice...
+            </div>
+          ) : filteredInvoices.length === 0 ? (
+            <div className="py-12 text-center text-slate-500 font-semibold text-xs">
+              Tidak ada faktur invoice yang cocok dengan pencarian.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {paginatedInvoices.map((inv) => (
+                <div key={inv.id} className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3 shadow-2xs hover:shadow-sm transition-all flex flex-col justify-between">
+                  <div className="space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="font-mono font-black text-slate-900 text-xs block">{inv.invNo}</span>
+                        <span className="font-mono text-2xs text-blue-600 font-bold">{inv.kode_booking || `BK-${inv.id}`}</span>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        {inv.isPaid ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-2xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <CheckCircle2 className="w-3 h-3" /> Lunas
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-2xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            <Clock className="w-3 h-3" /> Menunggu Bayar
+                          </span>
+                        )}
+                        {inv.status_verifikasi_pembayaran === 'menunggu_verifikasi' && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
+                            <AlertTriangle className="w-3 h-3 text-amber-600" /> Verifikasi Bukti
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50/70 p-3 rounded-xl border border-slate-100 text-xs space-y-1">
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="text-slate-500 font-medium">Pelanggan:</span>
+                        <span className="font-bold text-slate-900 text-right">{inv.customer?.nama || inv.nama_customer || 'Pelanggan NARA'}</span>
+                      </div>
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="text-slate-500 font-medium">Layanan:</span>
+                        <span className="font-semibold text-slate-800 text-right">{inv.layanan?.nama || inv.nama_layanan || 'Cuci AC Standard'} ({inv.unit} Unit)</span>
+                      </div>
+                      <div className="flex justify-between items-baseline pt-1.5 border-t border-slate-200/60">
+                        <span className="text-slate-500 font-medium">Total Tagihan:</span>
+                        <div className="text-right">
+                          <span className="font-bold text-slate-900 text-sm">Rp {inv.total.toLocaleString('id-ID')}</span>
+                          {inv.discount > 0 && (
+                            <span className="text-[10px] text-emerald-600 font-bold block">Hemat Rp {inv.discount.toLocaleString('id-ID')} (Member)</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-slate-100 flex-wrap">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Button
+                        size="sm"
+                        onClick={() => openInvoiceModal(inv)}
+                        className="rounded-xl text-xs font-bold h-8 px-2.5 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer flex items-center gap-1 shadow-2xs"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        <span>Cetak</span>
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => togglePaidStatus(inv.id)}
+                        disabled={updatingPaymentId === inv.id}
+                        className={`rounded-xl text-xs font-bold h-8 px-2.5 cursor-pointer ${
+                          inv.isPaid ? 'border-amber-200 text-amber-700 hover:bg-amber-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                        }`}
+                      >
+                        {updatingPaymentId === inv.id ? <Loader2 className="w-3 h-3 animate-spin" /> : inv.isPaid ? 'Batal Lunas' : 'Tandai Lunas'}
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      {(inv.status_verifikasi_pembayaran === 'menunggu_verifikasi' || inv.bukti_pembayaran_url) && (
+                        <Button
+                          size="sm"
+                          onClick={() => openVerifyModal(inv)}
+                          className="rounded-xl text-xs font-bold h-8 px-2 bg-amber-600 hover:bg-amber-700 text-white cursor-pointer"
+                          title="Lihat Bukti Bayar"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openRefundModal(inv)}
+                        className="rounded-xl text-xs font-bold h-8 px-2 border-slate-300 text-slate-700 hover:bg-slate-100 cursor-pointer"
+                        title="Refund"
+                      >
+                        <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 uppercase tracking-wider font-bold">
               <tr>
@@ -727,7 +794,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
                 paginatedInvoices.map((inv) => (
                   <tr key={inv.id} className="hover:bg-slate-50/70 transition-colors">
                     
-                    {/* Invoice & Tiket */}
                     <td className="py-3.5 px-5">
                       <p className="font-mono font-black text-slate-900">{inv.invNo}</p>
                       <p className="font-mono text-xs text-blue-600 mt-0.5">{inv.kode_booking || `BK-${inv.id}`}</p>
@@ -736,19 +802,16 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
                       </span>
                     </td>
 
-                    {/* Pelanggan */}
                     <td className="py-3.5 px-5">
                       <p className="font-bold text-slate-900">{inv.customer?.nama || inv.nama_customer || 'Pelanggan NARA'}</p>
                       <p className="text-xs text-slate-500">{inv.customer?.kontak || inv.kontak || '-'}</p>
                     </td>
 
-                    {/* Layanan & Unit */}
                     <td className="py-3.5 px-5">
                       <p className="font-semibold text-slate-800">{inv.layanan?.nama || inv.nama_layanan || 'Cuci AC Standard'}</p>
                       <p className="text-xs text-slate-500">{inv.unit} Unit AC</p>
                     </td>
 
-                    {/* Total Biaya & Diskon */}
                     <td className="py-3.5 px-5">
                       <p className="font-bold text-slate-900 text-sm">
                         Rp {inv.total.toLocaleString('id-ID')}
@@ -765,7 +828,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
                       )}
                     </td>
 
-                    {/* Status Bayar & Verifikasi */}
                     <td className="py-3.5 px-5">
                       <div className="space-y-1">
                         {inv.isPaid ? (
@@ -778,7 +840,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
                           </span>
                         )}
 
-                        {/* Indikator Bukti Bayar */}
                         {inv.status_verifikasi_pembayaran === 'menunggu_verifikasi' ? (
                           <div className="flex items-center gap-1">
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
@@ -797,11 +858,9 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
                       </div>
                     </td>
 
-                    {/* Aksi */}
                     <td className="py-3.5 px-5 text-right">
                       <div className="flex items-center justify-end gap-1.5 flex-wrap">
                         
-                        {/* Tombol Verifikasi Bukti Bayar */}
                         {(inv.status_verifikasi_pembayaran === 'menunggu_verifikasi' || inv.bukti_pembayaran_url) && (
                           <Button
                             size="sm"
@@ -814,7 +873,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
                           </Button>
                         )}
 
-                        {/* Tombol Catat/Proses Refund */}
                         <Button
                           size="sm"
                           variant="outline"
@@ -826,24 +884,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
                           <span>Refund</span>
                         </Button>
 
-                        {/* Tombol Kirim E-Invoice ke WhatsApp */}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleSendWhatsAppInvoice(inv.id)}
-                          disabled={sendingWaBookingId === inv.id}
-                          className="rounded-xl text-xs font-bold h-8 px-2 border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 cursor-pointer flex items-center gap-1"
-                          title="Kirim Salinan E-Invoice Resmi ke WhatsApp Pelanggan"
-                        >
-                          {sendingWaBookingId === inv.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin text-emerald-600" />
-                          ) : (
-                            <Send className="w-3 h-3 text-emerald-600" />
-                          )}
-                          <span>WA</span>
-                        </Button>
-
-                        {/* Toggle Manual Lunas */}
                         <Button
                           size="sm"
                           variant="outline"
@@ -860,7 +900,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
                           )}
                         </Button>
 
-                        {/* Cetak Invoice */}
                         <Button
                           size="sm"
                           onClick={() => openInvoiceModal(inv)}
@@ -879,7 +918,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
           </table>
         </div>
 
-        {/* PAGINATION TOOLBAR */}
         <div className="p-4 bg-slate-50/70 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 font-medium">
           <div>
             Menampilkan <strong className="text-slate-900">{filteredInvoices.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}</strong> - <strong className="text-slate-900">{Math.min(filteredInvoices.length, currentPage * itemsPerPage)}</strong> dari <strong className="text-slate-900">{filteredInvoices.length}</strong> faktur invoice
@@ -911,7 +949,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
         </div>
       </div>
 
-      {/* SCOPED PRINT STYLES FOR FLAWLESS A4 PRINTING */}
       <style>{`
         @media print {
           @page {
@@ -994,7 +1031,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
         }
       `}</style>
 
-      {/* MODAL E-INVOICE RESMI STANDAR CETAK A4 */}
       {isModalOpen && selectedInvoice && typeof document !== 'undefined' && createPortal(
         <div 
           id="invoice-print-portal"
@@ -1003,8 +1039,7 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
         >
           <div className="bg-white rounded-3xl max-w-4xl w-full shadow-2xl border border-slate-200 overflow-hidden my-2 sm:my-4 animate-in fade-in zoom-in-95 duration-200 invoice-modal-card relative flex flex-col print:overflow-visible print:max-w-none print:w-full print:border-none print:shadow-none print:my-0 print:rounded-none">
             
-            {/* Modal Header Actions */}
-            <div className="sticky top-0 z-20 p-3 sm:p-4 bg-slate-900 text-white flex items-center justify-between shadow-md print:hidden">
+            <div className="sticky top-0 z-20 p-3 sm:p-4 bg-gradient-to-r from-blue-700 to-sky-600 text-white flex items-center justify-between shadow-md print:hidden">
               <div className="flex items-center gap-2">
                 <Receipt className="w-5 h-5 text-sky-400" />
                 <span className="font-black text-xs sm:text-sm text-white truncate">
@@ -1013,17 +1048,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
               </div>
               <div className="flex items-center gap-2">
                 
-                {/* Kirim Salinan ke WhatsApp Pemesan Langsung */}
-                <Button
-                  size="sm"
-                  onClick={() => handleSendWhatsAppInvoice(selectedInvoice.id)}
-                  disabled={sendingWaBookingId === selectedInvoice.id}
-                  className="rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 cursor-pointer h-8 sm:h-9"
-                  title="Kirim Salinan E-Invoice Resmi ke WhatsApp Pemesan"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Kirim ke WA</span>
-                </Button>
 
                 <Button
                   size="sm"
@@ -1047,7 +1071,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
               </div>
             </div>
 
-            {/* Official Printable Paper Area */}
             <div className="overflow-x-auto bg-white flex-1 print:overflow-visible print:p-0 print:w-full">
               <OfficialInvoicePaper 
                 booking={selectedInvoice} 
@@ -1056,7 +1079,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
               />
             </div>
 
-            {/* Modal Bottom Bar for convenience */}
             <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 print:hidden">
               <span className="truncate pr-2">Gunakan tombol <strong>Cetak / Download PDF</strong> untuk menyimpan dokumen faktur resmi.</span>
             </div>
@@ -1066,9 +1088,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
         document.body
       )}
 
-      {/* ============================================================== */}
-      {/* MODAL VERIFIKASI BUKTI BAYAR TRANSFER BANK                     */}
-      {/* ============================================================== */}
       {isVerifyModalOpen && selectedVerifyBooking && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex justify-center items-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 p-6 space-y-4 animate-in fade-in zoom-in-95">
@@ -1090,7 +1109,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
               </button>
             </div>
 
-            {/* Preview Bukti Bayar */}
             <div className="space-y-2 text-xs">
               <span className="font-bold text-slate-700 block">Gambar / Lampiran Bukti Transfer:</span>
               {selectedVerifyBooking.bukti_pembayaran_url ? (
@@ -1121,7 +1139,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
               )}
             </div>
 
-            {/* Rincian Tagihan */}
             <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-2xl text-xs">
               <div>
                 <span className="text-slate-500 block text-2xs uppercase">Pemesan:</span>
@@ -1133,7 +1150,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
               </div>
             </div>
 
-            {/* Input Nominal Disetujui */}
             <div className="space-y-3 text-xs">
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Nominal yang Dikonfirmasi Masuk (Rp):</label>
@@ -1158,7 +1174,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex justify-between items-center gap-2 pt-3 border-t border-slate-100">
               <Button
                 type="button"
@@ -1196,9 +1211,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
         </div>
       )}
 
-      {/* ============================================================== */}
-      {/* MODAL PROSES PENGEMBALIAN DANA / REFUND                        */}
-      {/* ============================================================== */}
       {isRefundModalOpen && selectedRefundBooking && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex justify-center items-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 p-6 space-y-4 animate-in fade-in zoom-in-95">
@@ -1240,6 +1252,8 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Catatan Pengembalian Dana:</label>
                 <textarea
+                  id="refund-catatan-textarea"
+                  name="refund_catatan"
                   rows={2}
                   value={refundCatatan}
                   onChange={(e) => setRefundCatatan(e.target.value)}
@@ -1271,14 +1285,13 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
         </div>
       )}
 
-      {/* MODAL UBAH REKENING BANK PEMBAYARAN INVOICE */}
       {isBankModalOpen && (
         <div 
           onClick={(e) => { if (e.target === e.currentTarget) setIsBankModalOpen(false); }}
           className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/75 backdrop-blur-sm flex justify-center items-start p-3 sm:p-6 lg:p-8 animate-in fade-in duration-200"
         >
           <div className="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden my-4 sm:my-8 animate-in zoom-in-95 duration-200 flex flex-col">
-            <div className="p-5 sm:p-6 bg-slate-900 text-white flex items-center justify-between">
+            <div className="p-5 sm:p-6 bg-gradient-to-r from-blue-700 to-sky-600 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-blue-600/30 text-sky-400 rounded-xl border border-blue-500/30">
                   <Building2 className="w-5 h-5" />

@@ -4,7 +4,6 @@ const { migrate } = require('./db/migrate');
 const { startScheduler } = require('./services/reminderService');
 
 async function main() {
-  // Auto-migrate only in development; in production, migrations should be controlled
   if (process.env.NODE_ENV !== 'production' && process.env.AUTO_MIGRATE !== 'false') {
     const applied = await migrate();
     if (applied.length) console.log('[db] migrasi diterapkan:', applied.join(', '));

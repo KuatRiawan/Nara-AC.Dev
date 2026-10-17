@@ -34,16 +34,12 @@ except ImportError:
 
 warnings.filterwarnings('ignore')
 
-
 def train_model():
     print("=" * 80)
     print("Training intent classification model for NARA AC...")
     print("=" * 80)
 
-    # Expanded and improved training data with all required intents
-    # Each intent has varied phrasing to improve generalization
     data = [
-        # greeting - Sapaan
         ("halo", "greeting"),
         ("selamat pagi", "greeting"),
         ("selamat siang", "greeting"),
@@ -58,7 +54,6 @@ def train_model():
         ("ping", "greeting"),
         ("ada yang bisa dibantu?", "greeting"),
 
-        # tanya_layanan - Pertanyaan tentang layanan
         ("berapa harga cuci ac", "tanya_layanan"),
         ("info layanan", "tanya_layanan"),
         ("layanan apa saja yang ada", "tanya_layanan"),
@@ -81,7 +76,6 @@ def train_model():
         ("ada garansi nggak kalau service disini?", "tanya_layanan"),
         ("pembayaran bisa pakai transfer?", "tanya_layanan"),
 
-        # tanya_harga - Pertanyaan harga secara spesifik
         ("berapa harganya", "tanya_harga"),
         ("harga cuci ac berapa", "tanya_harga"),
         ("tarif servis ac", "tanya_harga"),
@@ -96,7 +90,6 @@ def train_model():
         ("harga ganti kompesor", "tanya_harga"),
         ("berapa untuk service rutin", "tanya_harga"),
 
-        # keluhan_ac - Keluhan mengenai AC
         ("ac saya bocor", "keluhan_ac"),
         ("ac tidak dingin", "keluhan_ac"),
         ("ac kurang dingin", "keluhan_ac"),
@@ -113,7 +106,6 @@ def train_model():
         ("freon habis", "keluhan_ac"),
         ("ac bunyi berisik", "keluhan_ac"),
 
-        # booking_service - Permintaan booking
         ("saya mau cuci ac", "booking_service"),
         ("pesan jasa perbaikan ac", "booking_service"),
         ("jadwalkan teknisi untuk besok", "booking_service"),
@@ -133,7 +125,6 @@ def train_model():
         ("bisa datangkan teknisi?", "booking_service"),
         ("saya butuh service ac segera", "booking_service"),
 
-        # ubah_jadwal - Perubahan jadwal
         ("saya mau ubah jadwal", "ubah_jadwal"),
         ("ganti jadwal booking", "ubah_jadwal"),
         ("jadwal digeser ke besok", "ubah_jadwal"),
@@ -144,7 +135,6 @@ def train_model():
         ("saya mau undur jadwal", "ubah_jadwal"),
         ("bukan besok, hari jumat", "ubah_jadwal"),
 
-        # batalkan_booking - Pembatalan booking
         ("saya mau batalkan booking", "batalkan_booking"),
         ("batalkan pesanan saya", "batalkan_booking"),
         ("saya mau cancel booking", "batalkan_booking"),
@@ -153,7 +143,6 @@ def train_model():
         ("cancel booking ac-1234", "batalkan_booking"),
         ("saya mau menghapus pesanan", "batalkan_booking"),
 
-        # tanya_status - Pertanyaan status booking
         ("status pesanan saya", "tanya_status"),
         ("kapan teknisi datang", "tanya_status"),
         ("jam berapa teknisi sampai", "tanya_status"),
@@ -167,7 +156,6 @@ def train_model():
         ("posisi tukang ac sekarang dimana?", "tanya_status"),
         ("booking saya statusnya apa", "tanya_status"),
 
-        # tanya_pembayaran - Pertanyaan pembayaran
         ("berapa biaya servisnya", "tanya_pembayaran"),
         ("berapa total yang harus dibayar", "tanya_pembayaran"),
         ("pembayaran bisa pakai apa saja", "tanya_pembayaran"),
@@ -178,7 +166,6 @@ def train_model():
         ("bagaimana cara pembayaran", "tanya_pembayaran"),
         ("bayar setelah selesai ya?", "tanya_pembayaran"),
 
-        # tanya_teknisi - Pertanyaan tentang teknisi
         ("siapa teknisi yang akan datang", "tanya_teknisi"),
         ("teknisi yang menangani saya siapa", "tanya_teknisi"),
         ("kontak teknisi bisa dicek?", "tanya_teknisi"),
@@ -187,7 +174,6 @@ def train_model():
         ("nomor hp teknisi", "tanya_teknisi"),
         ("siapa yang akan service ac saya", "tanya_teknisi"),
 
-        # tanya_area_layanan - Cakupan wilayah layanan
         ("area layanan nara ac dimana saja", "tanya_area_layanan"),
         ("apakah melayani di daerah saya", "tanya_area_layanan"),
         ("wilayah jangkauan service", "tanya_area_layanan"),
@@ -196,7 +182,6 @@ def train_model():
         ("apakah bisa datang ke bogor", "tanya_area_layanan"),
         ("daerah mana saja yang dilayani", "tanya_area_layanan"),
 
-        # tanya_prosedur - Pertanyaan tentang prosedur
         ("bagaimana cara booking", "tanya_prosedur"),
         ("prosedur service ac", "tanya_prosedur"),
         ("langkah-langkah booking", "tanya_prosedur"),
@@ -205,7 +190,6 @@ def train_model():
         ("berapa lama pengerjaan", "tanya_prosedur"),
         ("apakah perlu persiapan apa saja", "tanya_prosedur"),
 
-        # follow_up - Respons lanjutan
         ("ya", "follow_up"),
         ("iya", "follow_up"),
         ("benar", "follow_up"),
@@ -217,7 +201,6 @@ def train_model():
         ("makasih", "follow_up"),
         ("sip", "follow_up"),
 
-        # konfirmasi - Konfirmasi
         ("ya, saya mau booking", "konfirmasi"),
         ("saya setuju", "konfirmasi"),
         ("ok, lanjutkan", "konfirmasi"),
@@ -225,7 +208,6 @@ def train_model():
         ("ya, benar", "konfirmasi"),
         ("saya mau lanjut", "konfirmasi"),
 
-        # penolakan - Penolakan
         ("tidak", "penolakan"),
         ("tidak mau", "penolakan"),
         ("gak mau", "penolakan"),
@@ -234,7 +216,6 @@ def train_model():
         ("gak usah", "penolakan"),
         ("saya tidak mau", "penolakan"),
 
-        # human_handoff - Meminta berbicara dengan admin
         ("saya mau bicara dengan admin", "human_handoff"),
         ("tolong hubungkan dengan admin", "human_handoff"),
         ("bicara dengan customer service", "human_handoff"),
@@ -242,7 +223,6 @@ def train_model():
         ("bisa hubungi admin?", "human_handoff"),
         ("saya mau komplain ke admin", "human_handoff"),
 
-        # feedback - Masukan setelah layanan
         ("pelayanan bagus", "feedback"),
         ("sangat puas dengan layanan", "feedback"),
         ("teknisi kerjanya cepat", "feedback"),
@@ -251,7 +231,6 @@ def train_model():
         ("rating 5", "feedback"),
         ("saya berikan 4 bintang", "feedback"),
 
-        # admin_query - Query untuk admin (internal)
         ("berapa booking hari ini", "admin_query"),
         ("tampilkan laporan performa teknisi", "admin_query"),
         ("siapa teknisi yang kosong besok", "admin_query"),
@@ -262,7 +241,6 @@ def train_model():
         ("tampilkan jumlah pelanggan baru", "admin_query"),
         ("cek rating teknisi andi", "admin_query"),
 
-        # tech_query - Pertanyaan teknis (untuk teknisi)
         ("bagaimana cara isi freon", "tech_query"),
         ("apa sop cuci ac", "tech_query"),
         ("bagaimana memperbaiki ac bocor", "tech_query"),
@@ -273,7 +251,6 @@ def train_model():
         ("cara cek amper kompresor", "tech_query"),
         ("langkah-langkah vacuum ac", "tech_query"),
 
-        # lainnya - Intent yang belum teridentifikasi
         ("ya ampun", "lainnya"),
         ("wow", "lainnya"),
         ("hehe", "lainnya"),
@@ -282,7 +259,6 @@ def train_model():
 
     df = pd.DataFrame(data, columns=["text", "intent"])
 
-    # Encode labels
     label_encoder = LabelEncoder()
     y = label_encoder.fit_transform(df["intent"])
     class_names = label_encoder.classes_
@@ -291,18 +267,15 @@ def train_model():
     print(f"Number of intents: {len(class_names)}")
     print(f"Intent classes: {list(class_names)}")
 
-    # Check class distribution
     print("\nClass distribution:")
     intent_counts = df['intent'].value_counts()
     for intent, count in intent_counts.items():
         print(f"  {intent:20s}: {count:3d} samples")
 
-    # Train/test split (80/20)
     X_train, X_test, y_train, y_test = train_test_split(
         df["text"], y, test_size=0.2, random_state=42, stratify=y
     )
 
-    # Vectorize with n-grams for better context understanding
     vectorizer = TfidfVectorizer(
         lowercase=True,
         ngram_range=(1, 2),
@@ -312,7 +285,6 @@ def train_model():
     X_train_vec = vectorizer.fit_transform(X_train)
     X_test_vec = vectorizer.transform(X_test)
 
-    # Try multiple models and select the best one
     models = {
         'MultinomialNB': MultinomialNB(alpha=0.1),
         'LogisticRegression': LogisticRegression(max_iter=1000, C=1.0, solver='lbfgs'),
@@ -331,11 +303,9 @@ def train_model():
         print(f"\nTraining {name}...")
         model.fit(X_train_vec, y_train)
 
-        # Evaluate on training set
         y_train_pred = model.predict(X_train_vec)
         train_f1 = f1_score(y_train, y_train_pred, average='weighted')
 
-        # Evaluate on test set
         y_test_pred = model.predict(X_test_vec)
         test_f1 = f1_score(y_test, y_test_pred, average='weighted')
         test_precision = precision_score(y_test, y_test_pred, average='weighted')
@@ -355,7 +325,6 @@ def train_model():
     print(f"Selected model: {best_name} with Test F1: {best_f1:.4f}")
     print(f"{'=' * 80}")
 
-    # Final evaluation with best model
     y_train_pred = best_model.predict(X_train_vec)
     y_test_pred = best_model.predict(X_test_vec)
 
@@ -381,25 +350,21 @@ def train_model():
     print(f"Weighted Recall: {test_recall:.4f}")
     print(f"Weighted F1: {test_f1:.4f}")
 
-    # Confusion matrix for detailed analysis
     print("\n=== Confusion Matrix ===")
     cm = confusion_matrix(y_test, y_test_pred)
     print("Intents:", list(class_names))
     print("Matrix:")
     print(cm)
 
-    # Refit final production artifact on full corpus after held-out evaluation
     X_full_vec = vectorizer.fit_transform(df["text"])
     best_model.fit(X_full_vec, y)
 
-    # Save model, vectorizer, and label encoder in ai-service directory
     from pathlib import Path
     _base_dir = Path(__file__).resolve().parent
     joblib.dump(best_model, _base_dir / "intent_model.pkl")
     joblib.dump(vectorizer, _base_dir / "vectorizer.pkl")
     joblib.dump(label_encoder, _base_dir / "label_encoder.pkl")
 
-    # Also save the model type for reference
     with open(_base_dir / "model_type.txt", "w") as f:
         f.write(f"model_type={best_name}\n")
         f.write(f"train_f1={train_f1:.4f}\n")
@@ -416,7 +381,6 @@ def train_model():
     print("Files saved: intent_model.pkl, vectorizer.pkl, label_encoder.pkl, model_type.txt")
     print("Intent classes:", list(class_names))
     print("=" * 80)
-
 
 if __name__ == "__main__":
     train_model()
