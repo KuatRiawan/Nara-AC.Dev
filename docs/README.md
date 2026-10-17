@@ -63,3 +63,21 @@ Seluruh diagram tersimpan dalam format teks murni `.mmd` di folder [`docs/diagra
 - [`09-alur-garansi.mmd`](./diagrams/09-alur-garansi.mmd)
 - [`10-alur-pengingat-whatsapp.mmd`](./diagrams/10-alur-pengingat-whatsapp.mmd)
 - [`11-deployment.mmd`](./diagrams/11-deployment.mmd)
+
+---
+
+## Arsip Laporan & Hasil Audit Proyek
+Seluruh laporan audit dan dokumen kondisi proyek tersimpan pada folder [`docs/hasil audit/`](./hasil%20audit/):
+- [`NARA_AC_DOKUMENTASI_LENGKAP.md`](./hasil%20audit/NARA_AC_DOKUMENTASI_LENGKAP.md) — Dokumen Induk Teknis 44 Bab
+- [`NARA_AC_LAPORAN_KONDISI_PROYEK.md`](./hasil%20audit/NARA_AC_LAPORAN_KONDISI_PROYEK.md) — Laporan 21 Bagian Status Kesiapan Proyek
+- [`NARA_AC_LAPORAN_AUDIT_DAN_VERIFIKASI.md`](./hasil%20audit/NARA_AC_LAPORAN_AUDIT_DAN_VERIFIKASI.md) — Laporan Hasil Verifikasi & Audit Sistem
+- [`NARA_AC_DAFTAR_KESENJANGAN_IMPLEMENTASI.md`](./hasil%20audit/NARA_AC_DAFTAR_KESENJANGAN_IMPLEMENTASI.md) — Register Kesenjangan P0–P3 & Tindak Lanjut
+- [`NARA_AC_FULL_AUDIT_REPORT.md`](./hasil%20audit/NARA_AC_FULL_AUDIT_REPORT.md) — Laporan Audit Komprehensif Awal
+- [`NARA_AC_CURRENT_PROJECT_REPORT.md`](./hasil%20audit/NARA_AC_CURRENT_PROJECT_REPORT.md) — Laporan Kondisi Komprehensif Arsitektur
+- [`NARA_AC_BUG_FIX_LOG.md`](./hasil%20audit/NARA_AC_BUG_FIX_LOG.md) — Log Perbaikan Masalah & Regresi
+- [`NARA_AC_ROOT_CAUSE_REPORT.md`](./hasil%20audit/NARA_AC_ROOT_CAUSE_REPORT.md) — Laporan Akar Penyebab Masalah Teknis
+- [`NARA_AC_VERIFICATION_CHECKLIST.md`](./hasil%20audit/NARA_AC_VERIFICATION_CHECKLIST.md) — Daftar Periksa Verifikasi Fitur
+- [`NARA_AC_REGRESSION_CHECKLIST.md`](./hasil%20audit/NARA_AC_REGRESSION_CHECKLIST.md) — Daftar Periksa Pengujian Regresi
+- [`NARA_AC_PRODUCTION_READINESS.md`](./hasil%20audit/NARA_AC_PRODUCTION_READINESS.md) — Checklist Kesiapan Produksi
+- [`NARA_AC_IMPLEMENTATION_STATUS.md`](./hasil%20audit/NARA_AC_IMPLEMENTATION_STATUS.md) — Matriks Status Fitur Operasional
+
