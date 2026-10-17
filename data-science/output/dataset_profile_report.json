@@ -1,0 +1,260 @@
+{
+  "generated_at": "2026-10-17T05:44:13.298469",
+  "datasets": {
+    "dataset_pelanggan_rfm.csv": {
+      "rows": 251,
+      "columns": 31,
+      "column_names": [
+        "id_pelanggan",
+        "nama_pelanggan_standar",
+        "nama_di_sheet_member",
+        "terdaftar_di_member",
+        "kontak",
+        "alamat_rumah",
+        "kota",
+        "periode_registrasi",
+        "tanggal_order_pertama",
+        "tanggal_order_terakhir",
+        "frequency_total_order",
+        "total_unit_dilayani",
+        "monetary_total_kotor",
+        "monetary_total_bersih",
+        "rata_rata_nilai_order",
+        "rata_rata_unit_per_order",
+        "jml_order_cuci",
+        "jml_order_freon",
+        "jml_order_pasang",
+        "layanan_utama",
+        "segmen_pelanggan",
+        "recency_hari",
+        "masa_relasi_hari",
+        "rata_rata_jeda_order_hari",
+        "jumlah_komplain_garansi",
+        "catatan_komplain_garansi",
+        "skor_r",
+        "skor_f",
+        "skor_m",
+        "skor_rfm_total",
+        "segmen_retensi_rfm"
+      ],
+      "date_coverage": {
+        "first_order_min": "2025-05-07",
+        "last_order_max": "2026-10-13"
+      },
+      "duplicates": 0,
+      "pii_columns_detected": [
+        "nama_pelanggan_standar",
+        "nama_di_sheet_member",
+        "kontak",
+        "alamat_rumah"
+      ],
+      "non_null_kontak_count": 14,
+      "non_null_alamat_count": 31,
+      "registered_members": 53,
+      "non_members": 198,
+      "inactive_registered_members": [
+        "CUST-004"
+      ],
+      "warranty_complaints_total": 4,
+      "segments_rfm": {
+        "Dormant / Satu Kali Transaksi (>5 Bulan)": 65,
+        "Champions (Pelanggan Rutin Aktif)": 54,
+        "Perlu Follow-Up Cuci Berkala (3-5 Bulan)": 39,
+        "Pelanggan Baru (Potensial Repeat)": 34,
+        "Berisiko Churn (Repeat Lama Tidak Order)": 34,
+        "Loyal / Repeat Customer": 24,
+        "Terdaftar Belum Transaksi": 1
+      },
+      "customer_types": {
+        "Perorangan / Residensial": 224,
+        "Korporat / Instansi / Komersial": 27
+      }
+    },
+    "dataset_proyek_b2b_resik.csv": {
+      "rows": 79,
+      "columns": 19,
+      "column_names": [
+        "id_proyek",
+        "periode_sheet",
+        "periode_bulan",
+        "tahun",
+        "bulan",
+        "tanggal_proyek",
+        "flag_tanggal_estimasi",
+        "no_po",
+        "nama_proyek",
+        "kategori_proyek",
+        "tipe_arus_kas",
+        "nilai_proyek",
+        "biaya_proyek",
+        "fee_marketing",
+        "profit_tercatat_excel",
+        "profit_bersih_terkoreksi",
+        "selisih_koreksi_profit",
+        "margin_profit_persen",
+        "keterangan"
+      ],
+      "date_coverage": {
+        "min_period": "2025-07",
+        "max_period": "2026-10"
+      },
+      "duplicates": 0,
+      "total_nilai_proyek_idr": 234005000,
+      "total_biaya_proyek_idr": 56001200,
+      "total_fee_marketing_idr": 20459500,
+      "total_profit_bersih_terkoreksi_idr": 157544300,
+      "anomalies": {
+        "profit_excel_mismatch_records": [
+          {
+            "id_proyek": "PRJ-044",
+            "periode_bulan": "2026-01",
+            "nama_proyek": "eki",
+            "profit_tercatat_excel": 0,
+            "profit_bersih_terkoreksi": -250000,
+            "selisih_koreksi_profit": -250000
+          }
+        ],
+        "negative_profit_or_expense_rows": 24
+      }
+    },
+    "dataset_timeseries_harian.csv": {
+      "rows": 527,
+      "columns": 30,
+      "column_names": [
+        "tanggal",
+        "periode_bulan",
+        "tahun",
+        "bulan",
+        "hari",
+        "hari_dalam_minggu",
+        "nama_hari",
+        "is_weekend",
+        "jumlah_order_reguler",
+        "total_unit_ac_reguler",
+        "pendapatan_kotor_reguler",
+        "potongan_pph_reguler",
+        "pendapatan_bersih_reguler",
+        "order_pelanggan_baru",
+        "order_pelanggan_repeat",
+        "order_cuci_ac",
+        "order_isi_freon",
+        "order_pasang_bongkar",
+        "kategori_aktivitas_non_order",
+        "qty_elektrik_resik_harian",
+        "jumlah_teknisi_hadir",
+        "rata_rata_jam_masuk_teknisi",
+        "status_operasional_harian",
+        "order_lag_1_hari",
+        "order_lag_7_hari",
+        "pendapatan_lag_1_hari",
+        "pendapatan_lag_7_hari",
+        "rolling_mean_order_7_hari",
+        "rolling_sum_pendapatan_7_hari",
+        "rolling_sum_pendapatan_30_hari"
+      ],
+      "date_coverage": {
+        "start_date": "2025-05-05",
+        "end_date": "2026-10-13"
+      },
+      "duplicates": 0,
+      "total_regular_orders": 545,
+      "total_regular_units": 724,
+      "total_gross_revenue_idr": 96129000,
+      "total_pph_deduction_idr": 10200,
+      "total_net_revenue_idr": 96118800,
+      "active_order_days": 296,
+      "zero_order_days": 231
+    },
+    "dataset_transaksi_servis_ac.csv": {
+      "rows": 545,
+      "columns": 44,
+      "column_names": [
+        "id_transaksi",
+        "tanggal",
+        "periode_bulan",
+        "periode_sheet",
+        "tahun",
+        "bulan",
+        "hari",
+        "hari_dalam_minggu",
+        "nama_hari",
+        "is_weekend",
+        "minggu_ke_bulan",
+        "is_awal_bulan",
+        "is_akhir_bulan",
+        "waktu_kunjungan",
+        "jam_kunjungan",
+        "slot_waktu",
+        "tim_teknisi",
+        "id_pelanggan",
+        "nama_pelanggan_standar",
+        "nama_pelanggan_asli",
+        "segmen_pelanggan",
+        "is_member_terdaftar",
+        "kota_pelanggan",
+        "urutan_order_pelanggan",
+        "is_repeat_order",
+        "hari_sejak_order_sebelumnya",
+        "kategori_layanan",
+        "sumber_kategori_layanan",
+        "flag_cuci_ac",
+        "flag_isi_freon",
+        "flag_pasang_baru",
+        "flag_bongkar_pindah",
+        "flag_perbaikan_part",
+        "flag_pengecekan",
+        "qty_unit",
+        "harga_input_excel",
+        "tipe_harga_input",
+        "estimasi_harga_per_unit",
+        "total_tagihan_kotor",
+        "potongan_pph",
+        "pendapatan_bersih",
+        "tanggal_mentah_excel",
+        "flag_koreksi_tanggal",
+        "keterangan"
+      ],
+      "date_coverage": {
+        "start_date": "2025-05-07",
+        "end_date": "2026-10-13"
+      },
+      "duplicates": 0,
+      "pii_columns_detected": [
+        "nama_pelanggan_standar",
+        "nama_pelanggan_asli"
+      ],
+      "total_transactions": 545,
+      "total_units_serviced": 724,
+      "total_gross_revenue_idr": 96129000,
+      "total_net_revenue_idr": 96118800,
+      "date_corrected_rows": 15,
+      "zero_charge_warranty_or_followup_visits": 2,
+      "service_category_distribution": {
+        "Cuci AC Reguler": 318,
+        "Cuci AC & Tambah Freon / Perbaikan Ringan": 70,
+        "Pasang AC / Isi Freon Full / Perbaikan": 48,
+        "Pengecekan Ringan": 36,
+        "Bongkar Pasang / Perbaikan Besar / Paket": 27,
+        "Isi / Tambah Freon": 12,
+        "Pasang AC Baru": 10,
+        "Bongkar / Pindah AC": 9,
+        "Perbaikan & Ganti Komponen": 4,
+        "Isi Freon & Perbaikan Part": 3,
+        "Cuci & Pasang AC": 2,
+        "Cuci AC & Tambah Freon": 2,
+        "Pengecekan & Cuci AC": 1,
+        "Bongkar Pasang AC": 1,
+        "Layanan Lainnya": 1,
+        "Pengecekan & Perbaikan Bocor": 1
+      }
+    }
+  },
+  "cross_table_integrity": {
+    "orphan_transaction_customers": [],
+    "inactive_rfm_customers": [
+      "CUST-004"
+    ],
+    "timeseries_vs_transactions_daily_order_match_days": "527/527",
+    "timeseries_vs_transactions_daily_net_revenue_match_days": "527/527"
+  }
+}

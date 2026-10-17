@@ -1,0 +1,109 @@
+{
+  "target": "jumlah_order_reguler_harian",
+  "model_version": "nara-ds-v2.1-ridge-ts",
+  "keterangan": "Prediksi permintaan servis AC harian (14 hari ke depan) menggunakan model Autoregressive Ridge Regression pada 527 hari data historis nyata CV. Nara Teknindotama (Mei 2025 – Oktober 2026).",
+  "is_synthetic": false,
+  "dibuat_pada": "2026-10-17T05:44:13.383173",
+  "split_info": {
+    "train_period": "2025-05-05 s/d 2026-07-31 (453 hari)",
+    "test_period": "2026-08-01 s/d 2026-10-13 (74 hari)"
+  },
+  "metrik": {
+    "daily_order_MAE": 1.2885,
+    "daily_order_RMSE": 1.6219,
+    "daily_order_WAPE": 0.6668,
+    "baseline_naive7d_MAE": 1.2606,
+    "baseline_naive7d_RMSE": 1.5624,
+    "baseline_naive7d_WAPE": 0.6523,
+    "weekly_7d_sum_MAE": 5.0154,
+    "weekly_7d_sum_RMSE": 5.7927,
+    "weekly_7d_sum_WAPE": 0.3744,
+    "weekly_7d_baseline_WAPE": 0.1581
+  },
+  "prediksi": [
+    {
+      "periode": "2026-10-14",
+      "nilai": 1.98,
+      "batas_bawah": 0.12,
+      "batas_atas": 3.85
+    },
+    {
+      "periode": "2026-10-15",
+      "nilai": 1.76,
+      "batas_bawah": 0.0,
+      "batas_atas": 3.62
+    },
+    {
+      "periode": "2026-10-16",
+      "nilai": 1.76,
+      "batas_bawah": 0.0,
+      "batas_atas": 3.62
+    },
+    {
+      "periode": "2026-10-17",
+      "nilai": 2.07,
+      "batas_bawah": 0.21,
+      "batas_atas": 3.94
+    },
+    {
+      "periode": "2026-10-18",
+      "nilai": 2.33,
+      "batas_bawah": 0.47,
+      "batas_atas": 4.19
+    },
+    {
+      "periode": "2026-10-19",
+      "nilai": 1.73,
+      "batas_bawah": 0.0,
+      "batas_atas": 3.6
+    },
+    {
+      "periode": "2026-10-20",
+      "nilai": 1.89,
+      "batas_bawah": 0.03,
+      "batas_atas": 3.76
+    },
+    {
+      "periode": "2026-10-21",
+      "nilai": 1.82,
+      "batas_bawah": 0.0,
+      "batas_atas": 3.68
+    },
+    {
+      "periode": "2026-10-22",
+      "nilai": 1.58,
+      "batas_bawah": 0.0,
+      "batas_atas": 3.44
+    },
+    {
+      "periode": "2026-10-23",
+      "nilai": 1.49,
+      "batas_bawah": 0.0,
+      "batas_atas": 3.35
+    },
+    {
+      "periode": "2026-10-24",
+      "nilai": 1.75,
+      "batas_bawah": 0.0,
+      "batas_atas": 3.61
+    },
+    {
+      "periode": "2026-10-25",
+      "nilai": 2.14,
+      "batas_bawah": 0.28,
+      "batas_atas": 4.0
+    },
+    {
+      "periode": "2026-10-26",
+      "nilai": 1.52,
+      "batas_bawah": 0.0,
+      "batas_atas": 3.38
+    },
+    {
+      "periode": "2026-10-27",
+      "nilai": 1.59,
+      "batas_bawah": 0.0,
+      "batas_atas": 3.45
+    }
+  ]
+}

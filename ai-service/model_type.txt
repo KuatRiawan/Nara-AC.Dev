@@ -1,0 +1,7 @@
+model_type=MultinomialNB
+train_f1=0.9938
+test_f1=0.3579
+test_precision=0.3684
+test_recall=0.3684
+num_classes=20
+classes=admin_query batalkan_booking booking_service feedback follow_up greeting human_handoff keluhan_ac konfirmasi lainnya penolakan tanya_area_layanan tanya_harga tanya_layanan tanya_pembayaran tanya_prosedur tanya_status tanya_teknisi tech_query ubah_jadwal
