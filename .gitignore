@@ -79,6 +79,7 @@ design-system/
 # Audit Reports & Local Docs
 NARA_AC*.md
 AUDIT_REPORT*.md
+AI_IMPROVEMENT_DOCUMENTATION.md
 test.md
 
 # Local seed files (may contain demo data)
