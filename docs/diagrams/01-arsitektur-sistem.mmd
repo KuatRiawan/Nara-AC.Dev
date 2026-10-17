@@ -1,0 +1,88 @@
+flowchart TD
+    %% =========================================================================
+    %% DIAGRAM ARSITEKTUR SISTEM NARA AC (A26-CS054) - CV. NARA TEKNINDOTAMA
+    %% =========================================================================
+
+    subgraph ClientLayer["1. Lapisan Klien (Frontend SPA - React 19 + Tailwind CSS 4)"]
+        Landing["Aplikasi Web Publik & Pemesanan\n(BookingPage, StatusPage, LandingPage)\nPort: 5173"]
+        CustomerPortal["Portal Mandiri Pelanggan\n(CustomerDashboard, ACUnits, History, Profile)\nOtentikasi: Bearer JWT"]
+        TechConsole["Konsol Lapangan Teknisi\n(TechnicianDashboard, JobDetail, Checklist, Kamera)\nOtentikasi: Bearer JWT (Role: technician)"]
+        AdminHub["Pusat Kendali Administrasi & Operasional\n(15 Sub-rute Terintegrasi)\nOtentikasi: Bearer JWT (Role: admin)"]
+    end
+
+    subgraph GatewayLayer["2. Lapisan Gateway & Keamanan (Express 4.19 - Port 4000)"]
+        CORS["CORS & Origin Filtering\n(Allowed: localhost:5173 / Production Domain)"]
+        HelmetSec["Helmet Security Headers\n(Content Security Policy & XSS Guard)"]
+        RateLimiter["Rate Limiting\n(express-rate-limit: 200 req/menit)"]
+        CSRFProtection["Proteksi CSRF Ganda\n(Double-Submit Cookie X-CSRF-Token)"]
+        APIRouter["Express API Router\n(/api/v1/*, /health, /api/docs)"]
+    end
+
+    subgraph DomainServiceLayer["3. Lapisan Layanan Bisnis & Orkestrasi Backend"]
+        BookingSvc["Layanan Pemesanan & Slot\n(bookingService.js)\nAturan: 08:00-19:00 WIB, Slot Collision, Min 24 Jam Batal"]
+        WorkflowSvc["Layanan Pekerjaan & Laporan Teknisi\n(workflowService.js)\nAturan: Checklist Wajib, Foto Sebelum/Sesudah, 48 Jam Auto-Done"]
+        PaymentSvc["Layanan Faktur & Pembayaran\n(paymentService.js)\nAturan: Diskon Member 10% Khusus Jasa, Verifikasi Transfer"]
+        WarrantySvc["Layanan Garansi & Klaim\n(warrantyService.js)\nAturan: 14/30/45 Hari, 1 Klaim Aktif, Inspeksi Gratis"]
+        ReminderSvc["Layanan Penjadwal Cron Pengingat\n(reminderService.js)\nEksekusi: Harian Pukul 07:00 WIB (Interval 60-180 Hari)"]
+        AnalyticsSvc["Layanan Agregator Analitik\n(analyticsService.js)\nKategori: 5 Kategori Operasional + Prediksi 14 Hari"]
+    end
+
+    subgraph StorageLayer["4. Lapisan Persistensi Data (PostgreSQL 14+ & Penyimpanan Lokal)"]
+        PostgresDB[("Basis Data Relasional PostgreSQL\n34 Tabel | 21 Migrasi SQL\nIntegritas Transaksi ACID")]
+        UploadDisk[("Penyimpanan File Lokal\nbackend/uploads/\n(Validasi Magic-Byte JPEG, PNG, WEBP)")]
+    end
+
+    subgraph IntelligenceLayer["5. Sub-sistem AI & Analitik Data Science"]
+        FastAPINLP["Layanan AI NLP (FastAPI - Port 8000)\n20 Intent Klasifikasi & Ekstraksi Entitas\nFallback: ml_compat.py Pure-Python"]
+        StreamlitDash["Dashboard Data Science (Streamlit - Port 8501)\nVisualisasi Tren, Segmentasi RFM, Margin B2B"]
+        DSPipeline["Pipeline Ingesti & Pemodelan\n(data-science/ingest_and_train.py)\nTokenisasi PII, Pelatihan Model Ridge"]
+        GovernedCSV[("Data Set Terkelola\ndata-science/data/governed/\n(PII Dianonimkan)")]
+    end
+
+    subgraph ExternalServices["6. Integrasi Layanan Eksternal"]
+        WAGateway["Gateway Pesan WhatsApp\n(Provider: Mock / Fonnte / Meta Cloud)"]
+        GeminiAPI["Google Gemini AI\n(gemini-flash-lite untuk Chatbot Eskalasi)"]
+    end
+
+    %% Relasi Client ke Gateway
+    Landing -->|HTTP REST / JSON| CORS
+    CustomerPortal -->|Bearer Token JWT| CORS
+    TechConsole -->|Bearer Token JWT| CORS
+    AdminHub -->|Bearer Token JWT| CORS
+
+    %% Pipeline Gateway Keamanan
+    CORS --> HelmetSec --> RateLimiter --> CSRFProtection --> APIRouter
+
+    %% Rute API ke Layanan Bisnis
+    APIRouter --> BookingSvc
+    APIRouter --> WorkflowSvc
+    APIRouter --> PaymentSvc
+    APIRouter --> WarrantySvc
+    APIRouter --> ReminderSvc
+    APIRouter --> AnalyticsSvc
+
+    %% Layanan ke Persistensi
+    BookingSvc --> PostgresDB
+    WorkflowSvc --> PostgresDB
+    PaymentSvc --> PostgresDB
+    WarrantySvc --> PostgresDB
+    ReminderSvc --> PostgresDB
+    AnalyticsSvc --> PostgresDB
+
+    %% Upload File
+    WorkflowSvc -->|Simpan Foto Lapangan| UploadDisk
+    PaymentSvc -->|Simpan Bukti Transfer| UploadDisk
+
+    %% Integrasi AI & Data Science
+    APIRouter -->|HTTP JSON /predict-intent| FastAPINLP
+    AnalyticsSvc -->|Baca Output JSON| DSPipeline
+    DSPipeline --> GovernedCSV
+    DSPipeline --> PostgresDB
+    StreamlitDash --> GovernedCSV
+    StreamlitDash --> PostgresDB
+    AdminHub -.->|Tautan Terbuka| StreamlitDash
+
+    %% Integrasi Eksternal
+    ReminderSvc -->|Notifikasi Servis Berkala| WAGateway
+    PaymentSvc -->|Kirim Faktur Digital| WAGateway
+    APIRouter -->|Fallback LLM Cerdas| GeminiAPI

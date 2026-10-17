@@ -1,0 +1,61 @@
+sequenceDiagram
+    %% =========================================================================
+    %% SEQUENCE DIAGRAM PEMESANAN & PENGERJAAN - NARA AC (A26-CS054)
+    %% =========================================================================
+
+    autonumber
+    actor Pelanggan as Pelanggan
+    participant FE as Frontend (React 19)
+    participant API as Backend API (Express)
+    participant DB as Basis Data (PostgreSQL)
+    actor Admin as Admin Operasional
+    actor Teknisi as Teknisi Lapangan
+
+    Pelanggan->>FE: Pilih Layanan, Unit, Tanggal, & Slot Jam
+    FE->>API: GET /api/v1/bookings/availability?tanggal=...&durasi_menit=...
+    API->>DB: Query Cek Kapasitas & Slot Konflik
+    DB-->>API: Data Ketersediaan Slot
+    API-->>FE: HTTP 200 Slot Tersedia (08:00 - 18:00 WIB)
+    
+    Pelanggan->>FE: Isi Alamat, Kontak, & Klik "Konfirmasi Pemesanan"
+    FE->>API: POST /api/v1/bookings { layanan_id, tanggal, jam_mulai, kontak, ... }
+    Note over API: Validasi Otoritatif Server:<br/>1. Diskon Member 10% Jasa<br/>2. Jam Selesai <= 19:00 WIB
+    API->>DB: INSERT INTO bookings, booking_items (BEGIN ... COMMIT)
+    DB-->>API: Rekaman Berhasil Disimpan (kode_booking: NARA-AC...)
+    API-->>FE: HTTP 201 Created { kode_booking, invoice_estimasi }
+    FE-->>Pelanggan: Tampilkan Halaman Status & Estimasi Biaya
+
+    Admin->>FE: Buka Menu Dashboard /admin/bookings
+    FE->>API: GET /api/v1/admin/bookings
+    API->>DB: Query Daftar Booking Pending
+    DB-->>API: Data Booking
+    API-->>FE: Daftar Booking
+    Admin->>FE: Pilih Teknisi & Klik "Tugaskan"
+    FE->>API: PATCH /api/v1/admin/bookings/:id/assign { teknisi_id }
+    API->>DB: UPDATE bookings SET teknisi_id=..., status='confirmed'
+    DB-->>API: Updated
+    API-->>FE: HTTP 200 Sukses Ditugaskan
+
+    Teknisi->>FE: Buka Konsol /technician/jobs/:id
+    Teknisi->>FE: Klik "Teknisi Menuju Lokasi"
+    FE->>API: PATCH /api/v1/technician/jobs/:id/status { status: 'on_the_way' }
+    API->>DB: UPDATE bookings, work_orders
+    DB-->>API: Updated
+    API-->>FE: Status Berubah
+
+    Teknisi->>FE: Unggah Foto Sebelum, Ceklis, Foto Sesudah, Catatan
+    FE->>API: POST /api/v1/technician/jobs/:id/report (Multipart Form)
+    API->>DB: INSERT work_order_checklists, work_order_photos, UPDATE status='done'
+    DB-->>API: Laporan Tersimpan
+    API-->>FE: HTTP 200 Laporan Selesai
+
+    Pelanggan->>FE: Buka Halaman /status/:kode
+    FE->>API: GET /api/v1/public/bookings/:kode
+    API->>DB: Query Progres & Invoice Final
+    DB-->>API: Detail Lengkap Selesai
+    API-->>FE: Tampilkan Invoice Final & Form Ulasan
+    Pelanggan->>FE: Beri Rating 5 Bintang & Klik Konfirmasi
+    FE->>API: POST /api/v1/feedback { rating: 5, komentar: 'AC dingin bersih mantap' }
+    API->>DB: INSERT INTO feedback, konfirmasi_pelanggan=TRUE
+    DB-->>API: Sukses
+    API-->>FE: HTTP 201 Feedback Diterima & Masa Garansi Aktif

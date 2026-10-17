@@ -1,0 +1,219 @@
+erDiagram
+    %% =========================================================================
+    %% ENTITY RELATIONSHIP DIAGRAM (ERD) LENGKAP - NARA AC (A26-CS054)
+    %% =========================================================================
+
+    USERS ||--o| CUSTOMERS : "memiliki profil (customer_id)"
+    USERS ||--o| TECHNICIANS : "memiliki profil (technician_id)"
+    
+    CUSTOMERS ||--o{ AC_UNITS : "memiliki banyak aset unit"
+    CUSTOMERS ||--o{ BOOKINGS : "membuat transaksi booking"
+    
+    SERVICE_CATALOG ||--o{ BOOKING_ITEMS : "dipesan dalam paket"
+    SERVICE_CATALOG ||--o{ BOOKINGS : "layanan primer booking"
+    
+    BOOKINGS ||--o{ BOOKING_ITEMS : "memiliki rincian item layanan"
+    BOOKINGS ||--o| WORK_ORDERS : "dieksekusi melalui work order"
+    BOOKINGS ||--o| FEEDBACK : "diberikan penilaian dan ulasan"
+    BOOKINGS ||--o{ WARRANTY_CLAIMS : "dapat memiliki klaim garansi"
+    BOOKINGS ||--o{ WHATSAPP_INVOICE_LOGS : "riwayat pengiriman faktur"
+    
+    TECHNICIANS ||--o{ BOOKINGS : "ditugaskan pada booking"
+    TECHNICIANS ||--o{ TECHNICIAN_AVAILABILITY : "catatan cuti atau jadwal sibuk"
+    TECHNICIANS ||--o{ WORK_ORDERS : "mengerjakan work order"
+    
+    WORK_ORDERS ||--o{ WORK_ORDER_CHECKLISTS : "memiliki lembar checklist"
+    WORK_ORDERS ||--o{ WORK_ORDER_PHOTOS : "memiliki foto dokumentasi"
+    WORK_ORDERS ||--o{ INVENTORY_USAGE : "mengonsumsi suku cadang"
+    
+    INVENTORY ||--o{ INVENTORY_USAGE : "stok berkurang terpakai"
+    
+    AC_UNITS ||--o{ REMINDER_LOG : "riwayat pengingat perawatan berkala"
+
+    %% Entitas dan Atribut
+    USERS {
+        int id PK
+        string email UK
+        string password_hash
+        string role "admin | technician | customer"
+        string nama
+        string kontak
+        boolean aktif
+        timestamp created_at
+    }
+
+    CUSTOMERS {
+        int id PK
+        string kode_pelanggan UK "Format: CUST-xxx"
+        string nama
+        string kontak UK
+        text alamat
+        string tipe_pelanggan "residensial | korporat"
+        boolean terdaftar_member
+        boolean aktif
+        timestamp created_at
+    }
+
+    AC_UNITS {
+        int id PK
+        int customer_id FK
+        string brand "Daikin | Panasonic | Sharp | dll"
+        string model
+        string tipe "Inverter | Non-Inverter | Cassette"
+        decimal kapasitas_pk "0.5 | 1.0 | 2.0 PK"
+        string nomor_seri
+        string lokasi "Ruang Tamu | Kamar Utama | dll"
+        date tanggal_pasang
+        int interval_perawatan_hari "Default: 90 hari"
+        boolean aktif
+    }
+
+    SERVICE_CATALOG {
+        int id PK
+        string kode UK "SRV-STD | SRV-CORE | dll"
+        string nama_layanan
+        string kategori "cuci | perbaikan | instalasi"
+        decimal harga "Biaya Jasa Dasar"
+        int durasi_menit "60 | 90 | 120 menit"
+        int garansi_hari "14 | 30 | 45 hari"
+        int interval_maintenance_hari "60 - 180 hari"
+        boolean aktif
+    }
+
+    BOOKINGS {
+        int id PK
+        string kode_booking UK "Format: NARA-AC..."
+        int customer_id FK
+        int layanan_id FK
+        int teknisi_id FK
+        date tanggal_servis
+        time jam_mulai "08:00 - 18:00 WIB"
+        time jam_selesai "Maksimal 19:00 WIB"
+        int jumlah_unit
+        decimal total_harga "Kalkulasi Otoritatif Server"
+        decimal diskon_member "10% Khusus Biaya Jasa"
+        decimal biaya_sparepart "Tidak Diskon"
+        string status "pending | confirmed | in_progress | done | cancelled"
+        string status_pembayaran "unpaid | partial | paid | refunded"
+        string skema_pembayaran "full | dp_50"
+        string metode_pembayaran "transfer | qris | cash"
+        string bukti_transfer_url
+        boolean konfirmasi_pelanggan
+        timestamp created_at
+    }
+
+    BOOKING_ITEMS {
+        int id PK
+        int booking_id FK
+        int layanan_id FK
+        int jumlah
+        decimal harga_satuan
+        decimal subtotal
+    }
+
+    TECHNICIANS {
+        int id PK
+        string nama
+        string kontak UK
+        string spesialisasi
+        boolean aktif
+    }
+
+    TECHNICIAN_AVAILABILITY {
+        int id PK
+        int teknisi_id FK
+        date tanggal
+        time jam_mulai
+        time jam_selesai
+        string status "off | busy | available"
+        string alasan
+    }
+
+    WORK_ORDERS {
+        int id PK
+        int booking_id FK
+        int teknisi_id FK
+        string status "assigned | ongoing | completed"
+        timestamp waktu_mulai
+        timestamp waktu_selesai
+        text catatan_teknisi
+        text kendala_ditemukan
+        decimal biaya_tambahan
+        boolean persetujuan_biaya_pelanggan
+        boolean persetujuan_biaya_admin
+    }
+
+    WORK_ORDER_CHECKLISTS {
+        int id PK
+        int work_order_id FK
+        string item_pemeriksaan "filter | evaporator | tekanan_freon | ampere"
+        boolean kondisi_baik
+        text catatan
+    }
+
+    WORK_ORDER_PHOTOS {
+        int id PK
+        int work_order_id FK
+        string tipe "sebelum | sesudah"
+        string foto_url
+        timestamp uploaded_at
+    }
+
+    INVENTORY {
+        int id PK
+        string kode_barang UK
+        string nama_barang
+        string kategori "komponen | freon | pipa"
+        int stok
+        int min_stok
+        string satuan
+        decimal harga_jual
+        boolean aktif
+    }
+
+    INVENTORY_USAGE {
+        int id PK
+        int work_order_id FK
+        int inventory_id FK
+        int jumlah
+        decimal harga_saat_pakai
+    }
+
+    FEEDBACK {
+        int id PK
+        int booking_id FK
+        int customer_id FK
+        int rating "1 - 5 Bintang"
+        text komentar
+        timestamp created_at
+    }
+
+    WARRANTY_CLAIMS {
+        int id PK
+        int booking_id FK
+        string kode_klaim UK
+        string status "pending | approved | inspection_scheduled | rejected | resolved"
+        text deskripsi_kerusakan
+        string foto_bukti_url
+        int rating_awal
+        text tanggapan_admin
+        date tanggal_inspeksi
+        timestamp created_at
+    }
+
+    WHATSAPP_INVOICE_LOGS {
+        int id PK
+        int booking_id FK
+        string nomor_tujuan
+        string status_kirim "queued | sent | failed"
+        int retry_count
+        timestamp sent_at
+    }
+
+    REMINDER_LOG {
+        int id PK
+        int ac_unit_id FK
+        date tanggal_kirim
+        string channel "whatsapp"
+        string status "delivered | failed"
+    }

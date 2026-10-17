@@ -1,0 +1,89 @@
+flowchart LR
+    %% =========================================================================
+    %% DIAGRAM USE CASE SISTEM NARA AC - CV. NARA TEKNINDOTAMA
+    %% =========================================================================
+
+    Pelanggan["Pelanggan / Pengunjung"]
+    Teknisi["Teknisi Lapangan"]
+    Admin["Admin Operasional"]
+    SistemAI["Layanan AI / WhatsApp"]
+
+    subgraph UC_Pelanggan["Area Use Case Pelanggan"]
+        UC01["UC-01: Melihat Katalog & Estimasi Biaya"]
+        UC02["UC-02: Membuat Pemesanan (Booking) Servis"]
+        UC03["UC-03: Memeriksa Slot Waktu (08:00-19:00 WIB)"]
+        UC04["UC-04: Melacak Status Pengerjaan Real-time"]
+        UC05["UC-05: Mengunduh Faktur Resmi (Estimasi/Final)"]
+        UC06["UC-06: Mengunggah Bukti Pembayaran Transfer"]
+        UC07["UC-07: Mengonfirmasi Penyelesaian Servis"]
+        UC08["UC-08: Memberikan Ulasan & Rating (1-5 Bintang)"]
+        UC09["UC-09: Mengajukan Klaim Garansi Servis"]
+        UC10["UC-10: Mengelola Unit AC Pelanggan"]
+        UC11["UC-11: Berinteraksi dengan Chatbot AI"]
+    end
+
+    subgraph UC_Teknisi["Area Use Case Teknisi Lapangan"]
+        UC12["UC-12: Melihat Daftar Tugas Harian"]
+        UC13["UC-13: Memperbarui Status Pekerjaan"]
+        UC14["UC-14: Mengisi Checklist Diagnostik & Servis"]
+        UC15["UC-15: Mengunggah Foto Sebelum & Sesudah"]
+        UC16["UC-16: Mencatat Penggantian Sparepart & Tambahan Biaya"]
+        UC17["UC-17: Menyelesaikan Pekerjaan Servis"]
+    end
+
+    subgraph UC_Admin["Area Use Case Administrator Operasional"]
+        UC18["UC-18: Mengelola & Memvalidasi Booking"]
+        UC19["UC-19: Menugaskan Teknisi Berdasarkan Ketersediaan"]
+        UC20["UC-20: Memverifikasi Pembayaran Transfer Bank"]
+        UC21["UC-21: Menyetujui/Menolak Klaim Garansi"]
+        UC22["UC-22: Mengelola Katalog Layanan & Harga"]
+        UC23["UC-23: Memantau Stok Suku Cadang (Inventory)"]
+        UC24["UC-24: Mengelola Data Pelanggan & Kode CUST-..."]
+        UC25["UC-25: Memantau Analisis Bisnis & Forecast Permintaan"]
+        UC26["UC-26: Mengambil Alih Percakapan Chatbot (Human Handoff)"]
+    end
+
+    subgraph UC_Sistem["Area Use Case Otomasi Sistem"]
+        UC27["UC-27: Klasifikasi 20 Intent Pesan Pelanggan"]
+        UC28["UC-28: Mengirim Pengingat Servis Berkala (Cron 07:00 WIB)"]
+        UC29["UC-29: Konfirmasi Otomatis Pekerjaan Selesai (48 Jam)"]
+        UC30["UC-30: Mengirim Notifikasi Status & Invoice via WhatsApp"]
+    end
+
+    %% Relasi Aktor Pelanggan
+    Pelanggan --> UC01
+    Pelanggan --> UC02
+    Pelanggan --> UC03
+    Pelanggan --> UC04
+    Pelanggan --> UC05
+    Pelanggan --> UC06
+    Pelanggan --> UC07
+    Pelanggan --> UC08
+    Pelanggan --> UC09
+    Pelanggan --> UC10
+    Pelanggan --> UC11
+
+    %% Relasi Aktor Teknisi
+    Teknisi --> UC12
+    Teknisi --> UC13
+    Teknisi --> UC14
+    Teknisi --> UC15
+    Teknisi --> UC16
+    Teknisi --> UC17
+
+    %% Relasi Aktor Admin
+    Admin --> UC18
+    Admin --> UC19
+    Admin --> UC20
+    Admin --> UC21
+    Admin --> UC22
+    Admin --> UC23
+    Admin --> UC24
+    Admin --> UC25
+    Admin --> UC26
+
+    %% Relasi Aktor Sistem AI & WhatsApp
+    SistemAI --> UC27
+    SistemAI --> UC28
+    SistemAI --> UC29
+    SistemAI --> UC30

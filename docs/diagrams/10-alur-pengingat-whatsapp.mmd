@@ -1,0 +1,31 @@
+flowchart TD
+    %% =========================================================================
+    %% DIAGRAM ALUR PENGINGAT PEMELIHARAAN WHATSAPP & RETRY - NARA AC
+    %% =========================================================================
+
+    StartCron([Pemicu: Node-Cron Harian Pukul 07:00 WIB]) --> QueryUnits[(Cari Unit AC Pelanggan di Basis Data)]
+    QueryUnits --> CalculateInterval[Hitung Selisih Hari dari Servis Terakhir: Today - Tanggal_Selesai]
+
+    CalculateInterval --> CompareDue{Selisih Hari >= interval_perawatan_hari?\n(Standar: 60 - 90 Hari)}
+    CompareDue -- Belum Waktunya --> SkipUnit[Lewati Unit: Belum Waktunya Servis Berkala]
+
+    CompareDue -- Sudah Masuk Waktu --> CheckReminderHistory{Sudah Pernah Dikirim dalam 30 Hari Terakhir?}
+    CheckReminderHistory -- Sudah Pernah --> Deduplicate[Deduplikasi: Cegah Pengiriman Ganda (Spam)]
+
+    CheckReminderHistory -- Belum Pernah --> FormatTemplate[Susun Pesan WhatsApp Personalisasi:\nNama Pelanggan, Model AC, Tanggal Servis Terakhir, Tautan Booking]
+
+    FormatTemplate --> DispatchWA[Kirim HTTP Request ke WhatsApp Provider Gateway]
+    DispatchWA --> CheckResponse{Hasil Respons Provider?}
+
+    CheckResponse -- Berhasil (HTTP 200) --> RecordLog[(Catat ke reminder_log: status 'delivered')]
+    RecordLog --> NextUnit[Lanjut ke Unit Berikutnya]
+
+    CheckResponse -- Gagal / Jaringan Timeout --> RecordFailed[(Catat ke reminder_log: status 'failed')]
+    RecordFailed --> CheckRetryCount{Jumlah Percobaan Ulang < wa_max_retry?\n(Default: Maksimal 3x)}
+    CheckRetryCount -- Ya --> QueueRetry[Masukkan ke Antrean Retry Eksponensial (Jeda 15 Menit)]
+    QueueRetry --> DispatchWA
+    CheckRetryCount -- Sudah 3x --> LogPermanentFail[(Tandai Gagal Permanen & Beri Tahu Admin)]
+    LogPermanentFail --> NextUnit
+    SkipUnit --> NextUnit
+    Deduplicate --> NextUnit
+    NextUnit --> FinishCron([Selesai Eksekusi Pengingat Harian])
