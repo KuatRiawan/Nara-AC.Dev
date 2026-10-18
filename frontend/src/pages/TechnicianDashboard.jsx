@@ -7,11 +7,12 @@ import { Badge } from '../components/ui/badge';
 import { 
   MapPin, Clock, ArrowRight, User, 
   CheckCircle, History, ClipboardList, ChevronRight,
-  Phone, Search, ShieldCheck, RefreshCw
+  Phone, Search, ShieldCheck, Bell, CheckCheck, Wrench, Calendar
 } from 'lucide-react';
 import { useToast } from '../components/ui/toast';
 import { cn } from '../lib/utils';
 import DashboardLayout from '../components/layout/DashboardLayout';
+import NotificationDrawer from '../components/notifications/NotificationDrawer';
 
 export default function TechnicianDashboard() {
   const { user, loading: authLoading, logout } = useContext(AuthContext);
@@ -20,6 +21,13 @@ export default function TechnicianDashboard() {
   const location = useLocation();
   const [dashboardData, setDashboardData] = useState(null);
   const [jobs, setJobs] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const handleOpenNotif = useCallback(() => setIsNotifOpen(true), []);
+  const handleCloseNotif = useCallback(() => setIsNotifOpen(false), []);
+  const [notifFilter, setNotifFilter] = useState('all');
+  const [markingAllRead, setMarkingAllRead] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,9 +48,10 @@ export default function TechnicianDashboard() {
       if (!isSilent) setLoading(true);
       else setIsRefreshing(true);
 
-      const [dashRes, jobsRes] = await Promise.all([
+      const [dashRes, jobsRes, notifsRes] = await Promise.all([
         api.get('/technician/dashboard').catch(() => null),
-        api.get('/technician/jobs', { params: { limit: 100 } }).catch(() => null)
+        api.get('/technician/jobs', { params: { limit: 100 } }).catch(() => null),
+        api.get('/technician/notifications', { params: { limit: 50 } }).catch(() => null)
       ]);
 
       if (!isMountedRef.current) return;
@@ -50,6 +59,12 @@ export default function TechnicianDashboard() {
       const dData = dashRes?.data || dashRes || null;
       if (dData) {
         setDashboardData(dData);
+      }
+
+      if (notifsRes?.data) {
+        const notifList = notifsRes.data.data || [];
+        setNotifications(Array.isArray(notifList) ? notifList : []);
+        setUnreadNotifs(notifsRes.data.meta?.unread_count ?? notifList.filter(n => !n.is_read).length);
       }
 
       const rawJobs = jobsRes?.data?.data || jobsRes?.data || jobsRes || [];
@@ -98,9 +113,10 @@ export default function TechnicianDashboard() {
 
     fetchData(false);
 
+    // Fast 4-second real-time sync in background
     const interval = setInterval(() => {
       fetchData(true);
-    }, 10000);
+    }, 4000);
 
     return () => clearInterval(interval);
   }, [user, authLoading, navigate, fetchData]);
@@ -110,22 +126,31 @@ export default function TechnicianDashboard() {
       fetchData(true);
     };
     const handleStorage = (e) => {
-      if (e.key === 'nara_booking_sync_timestamp') {
+      if (e.key === 'nara_booking_sync_timestamp' || e.key === 'nara_ops_updated') {
         fetchData(true);
       }
     };
     const handleFocus = () => {
       fetchData(true);
     };
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        fetchData(true);
+      }
+    };
 
     window.addEventListener('nara-booking-updated', handleSync);
+    window.addEventListener('nara-technician-sync', handleSync);
     window.addEventListener('storage', handleStorage);
     window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       window.removeEventListener('nara-booking-updated', handleSync);
+      window.removeEventListener('nara-technician-sync', handleSync);
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [fetchData]);
 
@@ -413,6 +438,168 @@ export default function TechnicianDashboard() {
       );
     }
 
+    if (currentPath === '/technician/notifications') {
+      const filteredNotifs = notifFilter === 'unread' 
+        ? notifications.filter(n => !n.is_read)
+        : notifications;
+
+      return (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                Pusat Notifikasi
+                {unreadNotifs > 0 && (
+                  <span className="bg-rose-50 text-rose-700 text-xs px-2.5 py-0.5 rounded-full font-bold border border-rose-200">
+                    {unreadNotifs} Baru
+                  </span>
+                )}
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500">Pemberitahuan penugasan tiket dan jadwal servis terbaru</p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleMarkAllRead}
+                disabled={unreadNotifs === 0 || markingAllRead}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all border",
+                  unreadNotifs > 0
+                    ? "bg-white hover:bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300 shadow-2xs cursor-pointer"
+                    : "bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed"
+                )}
+              >
+                <CheckCheck className="w-4 h-4 text-emerald-600" />
+                <span>{markingAllRead ? 'Memproses...' : 'Tandai Semua Dibaca'}</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 border-b border-slate-200/80 pb-3">
+            <button
+              onClick={() => setNotifFilter('all')}
+              className={cn(
+                "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all",
+                notifFilter === 'all'
+                  ? "bg-blue-600 text-white shadow-xs"
+                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+              )}
+            >
+              Semua ({notifications.length})
+            </button>
+            <button
+              onClick={() => setNotifFilter('unread')}
+              className={cn(
+                "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5",
+                notifFilter === 'unread'
+                  ? "bg-blue-600 text-white shadow-xs"
+                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+              )}
+            >
+              Belum Dibaca
+              {unreadNotifs > 0 && (
+                <span className={cn(
+                  "text-[10px] px-1.5 py-0.2 rounded-full font-black",
+                  notifFilter === 'unread' ? "bg-white text-blue-700" : "bg-rose-600 text-white"
+                )}>
+                  {unreadNotifs}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {filteredNotifs.length === 0 ? (
+            <div className="p-12 text-center bg-white rounded-3xl border border-slate-100 shadow-xs">
+              <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center mx-auto mb-3">
+                <Bell className="w-8 h-8 text-slate-400" />
+              </div>
+              <h3 className="font-bold text-base text-slate-800">
+                {notifFilter === 'unread' ? 'Tidak Ada Notifikasi Baru' : 'Belum Ada Notifikasi'}
+              </h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                {notifFilter === 'unread'
+                  ? 'Semua notifikasi penugasan tiket dan sistem telah Anda baca.'
+                  : 'Pemberitahuan penugasan pekerjaan dari admin akan muncul di sini secara real-time.'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredNotifs.map((notif) => {
+                const targetUrl = notif.tautan || (notif.booking_id ? `/technician/jobs/${notif.booking_id}` : null);
+                const isTask = notif.title?.toLowerCase().includes('tugas') || notif.type === 'assignment';
+                
+                return (
+                  <div
+                    key={notif.id}
+                    onClick={() => handleMarkAsRead(notif)}
+                    className={cn(
+                      "p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer relative group",
+                      !notif.is_read 
+                        ? "bg-blue-50/40 hover:bg-blue-50/70 border-blue-200 shadow-xs" 
+                        : "bg-white hover:bg-slate-50 border-slate-100 shadow-2xs"
+                    )}
+                  >
+                    <div className="flex items-start gap-3.5">
+                      <div className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border transition-transform group-hover:scale-105",
+                        !notif.is_read
+                          ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                          : "bg-slate-100 text-slate-600 border-slate-200"
+                      )}>
+                        {isTask ? (
+                          <Wrench className="w-5 h-5" />
+                        ) : notif.type === 'schedule' ? (
+                          <Calendar className="w-5 h-5" />
+                        ) : (
+                          <Bell className="w-5 h-5" />
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline justify-between gap-2 mb-1">
+                          <h4 className={cn(
+                            "text-sm font-bold truncate",
+                            !notif.is_read ? "text-slate-900 font-black" : "text-slate-700"
+                          )}>
+                            {notif.title}
+                          </h4>
+                          <span className="text-[11px] font-medium text-slate-500 shrink-0">
+                            {formatNotifTime(notif.created_at)}
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-slate-600 leading-relaxed mb-3">
+                          {notif.message}
+                        </p>
+
+                        <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100/60">
+                          <div className="flex items-center gap-2">
+                            {!notif.is_read && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black text-rose-700 bg-rose-100/80 px-2 py-0.5 rounded-md border border-rose-200/60">
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
+                                Belum Dibaca
+                              </span>
+                            )}
+                          </div>
+
+                          {targetUrl && (
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 group-hover:text-blue-700 group-hover:underline">
+                              Buka Tugas
+                              <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    }
+
     const kpiHariIni = dashboardData?.ringkasan?.hari_ini ?? todayJobs.length;
     const kpiMendatang = dashboardData?.pekerjaan_mendatang?.length ?? upcomingJobs.length;
     const kpiBerjalan = dashboardData?.ringkasan?.berjalan ?? inProgressJobs.length;
@@ -461,16 +648,6 @@ export default function TechnicianDashboard() {
                 <span className="w-2 h-2 rounded-full bg-blue-600"></span>
                 Tugas Hari Ini
               </h2>
-              <button
-                type="button"
-                onClick={() => fetchData(true)}
-                disabled={isRefreshing}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-blue-600 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg shadow-2xs transition-all active:scale-95 disabled:opacity-50"
-                title="Sinkronkan data dengan sistem admin"
-              >
-                <RefreshCw className={cn("w-3.5 h-3.5 text-blue-600", isRefreshing && "animate-spin")} />
-                <span>{isRefreshing ? 'Menyinkron...' : 'Sinkron'}</span>
-              </button>
             </div>
             <Link to="/technician/jobs" className="text-xs sm:text-sm font-bold text-blue-600 hover:underline flex items-center gap-1">
               Lihat Semua <ChevronRight className="w-3.5 h-3.5" />
@@ -505,8 +682,64 @@ export default function TechnicianDashboard() {
     );
   };
 
+  const handleMarkAsRead = async (notif, e) => {
+    if (e) e.stopPropagation();
+    if (!notif.is_read) {
+      try {
+        await api.patch(`/technician/notifications/${notif.id}/read`);
+        setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n));
+        setUnreadNotifs(prev => Math.max(0, prev - 1));
+      } catch (err) {
+        console.error('Failed to mark read', err);
+      }
+    }
+    const target = notif.tautan || (notif.booking_id ? `/technician/jobs/${notif.booking_id}` : null);
+    if (target) {
+      navigate(target);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    if (unreadNotifs === 0 || markingAllRead) return;
+    try {
+      setMarkingAllRead(true);
+      await api.patch('/technician/notifications/read-all');
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setUnreadNotifs(0);
+    } catch (err) {
+      showError('Gagal menandai semua notifikasi: ' + (err.response?.data?.error?.message || err.message));
+    } finally {
+      if (isMountedRef.current) {
+        setMarkingAllRead(false);
+      }
+    }
+  };
+
+  const formatNotifTime = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMin = Math.floor(diffMs / 60000);
+      if (diffMin < 1) return 'Baru saja';
+      if (diffMin < 60) return `${diffMin} menit yang lalu`;
+      const diffHours = Math.floor(diffMin / 60);
+      if (diffHours < 24) return `${diffHours} jam yang lalu`;
+      const diffDays = Math.floor(diffHours / 24);
+      if (diffDays < 7) return `${diffDays} hari yang lalu`;
+      return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch (e) {
+      return '';
+    }
+  };
+
   return (
-    <DashboardLayout role="technician">
+    <DashboardLayout 
+      role="technician"
+      unreadCount={unreadNotifs}
+      onOpenNotif={handleOpenNotif}
+    >
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
         {loading ? (
           <div className="space-y-4">
@@ -517,6 +750,13 @@ export default function TechnicianDashboard() {
           renderContent()
         )}
       </div>
+
+      <NotificationDrawer 
+        isOpen={isNotifOpen}
+        onClose={handleCloseNotif}
+        role="technician"
+        onRefreshCount={() => fetchData(true)}
+      />
     </DashboardLayout>
   );
 }

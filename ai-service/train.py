@@ -287,8 +287,8 @@ def train_model():
 
     models = {
         'MultinomialNB': MultinomialNB(alpha=0.1),
-        'LogisticRegression': LogisticRegression(max_iter=1000, C=1.0, solver='lbfgs'),
-        'LinearSVC': LinearSVC(C=0.1, max_iter=10000),
+        'LogisticRegression': LogisticRegression(max_iter=1000, C=1.0, solver='lbfgs', class_weight='balanced'),
+        'LinearSVC': LinearSVC(C=1.0, max_iter=10000, class_weight='balanced'),
     }
 
     best_model = None
@@ -382,5 +382,144 @@ def train_model():
     print("Intent classes:", list(class_names))
     print("=" * 80)
 
+
+def train_sentiment_model():
+    """
+    Side Quest Rubric:
+    Melatih model klasifikasi sentimen ulasan pelanggan NARA AC (positif & negatif).
+    """
+    print("\n" + "=" * 80)
+    print("Training Sentiment Analysis Model for NARA AC Customer Reviews...")
+    print("=" * 80)
+
+    reviews_data = [
+        # Positif (30 ulasan pelanggan AC)
+        ("pelayanan sangat memuaskan teknisi ramah ac langsung dingin menggigil", "positif"),
+        ("kerja cepat dan rapi harga terjangkau sangat recommended servis di sini", "positif"),
+        ("teknisi datang tepat waktu ac dingin kembali mantap pelayanannya", "positif"),
+        ("sangat profesional datang sesuai jadwal dan bersihkan sampai tuntas tidak ada sisa air", "positif"),
+        ("ac bocor langsung beres teknisi ramah dan informatif menjelaskan kerusakannya", "positif"),
+        ("harga transparan pengerjaan rapi terima kasih banyak nara ac", "positif"),
+        ("puas sekali ac jadi dingin dan ga bau apek lagi mantap pelayanannya", "positif"),
+        ("teknisinya jujur freon masih bagus tidak disuruh isi macam-macam recommended", "positif"),
+        ("booking lewat web sangat mudah teknisi konfirmasi cepat dan komunikatif", "positif"),
+        ("sudah langganan di nara ac selalu puas dengan hasil kerjanya bersih rapi", "positif"),
+        ("pengerjaan teliti sekali dari cuci indoor sampai outdoor benar-benar bersih", "positif"),
+        ("admin fast response teknisi sopan dan bersihkan lantai setelah kerja", "positif"),
+        ("ac daikin saya yang netes air berhari-hari langsung sembuh garansi mantap", "positif"),
+        ("sangat membantu di saat cuaca panas teknisi datang hari itu juga top", "positif"),
+        ("kualitas servis bintang lima harga sangat bersahabat sukses terus", "positif"),
+        ("rekomendasi banget teknisinya sopan memakai masker dan bawa peralatan lengkap", "positif"),
+        ("ac kamar jadi senyap tidak berisik lagi setelah diperbaiki teknisi nara ac", "positif"),
+        ("proses klaim garansi sangat mudah dan langsung ditindaklanjuti tanpa ribet", "positif"),
+        ("pembayaran praktis bisa qris langsung setelah servis selesai luar biasa", "positif"),
+        ("sangat puas teknisi cek tekanan freon dan arus amperenya detail sekali", "positif"),
+        ("layanan cuci ac terbaik di kota ini teknisi tepat waktu dan ramah", "positif"),
+        ("luar biasa hasilnya ac dingin merata bau apek langsung hilang total", "positif"),
+        ("pelayanan ramah teknisi komunikatif dan solutif bintang lima", "positif"),
+        ("servis ac kantor 5 unit selesai cepat dan sangat rapi memuaskan", "positif"),
+        ("sangat terpercaya tidak ada pungli harga sesuai tarif di website", "positif"),
+        ("ac jadul jadi dingin lagi seperti baru terima kasih tim nara ac", "positif"),
+        ("sangat puas teknisi rapi bawa terpal pelindung dinding tidak kotor", "positif"),
+        ("rekomendasi terbaik untuk perbaikan ac inverter hasil memuaskan", "positif"),
+        ("pelayanan admin dan teknisi sangat memuaskan pasti pesan lagi", "positif"),
+        ("cuci ac bersih tuntas pipa pembuangan lancar jaya mantap", "positif"),
+
+        # Negatif (30 ulasan pelanggan AC)
+        ("teknisi telat datang 2 jam tanpa kabar sama sekali sangat mengecewakan", "negatif"),
+        ("ac masih tetap panas setelah diservis teknisi tidak bertanggung jawab", "negatif"),
+        ("air ac masih bocor menetes ke kasur padahal baru dicuci kemarin parah", "negatif"),
+        ("pengerjaan jorok tembok kotor terkena cipratan air cucian dan lantai becek", "negatif"),
+        ("harga di lapangan tiba-tiba naik drastis tidak sesuai kesepakatan awal di web", "negatif"),
+        ("kurang puas teknisi tidak ramah terburu-buru dan asal-asalan kerjanya", "negatif"),
+        ("tidak ada perubahan sama sekali ac tetap berisik dan tidak dingin rugi bayar", "negatif"),
+        ("komplain lambat direspon admin cuek dan nomor whatsapp susah dihubungi", "negatif"),
+        ("teknisi memaksa isi freon padahal baru servis bulan lalu sangat mencurigakan", "negatif"),
+        ("klaim garansi dipersulit teknisi beralasan terus tidak mau datang kembali", "negatif"),
+        ("sangat kecewa teknisi membatalkan jadwal sepihak padahal sudah ditunggu", "negatif"),
+        ("casing ac indoor retak setelah dibongkar teknisi tidak mau ganti rugi", "negatif"),
+        ("hasil servis sangat buruk bau apek malah semakin menyengat", "negatif"),
+        ("kapasitor katanya diganti tapi ac tetap tidak menyala buang-buang uang", "negatif"),
+        ("teknisi tidak profesional datang tidak bawa tangga dan pinjam alat sendiri", "negatif"),
+        ("pelayanan mengecewakan teknisi merokok sembarangan di area rumah", "negatif"),
+        ("respon cs sangat lambat pertanyaan berhari-hari baru dibalas", "negatif"),
+        ("kecewa berat jadwal jam 9 baru datang jam 15 sore tanpa kejelasan", "negatif"),
+        ("ac bocor freon habis teknisi tidak bisa perbaiki hanya ambil uang", "negatif"),
+        ("pengerjaan asal jadi outdoor tidak dibersihkan sama sekali parah", "negatif"),
+        ("sangat tidak recommended teknisi tidak jujur biaya tambahan mahal", "negatif"),
+        ("kecewa setelah diservis remote ac malah tidak berfungsi teknisi lepas tangan", "negatif"),
+        ("servis mahal tapi kualitas abal-abal 2 hari kemudian ac mati total", "negatif"),
+        ("air cucian ac tumpah merusak wallpaper kamar teknisi kabur", "negatif"),
+        ("sangat buruk teknisi datang terlambat dan tidak ramah sama sekali", "negatif"),
+        ("tidak puas garansi cuma janji manis saat komplain tidak digubris", "negatif"),
+        ("kecewa pengerjaan sangat lama dan hasilnya ac tetap tidak dingin", "negatif"),
+        ("penagihan biaya tidak ada nota resmi teknisi minta transfer rekening pribadi", "negatif"),
+        ("ac indoor bergetar keras setelah dibongkar pasang sangat mengganggu", "negatif"),
+        ("pelayanan terburuk yang pernah saya dapatkan tidak akan pakai jasa ini lagi", "negatif"),
+    ]
+
+    df_rev = pd.DataFrame(reviews_data, columns=["review", "sentiment"])
+    print(f"Total reviews: {len(df_rev)}")
+    print("Class distribution:")
+    for sent, cnt in df_rev["sentiment"].value_counts().items():
+        print(f"  {sent:15s}: {cnt:3d} samples")
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        df_rev["review"], df_rev["sentiment"], test_size=0.2, random_state=42, stratify=df_rev["sentiment"]
+    )
+
+    sent_vectorizer = TfidfVectorizer(
+        lowercase=True,
+        ngram_range=(1, 2),
+        sublinear_tf=True
+    )
+    X_train_vec = sent_vectorizer.fit_transform(X_train)
+    X_test_vec = sent_vectorizer.transform(X_test)
+
+    # Komparasi 3 model untuk sentimen
+    models = {
+        'LinearSVC': LinearSVC(C=1.0, max_iter=5000, class_weight='balanced'),
+        'LogisticRegression': LogisticRegression(max_iter=1000, C=1.0, class_weight='balanced'),
+        'MultinomialNB': MultinomialNB(alpha=0.1),
+    }
+
+    best_sent_model = None
+    best_sent_f1 = 0
+    best_sent_name = ''
+
+    for name, m in models.items():
+        m.fit(X_train_vec, y_train)
+        preds = m.predict(X_test_vec)
+        f1 = f1_score(y_test, preds, average='weighted')
+        prec = precision_score(y_test, preds, average='weighted')
+        rec = recall_score(y_test, preds, average='weighted')
+        print(f"  {name:18s} -> Test F1: {f1:.4f} | Prec: {prec:.4f} | Rec: {rec:.4f}")
+        if f1 > best_sent_f1:
+            best_sent_f1 = f1
+            best_sent_model = m
+            best_sent_name = name
+
+    print(f"\nSelected Sentiment Model: {best_sent_name} (F1: {best_sent_f1:.4f})")
+
+    # Retrain pada full review dataset
+    X_full_vec = sent_vectorizer.fit_transform(df_rev["review"])
+    best_sent_model.fit(X_full_vec, df_rev["sentiment"])
+
+    from pathlib import Path
+    _base_dir = Path(__file__).resolve().parent
+    joblib.dump(best_sent_model, _base_dir / "sentiment_model.pkl")
+    joblib.dump(sent_vectorizer, _base_dir / "sentiment_vectorizer.pkl")
+
+    with open(_base_dir / "sentiment_model_metrics.txt", "w") as f:
+        f.write(f"model_type={best_sent_name}\n")
+        f.write(f"test_f1={best_sent_f1:.4f}\n")
+        f.write("classes=positif negatif\n")
+
+    print("Sentiment model and vectorizer saved successfully to sentiment_model.pkl & sentiment_vectorizer.pkl.")
+    print("=" * 80)
+
+
 if __name__ == "__main__":
     train_model()
+    train_sentiment_model()
+

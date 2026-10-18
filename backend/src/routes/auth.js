@@ -14,10 +14,10 @@ const router = express.Router();
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: process.env.NODE_ENV === 'production' ? 10 : 1000,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: () => process.env.NODE_ENV === 'test',
+  skip: () => process.env.NODE_ENV !== 'production',
   handler: (_req, res) => res.status(429).json({
     error: { code: 'RATE_LIMITED', message: 'Terlalu banyak percobaan login. Coba lagi setelah 15 menit.' },
   }),
@@ -33,6 +33,10 @@ router.post('/login', loginLimiter, validate(loginSchema), wrap(async (req, res)
   const bad = () => E.unauthorized('Email atau password salah.');
   if (!u || !u.aktif) throw bad();
   if (!(await bcrypt.compare(req.body.password, u.password_hash))) throw bad();
+  if (req.body.portal === 'customer' && u.role !== 'customer') {
+    throw E.forbidden('Akses ditolak. Halaman ini khusus untuk pelanggan & member Nara. Staf internal (admin & teknisi) silakan masuk melalui Workspace Staf.');
+  }
+
   const token = signToken(u);
   const user = {
     id: u.id,
@@ -53,6 +57,41 @@ router.post('/login', loginLimiter, validate(loginSchema), wrap(async (req, res)
   });
 
   res.json({ user });
+}));
+
+router.post('/customer/login', loginLimiter, validate(loginSchema), wrap(async (req, res) => {
+  const u = (await query('SELECT * FROM users WHERE lower(email)=lower($1)', [req.body.email])).rows[0];
+  const bad = () => E.unauthorized('Email atau kata sandi tidak cocok. Periksa kembali.');
+  if (!u || !u.aktif) throw bad();
+  if (!(await bcrypt.compare(req.body.password, u.password_hash))) throw bad();
+
+  if (u.role !== 'customer') {
+    throw E.forbidden('Akses ditolak. Halaman ini khusus untuk pelanggan & member Nara. Staf internal (admin & teknisi) silakan masuk melalui Workspace Staf.');
+  }
+
+  const token = signToken(u);
+  const user = {
+    id: u.id,
+    nama: u.nama,
+    email: u.email,
+    role: u.role,
+    kontak: u.kontak || null,
+    technician_id: null,
+    customer_id: u.customer_id || null,
+  };
+
+  res.cookie('nara_token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 8 * 60 * 60 * 1000,
+    path: '/',
+  });
+
+  res.json({
+    user,
+    message: `Selamat datang kembali, ${u.nama}.`,
+  });
 }));
 
 router.post('/staff/login', loginLimiter, validate(loginSchema), wrap(async (req, res) => {
@@ -92,10 +131,10 @@ router.post('/staff/login', loginLimiter, validate(loginSchema), wrap(async (req
 
 const otpLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 5,
+  limit: process.env.NODE_ENV === 'production' ? 5 : 500,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: () => process.env.NODE_ENV === 'test',
+  skip: () => process.env.NODE_ENV !== 'production',
   handler: (_req, res) => res.status(429).json({
     error: { code: 'RATE_LIMITED', message: 'Terlalu banyak permintaan OTP WhatsApp. Silakan tunggu 15 menit sebelum mencoba kembali.' },
   }),
@@ -442,10 +481,10 @@ router.get('/csrf-token', requireAuth(), wrap(csrfTokenHandler));
 
 const resetPasswordLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 5,
+  limit: process.env.NODE_ENV === 'production' ? 5 : 500,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: () => process.env.NODE_ENV === 'test',
+  skip: () => process.env.NODE_ENV !== 'production',
   handler: (_req, res) => res.status(429).json({
     error: { code: 'RATE_LIMITED', message: 'Terlalu banyak permintaan reset password. Coba lagi dalam 15 menit.' },
   }),

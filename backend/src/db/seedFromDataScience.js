@@ -184,14 +184,13 @@ async function seedRealDataScience() {
       const custCode = r.id_pelanggan || `CUST-${String(i + 1).padStart(3, '0')}`;
       const isB2B = (r.segmen_pelanggan || '').includes('Korporat');
 
-      // Tentukan Nama yang Human-Readable dan Profesional
+      // Tentukan Nama yang Human-Readable dan Profesional (ID pelanggan tersimpan di kode_pelanggan)
       let displayName;
       if (isB2B) {
-        const corpName = INDONESIAN_CORP_PREFIX[i % INDONESIAN_CORP_PREFIX.length];
-        displayName = `${corpName} (${custCode})`;
+        displayName = INDONESIAN_CORP_PREFIX[i % INDONESIAN_CORP_PREFIX.length];
       } else {
         const fn = INDONESIAN_FIRST_NAMES[i % INDONESIAN_FIRST_NAMES.length];
-        displayName = `Bpk/Ibu ${fn} (${custCode})`;
+        displayName = `Bpk/Ibu ${fn}`;
       }
 
       // Format nomor HP valid untuk pengujian sistem

@@ -216,7 +216,7 @@ describe('Phase 5: Payments & Invoices (BR-34 s/d BR-43)', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.status).toBe('sent');
     expect(res.body.log.pesan).toMatch(/INVOICE FINAL/);
-    expect(res.body.log.tautan_invoice).toMatch(/nara-ac.com/);
+    expect(res.body.log.tautan_invoice).toMatch(/narateknindotama\.com|nara-ac\.com/);
   });
 
   test('BR-43: Jika pengiriman WhatsApp gagal, sistem mencatat status gagal dan mendukung pengiriman ulang otomatis', async () => {

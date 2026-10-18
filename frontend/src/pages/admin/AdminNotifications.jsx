@@ -95,7 +95,38 @@ export default function AdminNotifications({ isDrawer = false, onClose, onRefres
     const itemTitle = (item.title || '').toLowerCase();
     const itemMessage = item.message || '';
 
-    // Check if it relates to a booking
+    // 1. Check if it relates to payment / transfer proof / invoice verification FIRST
+    if (
+      itemType === 'payment' || 
+      itemType === 'invoice' || 
+      itemTitle.includes('bukti') || 
+      itemTitle.includes('pembayaran') || 
+      itemTitle.includes('transfer') || 
+      itemTitle.includes('verifikasi') ||
+      itemMessage.toLowerCase().includes('bukti pembayaran') ||
+      itemMessage.toLowerCase().includes('verifikasi manual')
+    ) {
+      if (target && target.includes('/admin/invoices')) {
+        return target;
+      }
+      if (bId) {
+        return `/admin/invoices?verify=${bId}`;
+      }
+      return target || '/admin/invoices';
+    }
+
+    // 2. Check if it relates to a warranty claim
+    if (itemType === 'claim' || itemTitle.includes('klaim')) {
+      const cId = item.reference_id;
+      return cId ? `/admin/claims?claimId=${cId}` : (target || '/admin/claims');
+    }
+
+    // 3. Check if it relates to inventory
+    if (itemType === 'inventory' || itemTitle.includes('stok') || itemTitle.includes('inventory')) {
+      return '/admin/inventory';
+    }
+
+    // 4. Check if it relates to a booking
     if (itemType === 'booking' || itemTitle.includes('booking') || itemTitle.includes('jadwal') || itemTitle.includes('teknisi') || itemTitle.includes('selesai') || bId) {
       if (bId) {
         return `/admin/bookings?bookingId=${bId}`;
@@ -105,25 +136,6 @@ export default function AdminNotifications({ isDrawer = false, onClose, onRefres
         return `/admin/bookings?kode=${match[1]}`;
       }
       return target || '/admin/bookings';
-    }
-
-    // Check if it relates to a warranty claim
-    if (itemType === 'claim' || itemTitle.includes('klaim')) {
-      const cId = item.reference_id;
-      return cId ? `/admin/claims?claimId=${cId}` : (target || '/admin/claims');
-    }
-
-    // Check if it relates to an invoice / payment
-    if (itemType === 'invoice' || itemTitle.includes('invoice') || itemTitle.includes('bayar')) {
-      if (bId) {
-        return `/admin/invoices?bookingId=${bId}`;
-      }
-      return target || '/admin/invoices';
-    }
-
-    // Check if it relates to inventory
-    if (itemType === 'inventory' || itemTitle.includes('stok') || itemTitle.includes('inventory')) {
-      return '/admin/inventory';
     }
 
     return target || null;

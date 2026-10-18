@@ -573,6 +573,15 @@ async function assignTechnician(id, teknisiId, actor) {
       'INSERT INTO booking_audit (booking_id, aksi, detail, oleh) VALUES ($1,$2,$3,$4)',
       [id, 'assign_technician', JSON.stringify({ dari: b.teknisi_id, ke: teknisiId, nama: t.nama }), actor.label],
     );
+    await notify(client, {
+      role: 'technician',
+      id: teknisiId,
+      title: 'Tugas Servis Baru',
+      message: `Anda ditugaskan pada booking ${b.kode_booking} (${formatWib(b.jadwal_mulai)}).`,
+      type: 'booking',
+      bookingId: id,
+      tautan: `/technician/jobs/${id}`,
+    });
     return (await client.query(`${BOOKING_SELECT} WHERE b.id = $1`, [id])).rows.map(mapBooking)[0];
   });
 }

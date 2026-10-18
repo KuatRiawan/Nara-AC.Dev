@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nara-ac-offline-v3';
+const CACHE_NAME = 'nara-ac-offline-v4';
 const OFFLINE_URL = '/offline.html';
 
 const ASSETS_TO_CACHE = [
@@ -45,6 +45,9 @@ self.addEventListener('fetch', (event) => {
   // Skip chrome-extension requests or non-http
   if (!url.protocol.startsWith('http')) return;
 
+  // Let all API and uploaded file requests pass through without service worker interception
+  if (url.pathname.startsWith('/api/') || url.pathname.includes('/proof-file/')) return;
+
   // For HTML navigation requests (pages)
   if (event.request.mode === 'navigate') {
     event.respondWith(
@@ -79,8 +82,8 @@ self.addEventListener('fetch', (event) => {
     fetch(event.request).catch(async () => {
       const match = await caches.match(event.request);
       if (match) return match;
-      // If an image fails offline, return cached logo if applicable
-      if (event.request.destination === 'image') {
+      // If a static image fails offline, return cached logo if applicable (never for API uploads)
+      if (event.request.destination === 'image' && !url.pathname.includes('/api/')) {
         return caches.match('/images/logo.png');
       }
       return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });

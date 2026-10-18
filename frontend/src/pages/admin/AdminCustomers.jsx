@@ -128,7 +128,7 @@ export default function AdminCustomers() {
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/admin/customers?q=${encodeURIComponent(search.trim())}`);
+      const res = await api.get(`/admin/customers?limit=1000&q=${encodeURIComponent(search.trim())}`);
       const raw = res?.data?.data || res?.data || res;
       const list = Array.isArray(raw) ? raw : (raw?.data && Array.isArray(raw.data) ? raw.data : []);
       setCustomers(list);

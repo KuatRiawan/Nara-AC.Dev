@@ -79,6 +79,29 @@ class TestGovernedDataSciencePipeline(unittest.TestCase):
         p = json.loads(prof.read_text(encoding="utf-8"))
         self.assertEqual(len(p.get("datasets", {})), 4)
 
+    def test_10_model_comparisons_present(self):
+        pred_file = OUT_DIR / "predictions.json"
+        self.assertTrue(pred_file.exists())
+        data = json.loads(pred_file.read_text(encoding="utf-8"))
+        comps = data.get("model_comparisons", [])
+        self.assertGreaterEqual(len(comps), 2)
+        for m in comps:
+            self.assertIn("model_name", m)
+            self.assertIn("MAE", m)
+            self.assertIn("RMSE", m)
+            self.assertIn("WAPE", m)
+
+    def test_11_model_limitations_and_split_info_present(self):
+        pred_file = OUT_DIR / "predictions.json"
+        data = json.loads(pred_file.read_text(encoding="utf-8"))
+        self.assertIn("model_limitations", data)
+        self.assertTrue(len(data["model_limitations"]) > 20)
+        split_info = data.get("split_info", {})
+        self.assertIn("train_period", split_info)
+        self.assertIn("test_period", split_info)
+        self.assertIn("prevention_data_leakage", split_info)
+
 
 if __name__ == "__main__":
     unittest.main()
+

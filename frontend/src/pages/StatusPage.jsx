@@ -82,7 +82,6 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
   const [isSchemeModalOpen, setIsSchemeModalOpen] = useState(false);
   const [proofFile, setProofFile] = useState(null);
   const [proofPreviewUrl, setProofPreviewUrl] = useState('');
-  const [proofUrl, setProofUrl] = useState('');
   const [proofNominal, setProofNominal] = useState('');
   const [proofCatatan, setProofCatatan] = useState('');
   const [proofError, setProofError] = useState('');
@@ -205,13 +204,45 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
 
   useEffect(() => {
     if (!booking?.kode_booking) return undefined;
-    const activeStatuses = ['scheduled', 'rescheduled', 'on process', 'delayed'];
-    if (!activeStatuses.includes((booking.status || '').toLowerCase())) return undefined;
+
+    const isTerminal = ['completed', 'cancelled', 'selesai', 'dibatalkan'].includes(
+      (booking.status || '').toLowerCase()
+    );
+    // Realtime background sync: 4s for active tickets, 12s for terminal tickets
+    const pollInterval = isTerminal ? 12000 : 4000;
 
     const timer = window.setInterval(() => {
       fetchStatus(booking.kode_booking, true);
-    }, 20000);
-    return () => window.clearInterval(timer);
+    }, pollInterval);
+
+    const handleSync = () => {
+      fetchStatus(booking.kode_booking, true);
+    };
+
+    const handleStorage = (e) => {
+      if (e.key === 'nara_booking_sync_timestamp' || e.key === 'nara_ops_updated') {
+        fetchStatus(booking.kode_booking, true);
+      }
+    };
+
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        fetchStatus(booking.kode_booking, true);
+      }
+    };
+
+    window.addEventListener('nara-booking-updated', handleSync);
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('focus', handleSync);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('nara-booking-updated', handleSync);
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('focus', handleSync);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [booking?.kode_booking, booking?.status, fetchStatus]);
 
   useEffect(() => {
@@ -558,8 +589,8 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
     if (proofSubmittingRef.current || isSubmittingProof) return;
     setProofError('');
 
-    if (!proofFile && !proofUrl.trim()) {
-      setProofError('Silakan pilih foto bukti transfer atau masukkan tautan bukti pembayaran.');
+    if (!proofFile) {
+      setProofError('Silakan pilih foto bukti transfer struk atau tangkapan layar m-banking.');
       return;
     }
     const nominalNum = Number(proofNominal);
@@ -574,28 +605,17 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
     proofSubmittingRef.current = true;
     setIsSubmittingProof(true);
     try {
-      let res;
-      if (proofFile) {
-        const fd = new FormData();
-        fd.append('foto', proofFile);
-        fd.append('nominal', String(nominalNum));
-        if (proofCatatan.trim()) fd.append('catatan', proofCatatan.trim());
-        if (phone) fd.append('kontak', phone);
-        res = await api.post(`/payments/bookings/${booking.id}/proof`, fd);
-      } else {
-        res = await api.post(`/payments/bookings/${booking.id}/proof`, {
-          bukti_url: proofUrl.trim(),
-          nominal: nominalNum,
-          catatan: proofCatatan.trim(),
-          kontak: phone || undefined,
-        });
-      }
+      const fd = new FormData();
+      fd.append('foto', proofFile);
+      fd.append('nominal', String(nominalNum));
+      if (proofCatatan.trim()) fd.append('catatan', proofCatatan.trim());
+      if (phone) fd.append('kontak', phone);
+      const res = await api.post(`/payments/bookings/${booking.id}/proof`, fd);
       showSuccess(res?.message || res?.data?.message || 'Bukti pembayaran berhasil diunggah dan menunggu verifikasi manual admin.');
       setIsProofModalOpen(false);
       setProofFile(null);
       if (proofPreviewUrl) URL.revokeObjectURL(proofPreviewUrl);
       setProofPreviewUrl('');
-      setProofUrl('');
       setProofCatatan('');
       fetchStatus(booking.kode_booking, false);
     } catch (err) {
@@ -1021,17 +1041,6 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
                     {statusInfo.icon && React.createElement(statusInfo.icon, { className: 'w-3.5 h-3.5' })}
                     <span>{statusInfo.label}</span>
                   </span>
-
-                  <button
-                    type="button"
-                    onClick={() => fetchStatus(booking.kode_booking, true)}
-                    disabled={refreshing}
-                    title="Segarkan status terbaru dari server"
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-600 cursor-pointer"
-                  >
-                    <RefreshCw className={cn('w-3.5 h-3.5 text-blue-600', refreshing && 'animate-spin')} />
-                    <span className="hidden sm:inline">Segarkan</span>
-                  </button>
                 </div>
               </div>
 
@@ -2224,19 +2233,6 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
                   </label>
                 </div>
 
-                <div>
-                  <label htmlFor="proof-url" className="font-bold text-slate-600 block mb-1">
-                    Atau Tautan Referensi Bukti (Opsional jika sudah unggah foto)
-                  </label>
-                  <Input
-                    id="proof-url"
-                    type="url"
-                    value={proofUrl}
-                    onChange={(e) => setProofUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="h-10 text-xs font-mono"
-                  />
-                </div>
 
                 <div>
                   <label htmlFor="proof-nominal" className="font-bold text-slate-700 block mb-1">

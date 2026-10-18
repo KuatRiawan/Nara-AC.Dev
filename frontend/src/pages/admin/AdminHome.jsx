@@ -6,8 +6,8 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 import { cn } from '../../lib/utils';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Wrench, Calendar as CalendarIcon, AlertTriangle, CheckCircle, CheckCircle2, Clock, ArrowRight, X, Receipt, CreditCard, ShieldCheck, Search, Plus } from 'lucide-react';
+import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Wrench, Calendar as CalendarIcon, AlertTriangle, CheckCircle, CheckCircle2, Clock, ArrowRight, X, Receipt, CreditCard, ShieldCheck, Search, Plus, BarChart3, TrendingUp, Users, DollarSign, Award, Layers, ChevronDown } from 'lucide-react';
 import AdminCreateBookingModal from '../../components/admin/AdminCreateBookingModal';
 
 export default function AdminHome({ bookings = [], technicians = [], loading = false, handleStatus: _handleStatus, handleAssign, isAdmin: _isAdmin, onBookingCreated }) {
@@ -23,6 +23,9 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
   const [trendPeriod, setTrendPeriod] = useState('7d'); // '7d' | '30d' | '90d' | '1y'
   const [apiTrendData, setApiTrendData] = useState(null);
   const [loadingTrends, setLoadingTrends] = useState(false);
+  const [activeChartTab, setActiveChartTab] = useState('tren_booking'); // 'tren_booking' | 'top_customers' | 'top_services' | 'monthly_revenue' | 'top_technicians' | 'monthly_bookings'
+  const [dashboardAnalytics, setDashboardAnalytics] = useState(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
 
   const getLocalDateStr = (d = new Date()) => {
     const year = d.getFullYear();
@@ -149,6 +152,13 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
       .filter(b => (!getAssignedTechnician(b) && b.status === 'scheduled') || b.status === 'delayed')
       .sort((a, b) => new Date(a.jadwal_mulai).getTime() - new Date(b.jadwal_mulai).getTime());
   }, [todayBookings, getAssignedTechnician]);
+
+  // Otomatis arahkan ke tab upcoming jika hari ini kosong tetapi ada antrean booking mendatang
+  useEffect(() => {
+    if (todayPending.length === 0 && upcomingPending.length > 0) {
+      setActionTab('upcoming');
+    }
+  }, [todayPending.length, upcomingPending.length]);
 
   const actionRequired = useMemo(() => {
     return actionTab === 'today' ? todayPending : upcomingPending;
@@ -283,15 +293,36 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
     }
   }, []);
 
-  useEffect(() => {
-    fetchTrends(trendPeriod);
-  }, [trendPeriod, fetchTrends]);
+  const fetchDashboardAnalytics = useCallback(async (period = '7d') => {
+    try {
+      setLoadingAnalytics(true);
+      const res = await api.get('/analytics/dashboard-views', {
+        params: { period }
+      });
+      const data = res?.data?.data || res?.data || res;
+      if (data) {
+        setDashboardAnalytics(data);
+      }
+    } catch (err) {
+      console.warn('Gagal memuat analitik dashboard:', err);
+    } finally {
+      setLoadingAnalytics(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const handleUpdate = () => fetchTrends(trendPeriod);
+    fetchTrends(trendPeriod);
+    fetchDashboardAnalytics(trendPeriod);
+  }, [trendPeriod, fetchTrends, fetchDashboardAnalytics]);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      fetchTrends(trendPeriod);
+      fetchDashboardAnalytics(trendPeriod);
+    };
     window.addEventListener('nara-booking-updated', handleUpdate);
     return () => window.removeEventListener('nara-booking-updated', handleUpdate);
-  }, [trendPeriod, fetchTrends]);
+  }, [trendPeriod, fetchTrends, fetchDashboardAnalytics]);
 
   const periodOptions = useMemo(() => [
     { key: '7d', label: '7 Hari', subtitle: 'Performa operasional 7 hari kalender terakhir' },
@@ -326,6 +357,108 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
     }
     return trendData;
   }, [apiTrendData, trendData]);
+
+  const topCustomersData = useMemo(() => {
+    const list = dashboardAnalytics?.topCustomers || [];
+    return list.map(c => {
+      let displayName = c.nama || '';
+      displayName = displayName.replace(/\(CUST-\d+\)/, '').replace('Bpk/Ibu ', '').trim();
+      if (displayName.length > 15) displayName = displayName.slice(0, 13) + '...';
+      return {
+        name: displayName,
+        fullName: c.nama,
+        kode: c.kode_pelanggan || '-',
+        total: c.total_transaksi || 0,
+        belanja: c.total_belanja || 0,
+        segmen: c.segmen_rfm || 'Reguler'
+      };
+    });
+  }, [dashboardAnalytics]);
+
+  const topServicesData = useMemo(() => {
+    const list = dashboardAnalytics?.topServices || [];
+    return list.map(s => {
+      let displayName = s.nama || '';
+      if (displayName.length > 18) displayName = displayName.slice(0, 16) + '...';
+      return {
+        name: displayName,
+        fullName: s.nama,
+        total: s.total_pesanan || 0,
+        revenue: s.total_revenue || 0,
+        kategori: s.kategori || 'Servis'
+      };
+    });
+  }, [dashboardAnalytics]);
+
+  const monthlyRevenueData = useMemo(() => {
+    const list = dashboardAnalytics?.monthlyRevenue || [];
+    return list.map(m => ({
+      date: m.bulan_label || m.periode,
+      revenue: m.revenue || 0,
+      total: m.total_transaksi || 0
+    }));
+  }, [dashboardAnalytics]);
+
+  const topTechniciansData = useMemo(() => {
+    const list = dashboardAnalytics?.topTechnicians || [];
+    return list.map(t => ({
+      name: t.nama || 'Teknisi',
+      fullName: t.nama || 'Teknisi',
+      selesai: t.selesai || 0,
+      total_tugas: t.total_tugas || 0,
+      kontak: t.kontak || '-'
+    }));
+  }, [dashboardAnalytics]);
+
+  const monthlyBookingsData = useMemo(() => {
+    const list = dashboardAnalytics?.monthlyBookings || [];
+    return list.map(m => ({
+      date: m.bulan_label || m.periode,
+      total: m.total_booking || 0,
+      selesai: m.selesai || 0,
+      aktif: m.aktif || 0,
+      batal: m.batal || 0
+    }));
+  }, [dashboardAnalytics]);
+
+  const chartViewConfigs = useMemo(() => ({
+    tren_booking: {
+      title: 'Tren Kunjungan Servis & Penyelesaian',
+      subtitle: currentPeriodConfig.subtitle,
+      badge: 'Operasional Harian',
+      badgeColor: 'bg-blue-50 text-blue-700 border-blue-200'
+    },
+    top_customers: {
+      title: 'Top 10 Transaksi Customer Terbanyak',
+      subtitle: `Peringkat 10 pelanggan teratas berdasarkan jumlah order & belanja (${currentPeriodConfig.label})`,
+      badge: 'Analisis Pelanggan',
+      badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200'
+    },
+    top_services: {
+      title: 'Top 10 Layanan Servis Terbanyak',
+      subtitle: `Paket servis AC paling banyak dipesan pelanggan (${currentPeriodConfig.label})`,
+      badge: 'Layanan Terfavorit',
+      badgeColor: 'bg-sky-50 text-sky-700 border-sky-200'
+    },
+    monthly_revenue: {
+      title: 'Tren Revenue / Pendapatan',
+      subtitle: `Akumulasi omset pendapatan servis AC riil yang telah selesai & terbayar (${currentPeriodConfig.label})`,
+      badge: 'Keuangan & Omset',
+      badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    },
+    top_technicians: {
+      title: 'Top 10 Teknisi dengan Pengerjaan Terbanyak',
+      subtitle: `Penyelesaian order kerja servis AC oleh tim teknisi lapangan (${currentPeriodConfig.label})`,
+      badge: 'Produktivitas Teknisi',
+      badgeColor: 'bg-purple-50 text-purple-700 border-purple-200'
+    },
+    monthly_bookings: {
+      title: 'Booking Terjadwal Customer',
+      subtitle: `Historis tren volume order servis yang dijadwalkan (${currentPeriodConfig.label})`,
+      badge: 'Tren Periode',
+      badgeColor: 'bg-amber-50 text-amber-700 border-amber-200'
+    }
+  }), [currentPeriodConfig]);
 
   const techWorkload = useMemo(() => {
     const workload = {};
@@ -423,7 +556,11 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
               {bookingStats.todayBookings} <span className="text-xs font-semibold text-slate-500">Tiket</span>
             </p>
             <p className="text-xs text-slate-500 font-medium mt-1">
-              Jadwal servis terdaftar
+              {bookingStats.todayBookings > 0 
+                ? "Jadwal servis hari ini" 
+                : (upcomingPending.length > 0 
+                    ? `0 hari ini • ${upcomingPending.length} terjadwal besok` 
+                    : "Jadwal servis terdaftar")}
             </p>
           </div>
         </div>
@@ -469,24 +606,43 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
         </div>
 
         <div 
-          onClick={() => setFilterTodayStatus('unassigned')}
+          onClick={() => {
+            if (bookingStats.pendingAssign > 0) {
+              setFilterTodayStatus('unassigned');
+              setActionTab('today');
+              const el = document.getElementById('action-center-section');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            } else if (upcomingPending.length > 0) {
+              setActionTab('upcoming');
+              const el = document.getElementById('action-center-section');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            } else {
+              navigate('/admin/bookings');
+            }
+          }}
           className={cn(
             "p-5 rounded-3xl border shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between bg-white",
             bookingStats.pendingAssign > 0 
               ? "border-rose-300 ring-1 ring-rose-200" 
-              : "border-slate-200/80"
+              : (upcomingPending.length > 0 
+                  ? "border-amber-300 ring-1 ring-amber-200" 
+                  : "border-slate-200/80")
           )}
         >
           <div className="flex justify-between items-start mb-3">
             <span className={cn(
               "text-xs font-bold uppercase tracking-wider",
-              bookingStats.pendingAssign > 0 ? "text-rose-600" : "text-slate-500"
+              bookingStats.pendingAssign > 0 
+                ? "text-rose-600" 
+                : (upcomingPending.length > 0 ? "text-amber-600" : "text-slate-500")
             )}>
               Belum Ditugaskan
             </span>
             <div className={cn(
               "w-10 h-10 rounded-2xl flex items-center justify-center font-bold transition-colors",
-              bookingStats.pendingAssign > 0 ? "bg-rose-100 text-rose-600" : "bg-slate-100 text-slate-500"
+              bookingStats.pendingAssign > 0 
+                ? "bg-rose-100 text-rose-600" 
+                : (upcomingPending.length > 0 ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500")
             )}>
               <AlertTriangle className="w-4 h-4" />
             </div>
@@ -494,12 +650,18 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
           <div>
             <p className={cn(
               "text-2xl sm:text-3xl font-black tracking-tight",
-              bookingStats.pendingAssign > 0 ? "text-rose-600" : "text-slate-900"
+              bookingStats.pendingAssign > 0 
+                ? "text-rose-600" 
+                : (upcomingPending.length > 0 ? "text-amber-700" : "text-slate-900")
             )}>
-              {bookingStats.pendingAssign} <span className="text-xs font-semibold text-slate-500">Tiket</span>
+              {bookingStats.pendingAssign + upcomingPending.length} <span className="text-xs font-semibold text-slate-500">Tiket</span>
             </p>
             <p className="text-xs text-slate-500 font-medium mt-1">
-              {bookingStats.pendingAssign > 0 ? "Memerlukan alokasi!" : "Semua tiket bertugas"}
+              {bookingStats.pendingAssign > 0 
+                ? `${bookingStats.pendingAssign} tiket hari ini perlu teknisi!` 
+                : (upcomingPending.length > 0 
+                    ? `${upcomingPending.length} tiket jadwal mendatang perlu alokasi` 
+                    : "Semua tiket bertugas")}
             </p>
           </div>
         </div>
@@ -530,18 +692,44 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
         
         <div className="lg:col-span-7 bg-white p-5 sm:p-7 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between min-w-0">
           <div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-              <div>
-                <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-                  Tren Kunjungan Servis & Penyelesaian
-                </h2>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  {currentPeriodConfig.subtitle}
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
+              <div className="flex-1 min-w-0 sm:pr-4">
+                <div className="flex items-center gap-2.5 flex-wrap mb-1">
+                  <h2 className="text-base sm:text-xl font-black text-slate-900 tracking-tight leading-snug">
+                    {chartViewConfigs[activeChartTab]?.title || 'Tren Kunjungan Servis'}
+                  </h2>
+                  <span className={cn(
+                    "text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full border",
+                    chartViewConfigs[activeChartTab]?.badgeColor || "bg-blue-50 text-blue-700 border-blue-200"
+                  )}>
+                    {chartViewConfigs[activeChartTab]?.badge}
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed">
+                  {chartViewConfigs[activeChartTab]?.subtitle}
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                <div className="inline-flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200/80">
+              <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
+                {/* Dropdown Pemilih Tampilan Grafik (Tanpa Penomoran & Tanpa Emoji) */}
+                <div className="relative inline-flex items-center w-full sm:w-auto">
+                  <select
+                    value={activeChartTab}
+                    onChange={(e) => setActiveChartTab(e.target.value)}
+                    className="appearance-none bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-800 text-xs sm:text-sm font-bold py-2 pl-3.5 pr-9 rounded-2xl shadow-xs transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer min-w-[220px]"
+                  >
+                    <option value="tren_booking">Tren Booking (Default)</option>
+                    <option value="top_customers">Top 10 Transaksi Customer</option>
+                    <option value="top_services">Top 10 Layanan Terbanyak</option>
+                    <option value="monthly_revenue">Revenue per Periode</option>
+                    <option value="top_technicians">Top 10 Teknisi Terbanyak</option>
+                    <option value="monthly_bookings">Booking Terjadwal per Periode</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 pointer-events-none" />
+                </div>
+
+                {/* Filter Waktu: 7 Hari, 1 Bulan, 3 Bulan, 1 Tahun (Di bawah Dropdown) */}
+                <div className="inline-flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200/80 shadow-2xs">
                   {periodOptions.map((opt) => {
                     const isActive = trendPeriod === opt.key;
                     return (
@@ -561,79 +749,398 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
                     );
                   })}
                 </div>
-
-                <div className="flex items-center gap-3 text-xs font-bold text-slate-600 pl-1">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
-                    <span>Total</span>
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                    <span>Selesai</span>
-                  </span>
-                </div>
               </div>
             </div>
 
-            <div className={cn("h-[250px] sm:h-[270px] w-full min-w-0 transition-opacity duration-200", loadingTrends ? "opacity-60" : "opacity-100")}>
+            {/* Sub-bar indikator periode & legend grafis */}
+            <div className="flex items-center justify-between text-xs pb-2 mb-2 border-b border-slate-100">
+              <span className="text-[11px] font-medium text-slate-400">
+                Periode data: <strong className="text-slate-700">{currentPeriodConfig.label}</strong>
+              </span>
+              <div className="flex items-center gap-3">
+                {activeChartTab === 'tren_booking' && (
+                  <>
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+                      <span>Total</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                      <span>Selesai</span>
+                    </span>
+                  </>
+                )}
+                {activeChartTab === 'top_customers' && (
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-indigo-700">
+                    <Users className="w-3.5 h-3.5" />
+                    <span>Total Transaksi & Belanja</span>
+                  </span>
+                )}
+                {activeChartTab === 'top_services' && (
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-sky-700">
+                    <Wrench className="w-3.5 h-3.5" />
+                    <span>Total Pesanan Layanan</span>
+                  </span>
+                )}
+                {activeChartTab === 'monthly_revenue' && (
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-700">
+                    <DollarSign className="w-3.5 h-3.5" />
+                    <span>Akumulasi Omset Selesai (IDR)</span>
+                  </span>
+                )}
+                {activeChartTab === 'top_technicians' && (
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-purple-700">
+                    <Award className="w-3.5 h-3.5" />
+                    <span>Pengerjaan Selesai</span>
+                  </span>
+                )}
+                {activeChartTab === 'monthly_bookings' && (
+                  <>
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                      <span>Total Booking</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                      <span>Selesai</span>
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className={cn("h-[250px] sm:h-[270px] w-full min-w-0 transition-opacity duration-200", (loadingTrends || loadingAnalytics) ? "opacity-60" : "opacity-100")}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={activeTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="naraTotalGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.25}/>
-                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0}/>
-                    </linearGradient>
-                    <linearGradient id="naraDoneGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.25}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis 
-                    dataKey="date" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} 
-                    dy={10} 
-                  />
-                  <YAxis 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} 
-                    dx={-10} 
-                  />
-                  <RTooltip 
-                    contentStyle={{ 
-                      borderRadius: '16px', 
-                      border: '1px solid #e2e8f0', 
-                      boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', 
-                      padding: '12px',
-                      fontSize: '12px',
-                      fontWeight: 700
-                    }} 
-                  />
-                  <Area 
-                    type="monotone" 
-                    name="Total Booking" 
-                    dataKey="total" 
-                    stroke="#2563eb" 
-                    strokeWidth={3} 
-                    fillOpacity={1} 
-                    fill="url(#naraTotalGrad)" 
-                    dot={{ r: 4, fill: '#2563eb', strokeWidth: 2, stroke: '#fff' }} 
-                    activeDot={{ r: 6 }} 
-                  />
-                  <Area 
-                    type="monotone" 
-                    name="Selesai" 
-                    dataKey="selesai" 
-                    stroke="#10b981" 
-                    strokeWidth={3} 
-                    fillOpacity={1} 
-                    fill="url(#naraDoneGrad)" 
-                    dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} 
-                  />
-                </AreaChart>
+                {activeChartTab === 'tren_booking' && (
+                  <AreaChart data={activeTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="naraTotalGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.25}/>
+                        <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0}/>
+                      </linearGradient>
+                      <linearGradient id="naraDoneGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.25}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis 
+                      dataKey="date" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} 
+                      dy={10} 
+                    />
+                    <YAxis 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} 
+                      dx={-10} 
+                    />
+                    <RTooltip 
+                      contentStyle={{ 
+                        borderRadius: '16px', 
+                        border: '1px solid #e2e8f0', 
+                        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', 
+                        padding: '12px',
+                        fontSize: '12px',
+                        fontWeight: 700
+                      }} 
+                    />
+                    <Area 
+                      type="monotone" 
+                      name="Total Booking" 
+                      dataKey="total" 
+                      stroke="#2563eb" 
+                      strokeWidth={3} 
+                      fillOpacity={1} 
+                      fill="url(#naraTotalGrad)" 
+                      dot={{ r: 4, fill: '#2563eb', strokeWidth: 2, stroke: '#fff' }} 
+                      activeDot={{ r: 6 }} 
+                    />
+                    <Area 
+                      type="monotone" 
+                      name="Selesai" 
+                      dataKey="selesai" 
+                      stroke="#10b981" 
+                      strokeWidth={3} 
+                      fillOpacity={1} 
+                      fill="url(#naraDoneGrad)" 
+                      dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} 
+                    />
+                  </AreaChart>
+                )}
+
+                {activeChartTab === 'top_customers' && (
+                  <BarChart data={topCustomersData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis 
+                      dataKey="name" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }} 
+                      interval={0}
+                      angle={-25}
+                      textAnchor="end"
+                      height={40}
+                    />
+                    <YAxis 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} 
+                      dx={-10} 
+                    />
+                    <RTooltip 
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+                        const d = payload[0].payload;
+                        return (
+                          <div className="bg-white p-3 rounded-2xl shadow-xl border border-slate-200 text-xs min-w-[200px]">
+                            <p className="font-bold text-slate-900 text-sm">{d.fullName}</p>
+                            <p className="text-slate-500 font-medium text-[11px] mb-2">
+                              ID: {d.kode} • Segmen: <span className="font-semibold text-blue-600">{d.segmen}</span>
+                            </p>
+                            <div className="space-y-1.5 pt-1.5 border-t border-slate-100 font-medium">
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-600">Total Transaksi:</span>
+                                <span className="font-bold text-blue-600">{d.total} order</span>
+                              </div>
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-600">Akumulasi Belanja:</span>
+                                <span className="font-bold text-emerald-600">Rp {Number(d.belanja || 0).toLocaleString('id-ID')}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }}
+                    />
+                    <Bar dataKey="total" name="Total Transaksi" fill="#4f46e5" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                )}
+
+                {activeChartTab === 'top_services' && (
+                  <BarChart data={topServicesData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis 
+                      dataKey="name" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }} 
+                      interval={0}
+                      angle={-25}
+                      textAnchor="end"
+                      height={40}
+                    />
+                    <YAxis 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} 
+                      dx={-10} 
+                    />
+                    <RTooltip 
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+                        const d = payload[0].payload;
+                        return (
+                          <div className="bg-white p-3 rounded-2xl shadow-xl border border-slate-200 text-xs min-w-[200px]">
+                            <p className="font-bold text-slate-900 text-sm">{d.fullName}</p>
+                            <p className="text-slate-500 font-medium text-[11px] mb-2">
+                              Kategori: <span className="font-semibold text-sky-600">{d.kategori}</span>
+                            </p>
+                            <div className="space-y-1.5 pt-1.5 border-t border-slate-100 font-medium">
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-600">Total Pesanan:</span>
+                                <span className="font-bold text-sky-600">{d.total} pengerjaan</span>
+                              </div>
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-600">Total Revenue:</span>
+                                <span className="font-bold text-emerald-600">Rp {Number(d.revenue || 0).toLocaleString('id-ID')}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }}
+                    />
+                    <Bar dataKey="total" name="Total Pesanan" fill="#0284c7" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                )}
+
+                {activeChartTab === 'monthly_revenue' && (
+                  <AreaChart data={monthlyRevenueData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="naraRevGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis 
+                      dataKey="date" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} 
+                      dy={10} 
+                    />
+                    <YAxis 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }} 
+                      tickFormatter={(val) => `Rp ${(val / 1000000).toFixed(0)}Jt`}
+                      dx={-5} 
+                    />
+                    <RTooltip 
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+                        const d = payload[0].payload;
+                        return (
+                          <div className="bg-white p-3 rounded-2xl shadow-xl border border-slate-200 text-xs min-w-[200px]">
+                            <p className="font-bold text-slate-900 text-sm">{d.date}</p>
+                            <div className="space-y-1.5 mt-2 pt-1.5 border-t border-slate-100 font-medium">
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-600">Total Revenue:</span>
+                                <span className="font-bold text-emerald-600">Rp {Number(d.revenue || 0).toLocaleString('id-ID')}</span>
+                              </div>
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-600">Order Selesai:</span>
+                                <span className="font-bold text-slate-800">{d.total} transaksi</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      name="Revenue" 
+                      dataKey="revenue" 
+                      stroke="#10b981" 
+                      strokeWidth={3} 
+                      fillOpacity={1} 
+                      fill="url(#naraRevGrad)" 
+                      dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} 
+                      activeDot={{ r: 6 }} 
+                    />
+                  </AreaChart>
+                )}
+
+                {activeChartTab === 'top_technicians' && (
+                  <BarChart data={topTechniciansData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis 
+                      dataKey="name" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} 
+                      dy={10} 
+                    />
+                    <YAxis 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} 
+                      dx={-10} 
+                    />
+                    <RTooltip 
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+                        const d = payload[0].payload;
+                        return (
+                          <div className="bg-white p-3 rounded-2xl shadow-xl border border-slate-200 text-xs min-w-[200px]">
+                            <p className="font-bold text-slate-900 text-sm">{d.fullName}</p>
+                            <p className="text-slate-500 font-medium text-[11px] mb-2">Kontak: {d.kontak}</p>
+                            <div className="space-y-1.5 pt-1.5 border-t border-slate-100 font-medium">
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-600">Servis Selesai:</span>
+                                <span className="font-bold text-purple-600">{d.selesai} pengerjaan</span>
+                              </div>
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-600">Total Penugasan:</span>
+                                <span className="font-bold text-slate-800">{d.total_tugas} tiket</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }}
+                    />
+                    <Bar dataKey="selesai" name="Servis Selesai" fill="#8b5cf6" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                )}
+
+                {activeChartTab === 'monthly_bookings' && (
+                  <AreaChart data={monthlyBookingsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="naraBookGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.25}/>
+                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0}/>
+                      </linearGradient>
+                      <linearGradient id="naraDoneMonthGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.25}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis 
+                      dataKey="date" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} 
+                      dy={10} 
+                    />
+                    <YAxis 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} 
+                      dx={-10} 
+                    />
+                    <RTooltip 
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+                        const d = payload[0].payload;
+                        return (
+                          <div className="bg-white p-3 rounded-2xl shadow-xl border border-slate-200 text-xs min-w-[200px]">
+                            <p className="font-bold text-slate-900 text-sm">{d.date}</p>
+                            <div className="space-y-1.5 mt-2 pt-1.5 border-t border-slate-100 font-medium">
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-600">Total Terjadwal:</span>
+                                <span className="font-bold text-amber-600">{d.total} booking</span>
+                              </div>
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-600">Selesai Beres:</span>
+                                <span className="font-bold text-emerald-600">{d.selesai} order</span>
+                              </div>
+                              {d.aktif > 0 && (
+                                <div className="flex justify-between gap-4">
+                                  <span className="text-slate-600">Masih Berjalan:</span>
+                                  <span className="font-bold text-blue-600">{d.aktif} order</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      name="Total Booking" 
+                      dataKey="total" 
+                      stroke="#f59e0b" 
+                      strokeWidth={3} 
+                      fillOpacity={1} 
+                      fill="url(#naraBookGrad)" 
+                      dot={{ r: 4, fill: '#f59e0b', strokeWidth: 2, stroke: '#fff' }} 
+                      activeDot={{ r: 6 }} 
+                    />
+                    <Area 
+                      type="monotone" 
+                      name="Selesai" 
+                      dataKey="selesai" 
+                      stroke="#10b981" 
+                      strokeWidth={3} 
+                      fillOpacity={1} 
+                      fill="url(#naraDoneMonthGrad)" 
+                      dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} 
+                    />
+                  </AreaChart>
+                )}
               </ResponsiveContainer>
             </div>
           </div>
@@ -776,15 +1283,17 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
           </div>
         </div>
 
-        <div className="lg:col-span-7 bg-white p-5 sm:p-7 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between min-w-0">
+        <div id="action-center-section" className="lg:col-span-7 bg-white p-5 sm:p-7 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between min-w-0 scroll-mt-20">
           <div>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2.5">
                 <div className={cn(
                   "p-2 rounded-xl",
-                  todayPending.length > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"
+                  todayPending.length > 0 
+                    ? "bg-rose-50 text-rose-600" 
+                    : (upcomingPending.length > 0 ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600")
                 )}>
-                  {todayPending.length > 0 ? <AlertTriangle className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+                  {todayPending.length > 0 || upcomingPending.length > 0 ? <AlertTriangle className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
                 </div>
                 <div>
                   <h3 className="font-black text-slate-900 text-base">Pusat Tindakan & Perhatian</h3>
@@ -795,9 +1304,15 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
                 "text-xs font-mono font-bold px-2.5 py-0.5 rounded-full border",
                 todayPending.length > 0 
                   ? "bg-rose-50 text-rose-700 border-rose-200" 
-                  : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : (upcomingPending.length > 0
+                      ? "bg-amber-50 text-amber-700 border-amber-200"
+                      : "bg-emerald-50 text-emerald-700 border-emerald-200")
               )}>
-                {todayPending.length > 0 ? `${todayPending.length} Hari Ini Perlu Alokasi` : 'Hari Ini Terkendali ✓'}
+                {todayPending.length > 0 
+                  ? `${todayPending.length} Hari Ini Perlu Alokasi` 
+                  : (upcomingPending.length > 0
+                      ? `${upcomingPending.length} Jadwal Mendatang Perlu Alokasi`
+                      : 'Hari Ini Terkendali ✓')}
               </Badge>
             </div>
 
@@ -1070,8 +1585,22 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
         ) : filteredTodayBookings.length === 0 ? (
           <div className="py-12 px-4 text-center">
             <CheckCircle2 className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-            <p className="text-sm font-bold text-slate-700">Tidak ada operasi yang sesuai filter.</p>
-            <p className="text-xs text-slate-500 mt-0.5">Semua data hari ini telah ditampilkan atau filter belum menemukan hasil.</p>
+            <p className="text-sm font-bold text-slate-700">Tidak ada jadwal operasi untuk hari ini ({todayFormatted}).</p>
+            <p className="text-xs text-slate-500 mt-0.5">Operasional servis aktif sesuai jadwal pemesanan pelanggan.</p>
+            {upcomingPending.length > 0 && (
+              <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-2">
+                <span className="text-xs font-semibold text-slate-600">
+                  Ada {upcomingPending.length} booking menunggu alokasi teknisi untuk jadwal besok / mendatang:
+                </span>
+                <Button
+                  size="sm"
+                  onClick={() => navigate('/admin/bookings')}
+                  className="h-8 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs cursor-pointer"
+                >
+                  Buka Manajemen Booking ({upcomingPending.length} Tiket) →
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <>

@@ -278,6 +278,10 @@ export default function AdminSettings() {
         reminder_hour: Number(opsForm.reminder_hour)
       };
       await api.put('/settings/operating-hours', payload);
+      try {
+        localStorage.setItem('nara_ops_updated', Date.now().toString());
+        window.dispatchEvent(new CustomEvent('nara-ops-updated'));
+      } catch (_) {}
       showSuccess('Pengaturan jam & jadwal operasional servis berhasil disimpan.');
     } catch (err) {
       const msg = getErrorMessage(err, 'Gagal menyimpan jam operasional');

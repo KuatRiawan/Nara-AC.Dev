@@ -3,10 +3,13 @@
   "model_version": "nara-ds-v2.1-ridge-ts",
   "keterangan": "Prediksi permintaan servis AC harian (14 hari ke depan) menggunakan model Autoregressive Ridge Regression pada 527 hari data historis nyata CV. Nara Teknindotama (Mei 2025 – Oktober 2026).",
   "is_synthetic": false,
-  "dibuat_pada": "2026-10-17T22:54:10.548852",
+  "dibuat_pada": "2026-10-18T10:57:05.437020",
   "split_info": {
     "train_period": "2025-05-05 s/d 2026-07-31 (453 hari)",
-    "test_period": "2026-08-01 s/d 2026-10-13 (74 hari)"
+    "test_period": "2026-08-01 s/d 2026-10-13 (74 hari)",
+    "train_ratio": "86%",
+    "test_ratio": "14%",
+    "prevention_data_leakage": "Temporal chronological split: data uji sepenuhnya berada di masa depan relatif terhadap data latih, mencegah kebocoran informasi masa depan ke masa lalu."
   },
   "metrik": {
     "daily_order_MAE": 1.2885,
@@ -15,11 +18,44 @@
     "baseline_naive7d_MAE": 1.2606,
     "baseline_naive7d_RMSE": 1.5624,
     "baseline_naive7d_WAPE": 0.6523,
+    "ols_linear_MAE": 1.2759,
+    "ols_linear_RMSE": 1.5996,
+    "ols_linear_WAPE": 0.6603,
     "weekly_7d_sum_MAE": 5.0154,
     "weekly_7d_sum_RMSE": 5.7927,
     "weekly_7d_sum_WAPE": 0.3744,
     "weekly_7d_baseline_WAPE": 0.1581
   },
+  "model_comparisons": [
+    {
+      "model_name": "Baseline Moving Average 7-Day",
+      "type": "Heuristic Baseline",
+      "MAE": 1.2606,
+      "RMSE": 1.5624,
+      "WAPE": 0.6523,
+      "status": "Pembanding Heuristik",
+      "deskripsi": "Rata-rata bergulir 7 hari terakhir tanpa pembelajaran pola hari dalam seminggu."
+    },
+    {
+      "model_name": "Linear Regression (Ordinary Least Squares)",
+      "type": "Linear Model (No Regularization)",
+      "MAE": 1.2759,
+      "RMSE": 1.5996,
+      "WAPE": 0.6603,
+      "status": "Pembanding Linier",
+      "deskripsi": "Regresi linear multivariat standar tanpa penalti bobot L2."
+    },
+    {
+      "model_name": "Autoregressive Ridge Regression (alpha=10.0)",
+      "type": "Regularized Linear Model",
+      "MAE": 1.2885,
+      "RMSE": 1.6219,
+      "WAPE": 0.6668,
+      "status": "Terpilih (Best Model)",
+      "deskripsi": "Model dengan regularisasi L2 yang mereduksi multikolinieritas antar-lag dan siklus mingguan."
+    }
+  ],
+  "model_limitations": "Model deret waktu mengasumsikan pola musiman (seasonality) dan tren historis yang relatif stabil. Keterbatasan model muncul apabila terjadi peristiwa luar biasa di luar data latih (misal: gelombang panas ekstrem yang belum pernah tercatat, bencana alam gempa bumi, atau kebijakan pembatasan mobilitas sosial tak terduga). Dalam kondisi tersebut, model memerlukan penyesuaian manual oleh tim manajemen operasional NARA AC.",
   "prediksi": [
     {
       "periode": "2026-10-14",

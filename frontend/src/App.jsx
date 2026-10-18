@@ -81,6 +81,7 @@ function App() {
           <Route path="/technician/jobs" element={<TechnicianDashboard />} />
           <Route path="/technician/schedule" element={<TechnicianDashboard />} />
           <Route path="/technician/history" element={<TechnicianDashboard />} />
+          <Route path="/technician/notifications" element={<TechnicianDashboard />} />
           <Route path="/technician/profile" element={<TechnicianDashboard />} />
           <Route path="/technician/jobs/:id" element={<TechnicianJobDetail />} />
           <Route path="/customer" element={<Navigate to="/customer/dashboard" replace />} />

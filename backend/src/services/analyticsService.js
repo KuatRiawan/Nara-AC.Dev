@@ -354,4 +354,253 @@ async function trends(period = '7d', now = new Date()) {
   return result;
 }
 
-module.exports = { summary, latestPredictions, trends };
+async function dashboardAnalyticsCharts(period = '7d', now = new Date()) {
+  const p = ['7d', '30d', '90d', '1y'].includes(period) ? period : '7d';
+
+  let startDate;
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 59, 999);
+
+  if (p === '1y') {
+    const year = now.getFullYear();
+    startDate = new Date(Date.UTC(year, 0, 1, 0, 0, 0));
+  } else if (p === '90d') {
+    startDate = new Date(now.getTime() - 89 * 24 * 60 * 60 * 1000);
+    startDate.setHours(0, 0, 0, 0);
+  } else if (p === '30d') {
+    startDate = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000);
+    startDate.setHours(0, 0, 0, 0);
+  } else {
+    // 7d
+    startDate = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+    startDate.setHours(0, 0, 0, 0);
+  }
+
+  const topCustomersPromise = query(`
+    SELECT c.id, c.kode_pelanggan, c.nama, c.segmen_rfm,
+           COUNT(b.id)::int AS total_transaksi,
+           COALESCE(SUM(b.total_dibayar), 0)::float AS total_belanja
+    FROM customers c
+    JOIN bookings b ON b.customer_id = c.id AND b.status <> 'cancelled'
+    WHERE b.jadwal_mulai >= $1 AND b.jadwal_mulai <= $2
+    GROUP BY c.id
+    ORDER BY total_transaksi DESC, total_belanja DESC
+    LIMIT 10
+  `, [startDate, endOfToday]).then(r => r.rows);
+
+  const topServicesPromise = query(`
+    SELECT s.id, s.nama_layanan AS nama, s.kategori, s.harga::float,
+           COUNT(b.id)::int AS total_pesanan,
+           COALESCE(SUM(b.total_dibayar), 0)::float AS total_revenue
+    FROM service_catalog s
+    JOIN bookings b ON b.layanan_id = s.id AND b.status <> 'cancelled'
+    WHERE b.jadwal_mulai >= $1 AND b.jadwal_mulai <= $2
+    GROUP BY s.id
+    ORDER BY total_pesanan DESC, total_revenue DESC
+    LIMIT 10
+  `, [startDate, endOfToday]).then(r => r.rows);
+
+  const topTechniciansPromise = query(`
+    SELECT t.id, t.nama, t.kontak,
+           COUNT(b.id) FILTER (WHERE b.status = 'done')::int AS selesai,
+           COUNT(b.id) FILTER (WHERE b.status = 'on process')::int AS sedang_jalan,
+           COUNT(b.id) FILTER (WHERE b.status IN ('scheduled', 'rescheduled'))::int AS terjadwal,
+           COUNT(b.id) FILTER (WHERE b.status <> 'cancelled')::int AS total_tugas
+    FROM technicians t
+    JOIN bookings b ON b.teknisi_id = t.id AND b.status <> 'cancelled'
+    WHERE b.jadwal_mulai >= $1 AND b.jadwal_mulai <= $2
+    GROUP BY t.id
+    ORDER BY selesai DESC, total_tugas DESC
+    LIMIT 10
+  `, [startDate, endOfToday]).then(r => r.rows);
+
+  let revenuePromise;
+  let bookingsPromise;
+
+  if (p === '1y') {
+    const year = now.getFullYear();
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+    revenuePromise = query(`
+      SELECT to_char(date_trunc('month', jadwal_mulai AT TIME ZONE 'Asia/Jakarta'), 'MM') AS month_num,
+             COALESCE(SUM(total_dibayar), 0)::float AS revenue,
+             COUNT(*)::int AS total_transaksi
+      FROM bookings
+      WHERE (status = 'done' OR status_pembayaran = 'paid')
+        AND jadwal_mulai >= $1 AND jadwal_mulai <= $2
+      GROUP BY 1
+      ORDER BY 1
+    `, [startDate, endOfToday]).then(r => {
+      const revMap = new Map(r.rows.map(row => [row.month_num, row]));
+      return monthNames.map((name, idx) => {
+        const mStr = String(idx + 1).padStart(2, '0');
+        const found = revMap.get(mStr) || {};
+        return {
+          periode: `${year}-${mStr}`,
+          bulan_label: name,
+          revenue: found.revenue || 0,
+          total_transaksi: found.total_transaksi || 0,
+        };
+      });
+    });
+
+    bookingsPromise = query(`
+      SELECT to_char(date_trunc('month', jadwal_mulai AT TIME ZONE 'Asia/Jakarta'), 'MM') AS month_num,
+             COUNT(*)::int AS total_booking,
+             COUNT(*) FILTER (WHERE status = 'done')::int AS selesai,
+             COUNT(*) FILTER (WHERE status IN ('scheduled', 'rescheduled', 'on process'))::int AS aktif,
+             COUNT(*) FILTER (WHERE status = 'cancelled')::int AS batal
+      FROM bookings
+      WHERE jadwal_mulai >= $1 AND jadwal_mulai <= $2
+      GROUP BY 1
+      ORDER BY 1
+    `, [startDate, endOfToday]).then(r => {
+      const bookMap = new Map(r.rows.map(row => [row.month_num, row]));
+      return monthNames.map((name, idx) => {
+        const mStr = String(idx + 1).padStart(2, '0');
+        const found = bookMap.get(mStr) || {};
+        return {
+          periode: `${year}-${mStr}`,
+          bulan_label: name,
+          total_booking: found.total_booking || 0,
+          selesai: found.selesai || 0,
+          aktif: found.aktif || 0,
+          batal: found.batal || 0,
+        };
+      });
+    });
+  } else if (p === '90d') {
+    revenuePromise = query(`
+      SELECT to_char(date_trunc('week', jadwal_mulai AT TIME ZONE 'Asia/Jakarta'), 'YYYY-MM-DD') AS week_start,
+             COALESCE(SUM(total_dibayar), 0)::float AS revenue,
+             COUNT(*)::int AS total_transaksi
+      FROM bookings
+      WHERE (status = 'done' OR status_pembayaran = 'paid')
+        AND jadwal_mulai >= $1 AND jadwal_mulai <= $2
+      GROUP BY 1
+      ORDER BY 1
+    `, [startDate, endOfToday]).then(r => {
+      return r.rows.map(row => {
+        const d = new Date(row.week_start);
+        return {
+          periode: row.week_start,
+          bulan_label: d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
+          revenue: row.revenue || 0,
+          total_transaksi: row.total_transaksi || 0,
+        };
+      });
+    });
+
+    bookingsPromise = query(`
+      SELECT to_char(date_trunc('week', jadwal_mulai AT TIME ZONE 'Asia/Jakarta'), 'YYYY-MM-DD') AS week_start,
+             COUNT(*)::int AS total_booking,
+             COUNT(*) FILTER (WHERE status = 'done')::int AS selesai,
+             COUNT(*) FILTER (WHERE status IN ('scheduled', 'rescheduled', 'on process'))::int AS aktif,
+             COUNT(*) FILTER (WHERE status = 'cancelled')::int AS batal
+      FROM bookings
+      WHERE jadwal_mulai >= $1 AND jadwal_mulai <= $2
+      GROUP BY 1
+      ORDER BY 1
+    `, [startDate, endOfToday]).then(r => {
+      return r.rows.map(row => {
+        const d = new Date(row.week_start);
+        return {
+          periode: row.week_start,
+          bulan_label: d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
+          total_booking: row.total_booking || 0,
+          selesai: row.selesai || 0,
+          aktif: row.aktif || 0,
+          batal: row.batal || 0,
+        };
+      });
+    });
+  } else {
+    // 7d or 30d
+    const daysCount = p === '30d' ? 30 : 7;
+    revenuePromise = query(`
+      SELECT to_char((jadwal_mulai AT TIME ZONE 'Asia/Jakarta')::date, 'YYYY-MM-DD') AS day_str,
+             COALESCE(SUM(total_dibayar), 0)::float AS revenue,
+             COUNT(*)::int AS total_transaksi
+      FROM bookings
+      WHERE (status = 'done' OR status_pembayaran = 'paid')
+        AND jadwal_mulai >= $1 AND jadwal_mulai <= $2
+      GROUP BY 1
+      ORDER BY 1
+    `, [startDate, endOfToday]).then(r => {
+      const revMap = new Map(r.rows.map(row => [row.day_str, row]));
+      const list = [];
+      for (let i = daysCount - 1; i >= 0; i--) {
+        const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const key = `${yyyy}-${mm}-${dd}`;
+        const label = p === '7d'
+          ? d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' })
+          : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+        const found = revMap.get(key) || {};
+        list.push({
+          periode: key,
+          bulan_label: label,
+          revenue: found.revenue || 0,
+          total_transaksi: found.total_transaksi || 0,
+        });
+      }
+      return list;
+    });
+
+    bookingsPromise = query(`
+      SELECT to_char((jadwal_mulai AT TIME ZONE 'Asia/Jakarta')::date, 'YYYY-MM-DD') AS day_str,
+             COUNT(*)::int AS total_booking,
+             COUNT(*) FILTER (WHERE status = 'done')::int AS selesai,
+             COUNT(*) FILTER (WHERE status IN ('scheduled', 'rescheduled', 'on process'))::int AS aktif,
+             COUNT(*) FILTER (WHERE status = 'cancelled')::int AS batal
+      FROM bookings
+      WHERE jadwal_mulai >= $1 AND jadwal_mulai <= $2
+      GROUP BY 1
+      ORDER BY 1
+    `, [startDate, endOfToday]).then(r => {
+      const bookMap = new Map(r.rows.map(row => [row.day_str, row]));
+      const list = [];
+      for (let i = daysCount - 1; i >= 0; i--) {
+        const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const key = `${yyyy}-${mm}-${dd}`;
+        const label = p === '7d'
+          ? d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' })
+          : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+        const found = bookMap.get(key) || {};
+        list.push({
+          periode: key,
+          bulan_label: label,
+          total_booking: found.total_booking || 0,
+          selesai: found.selesai || 0,
+          aktif: found.aktif || 0,
+          batal: found.batal || 0,
+        });
+      }
+      return list;
+    });
+  }
+
+  const [topCustomers, topServices, topTechnicians, monthlyRevenue, monthlyBookings] = await Promise.all([
+    topCustomersPromise,
+    topServicesPromise,
+    topTechniciansPromise,
+    revenuePromise,
+    bookingsPromise,
+  ]);
+
+  return {
+    period: p,
+    topCustomers,
+    topServices,
+    topTechnicians,
+    monthlyRevenue,
+    monthlyBookings,
+  };
+}
+
+module.exports = { summary, latestPredictions, trends, dashboardAnalyticsCharts };

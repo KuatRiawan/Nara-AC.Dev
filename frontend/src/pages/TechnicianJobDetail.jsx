@@ -41,8 +41,9 @@ export default function TechnicianJobDetail() {
   const [workOrder, setWorkOrder] = useState({ catatan: '' });
   const [newTask, setNewTask] = useState('');
 
-  // Step state for post-before-photo workflow: 'checklist' | 'after_photo'
-  const [workStep, setWorkStep] = useState('checklist');
+  // Step state for in-process workflow: 'before_photo' | 'checklist' | 'after_photo'
+  const [workStep, setWorkStep] = useState('before_photo');
+  const hasAutoNavigatedRef = useRef(false);
 
   // Photo state with dedicated previews
   const [beforePhoto, setBeforePhoto] = useState({ file: null, preview: '' });
@@ -66,10 +67,26 @@ export default function TechnicianJobDetail() {
       const res = await api.get(`/technician/jobs/${id}`);
       const jobData = res.data || res;
       setJob(jobData);
+
+      // Smart initial step placement on first load only (does not reset user position on subsequent live syncs)
+      if (!hasAutoNavigatedRef.current && jobData?.status === 'on process') {
+        hasAutoNavigatedRef.current = true;
+        const photos = jobData.photos || [];
+        const hasBfr = photos.some((p) => p.tipe === 'before');
+        const hasAft = photos.some((p) => p.tipe === 'after');
+        const hasChecklistStarted = (jobData.checklists || []).some((c) => c.status === 'completed');
+        if (hasAft) {
+          setWorkStep('after_photo');
+        } else if (hasChecklistStarted) {
+          setWorkStep('checklist');
+        } else {
+          setWorkStep('before_photo');
+        }
+      }
       
-      setWorkOrder({
-        catatan: jobData?.catatan || ''
-      });
+      setWorkOrder((prev) => ({
+        catatan: isSilent && prev.catatan ? prev.catatan : (jobData?.catatan || '')
+      }));
     } catch (err) {
       if (err.error?.code === 'NOT_FOUND') {
         showError('Pekerjaan tidak ditemukan.');
@@ -101,6 +118,47 @@ export default function TechnicianJobDetail() {
     fetchInventory();
   }, [id, user, authLoading, navigate, fetchJob, fetchInventory]);
 
+  // Real-time automatic background synchronization
+  useEffect(() => {
+    if (authLoading || !user || user.role !== 'technician') return undefined;
+
+    // Fast 4-second polling for live status/assignment changes
+    const timer = setInterval(() => {
+      fetchJob(true);
+    }, 4000);
+
+    const handleSync = () => {
+      fetchJob(true);
+    };
+
+    const handleStorage = (e) => {
+      if (e.key === 'nara_booking_sync_timestamp' || e.key === 'nara_ops_updated') {
+        fetchJob(true);
+      }
+    };
+
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        fetchJob(true);
+      }
+    };
+
+    window.addEventListener('nara-booking-updated', handleSync);
+    window.addEventListener('nara-technician-sync', handleSync);
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('focus', handleSync);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('nara-booking-updated', handleSync);
+      window.removeEventListener('nara-technician-sync', handleSync);
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('focus', handleSync);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [authLoading, user, fetchJob]);
+
   // Cleanup object URLs on unmount
   useEffect(() => {
     return () => {
@@ -117,6 +175,7 @@ export default function TechnicianJobDetail() {
       window.dispatchEvent(new CustomEvent('nara-booking-updated'));
       localStorage.setItem('nara_booking_sync_timestamp', Date.now().toString());
       if (endpoint === 'start') {
+        setWorkStep('before_photo');
         showSuccess('Pekerjaan dimulai. Silakan ambil foto kondisi awal unit AC.');
       } else if (endpoint === 'complete') {
         showSuccess('Selamat! Pekerjaan servis AC berhasil diselesaikan.');
@@ -366,21 +425,21 @@ export default function TechnicianJobDetail() {
       name: 'Foto Sebelum',
       subtitle: hasBefore ? 'Terverifikasi' : 'Wajib 1 Foto',
       isCompleted: hasBefore,
-      isCurrent: job.status === 'on process' && !hasBefore,
+      isCurrent: job.status === 'on process' && workStep === 'before_photo',
     },
     {
       id: 3,
       name: 'Pengerjaan & SOP',
       subtitle: totalChecklistCount > 0 ? `${completedChecklistCount}/${totalChecklistCount} Selesai` : 'Checklist SOP',
       isCompleted: hasBefore && (workStep === 'after_photo' || hasAfter),
-      isCurrent: job.status === 'on process' && hasBefore && workStep === 'checklist',
+      isCurrent: job.status === 'on process' && workStep === 'checklist',
     },
     {
       id: 4,
       name: 'Foto Sesudah',
       subtitle: hasAfter ? 'Terverifikasi' : 'Wajib 1 Foto',
       isCompleted: hasAfter,
-      isCurrent: job.status === 'on process' && hasBefore && workStep === 'after_photo' && !hasAfter,
+      isCurrent: job.status === 'on process' && workStep === 'after_photo' && !hasAfter,
     },
     {
       id: 5,
@@ -463,15 +522,20 @@ export default function TechnicianJobDetail() {
                 <div 
                   key={st.id} 
                   onClick={() => {
-                    if (hasBefore && job.status === 'on process') {
-                      if (st.id === 3) setWorkStep('checklist');
-                      if (st.id === 4) setWorkStep('after_photo');
+                    if (job.status === 'on process') {
+                      if (st.id === 2) setWorkStep('before_photo');
+                      if (st.id === 3 && hasBefore) setWorkStep('checklist');
+                      if (st.id === 4 && hasBefore) setWorkStep('after_photo');
                     }
                   }}
                   className={`flex flex-col items-center text-center relative group ${
-                    hasBefore && (st.id === 3 || st.id === 4) ? 'cursor-pointer' : ''
+                    job.status === 'on process' && (st.id === 2 || (hasBefore && (st.id === 3 || st.id === 4))) ? 'cursor-pointer' : ''
                   }`}
-                  title={hasBefore && (st.id === 3 || st.id === 4) ? `Buka tahap ${st.name}` : undefined}
+                  title={
+                    job.status === 'on process' && (st.id === 2 || (hasBefore && (st.id === 3 || st.id === 4)))
+                      ? `Buka tahap ${st.name}` 
+                      : undefined
+                  }
                 >
                   {/* Connector line between steps */}
                   {index < steps.length - 1 && (
@@ -583,7 +647,7 @@ export default function TechnicianJobDetail() {
         </section>
 
         {/* STEP 1: FOTO SEBELUM PENGERJAAN (BEFORE) */}
-        {job.status === 'on process' && !hasBefore && (
+        {job.status === 'on process' && workStep === 'before_photo' && (
           <section className="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden">
             <div className="p-4 border-b border-slate-100 bg-blue-50/70 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
@@ -601,6 +665,35 @@ export default function TechnicianJobDetail() {
             </div>
 
             <div className="p-5 space-y-4">
+              {/* Action Banner to Proceed to Checklist when at least 1 photo uploaded */}
+              {hasBefore && (
+                <div className="pb-1">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-gradient-to-r from-blue-50/90 to-indigo-50/70 p-4 rounded-2xl border border-blue-200/90 shadow-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                        <CheckCircle2 className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800">
+                          {beforePhotos.length} Foto Sebelum Tersimpan
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          Kondisi awal telah didokumentasikan. Klik tombol untuk lanjut ke checklist SOP.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setWorkStep('checklist')}
+                      className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs px-5 py-3 rounded-xl shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all shrink-0"
+                    >
+                      <span>Lanjut ke Halaman Berikutnya (Checklist)</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Display existing uploaded before photos */}
               {hasBefore && (
                 <div>
@@ -667,7 +760,7 @@ export default function TechnicianJobDetail() {
                       className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer disabled:opacity-50"
                     >
                       {updating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
-                      <span>Unggah Foto &amp; Lanjut</span>
+                      <span>Unggah Foto Sebelum</span>
                     </button>
                     <button
                       type="button"
@@ -719,8 +812,21 @@ export default function TechnicianJobDetail() {
         )}
 
         {/* STEP 2: CHECKLIST SOP & MATERIAL (ACTIVE WHEN workStep === 'checklist') */}
-        {job.status === 'on process' && hasBefore && workStep === 'checklist' && (
+        {job.status === 'on process' && workStep === 'checklist' && (
           <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Top Back to Before Photo */}
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setWorkStep('before_photo')}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-100 px-3.5 py-2 rounded-xl border border-slate-200 transition-colors cursor-pointer shadow-2xs"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Lihat / Tambah Foto Sebelum ({beforePhotos.length} foto)</span>
+              </button>
+              <span className="text-[11px] text-slate-500 font-medium">Langkah 2: Checklist &amp; Material</span>
+            </div>
+
             {/* Checklist SOP */}
             <section className="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden">
               <div className="p-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between gap-2">
@@ -1130,33 +1236,68 @@ export default function TechnicianJobDetail() {
             
             {job.status === 'on process' && (
               <div className="w-full">
-                {hasBefore && workStep === 'checklist' && (
+                {workStep === 'before_photo' && (
                   <button 
                     type="button"
-                    onClick={() => setWorkStep('after_photo')} 
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl flex justify-center items-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer text-sm"
+                    onClick={() => setWorkStep('checklist')} 
+                    disabled={!hasBefore}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl flex justify-center items-center gap-2 shadow-lg shadow-blue-500/20 transition-all disabled:opacity-40 disabled:bg-slate-300 disabled:text-slate-500 cursor-pointer disabled:cursor-not-allowed text-sm"
+                    title={!hasBefore ? 'Harap unggah minimal 1 foto kondisi awal terlebih dahulu' : undefined}
                   >
-                    <span>Lanjut ke Upload Foto Sesudah</span>
+                    <span>Lanjut ke Checklist Pengerjaan</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 )}
 
-                {hasBefore && workStep === 'after_photo' && (
+                {workStep === 'checklist' && (
+                  <div className="w-full flex gap-2 sm:gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setWorkStep('before_photo')}
+                      className="px-4 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer text-xs sm:text-sm shrink-0"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      <span className="hidden sm:inline">Foto Sebelum</span>
+                      <span className="sm:hidden">Kembali</span>
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setWorkStep('after_photo')} 
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl flex justify-center items-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer text-sm"
+                    >
+                      <span>Lanjut ke Foto Sesudah</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {workStep === 'after_photo' && (
                   <div className="w-full flex flex-col gap-2">
                     {hasAfter && pendingWajibCount > 0 && (
                       <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200/80 rounded-xl px-3 py-2 text-center font-bold">
                         ⚠️ Masih ada {pendingWajibCount} item SOP wajib yang belum dicentang.
                       </p>
                     )}
-                    <button 
-                      type="button"
-                      onClick={() => updateStatus('complete')} 
-                      disabled={updating || !hasAfter || pendingWajibCount > 0}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-6 rounded-2xl flex justify-center items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-40 disabled:bg-slate-300 disabled:text-slate-500 cursor-pointer disabled:cursor-not-allowed text-sm"
-                    >
-                      {updating ? <RefreshCw className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
-                      <span>Selesaikan Pekerjaan (Order Selesai)</span>
-                    </button>
+                    <div className="flex gap-2 sm:gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setWorkStep('checklist')}
+                        className="px-4 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer text-xs sm:text-sm shrink-0"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        <span className="hidden sm:inline">Checklist SOP</span>
+                        <span className="sm:hidden">Kembali</span>
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => updateStatus('complete')} 
+                        disabled={updating || !hasAfter || pendingWajibCount > 0}
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-6 rounded-2xl flex justify-center items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-40 disabled:bg-slate-300 disabled:text-slate-500 cursor-pointer disabled:cursor-not-allowed text-sm"
+                      >
+                        {updating ? <RefreshCw className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+                        <span>Selesaikan Pekerjaan (Order Selesai)</span>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

@@ -64,7 +64,7 @@ export default function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showResetFields, setShowResetFields] = useState(false);
 
-  const { login, requestCustomerOtp, verifyCustomerOtp } = useContext(AuthContext);
+  const { login, requestCustomerOtp, verifyCustomerOtp, executeLogout } = useContext(AuthContext);
   const navigate = useNavigate();
   const handleBack = useContextualBack('/');
   const { whatsappNumber } = useBusinessProfile();
@@ -144,14 +144,14 @@ export default function LoginPage() {
 
     try {
       const res = await login(email.trim(), password);
+      if (res?.user?.role !== 'customer') {
+        if (executeLogout) await executeLogout();
+        setPwdError('Akses ditolak. Halaman ini khusus untuk pelanggan & member Nara. Staf internal (admin & teknisi) silakan masuk melalui Workspace Staf.');
+        setPwdLoading(false);
+        return;
+      }
       setTimeout(() => {
-        if (res.user.role === 'customer') {
-          navigate('/customer/dashboard');
-        } else if (res.user.role === 'technician') {
-          navigate('/technician/dashboard');
-        } else {
-          navigate('/admin');
-        }
+        navigate('/customer/dashboard');
       }, 350);
     } catch (err) {
       setPwdError(
@@ -558,12 +558,23 @@ export default function LoginPage() {
                     <motion.div
                       initial={{ opacity: 0, y: -6 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2.5 shadow-xs"
+                      className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-start gap-2.5 shadow-xs"
                     >
-                      <div className="w-6 h-6 rounded-lg bg-rose-100 flex items-center justify-center shrink-0">
+                      <div className="w-6 h-6 rounded-lg bg-rose-100 flex items-center justify-center shrink-0 mt-0.5">
                         <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
                       </div>
-                      <p className="flex-1">{pwdError}</p>
+                      <div className="flex-1 space-y-1">
+                        <p>{pwdError}</p>
+                        {pwdError.includes('Workspace Staf') && (
+                          <Link 
+                            to="/staff/login" 
+                            className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 hover:text-blue-800 hover:underline pt-0.5"
+                          >
+                            <span>Buka Halaman Login Staf Internal</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </Link>
+                        )}
+                      </div>
                     </motion.div>
                   )}
 

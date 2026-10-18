@@ -23,14 +23,18 @@ BASE_DIR = Path(__file__).resolve().parent
 MODEL_PATH = BASE_DIR / "intent_model.pkl"
 VECTORIZER_PATH = BASE_DIR / "vectorizer.pkl"
 LABEL_ENCODER_PATH = BASE_DIR / "label_encoder.pkl"
+SENTIMENT_MODEL_PATH = BASE_DIR / "sentiment_model.pkl"
+SENTIMENT_VECTORIZER_PATH = BASE_DIR / "sentiment_vectorizer.pkl"
 
 model = None
 vectorizer = None
 label_encoder = None
+sentiment_model = None
+sentiment_vectorizer = None
 
 def load_model():
-    """Load model, vectorizer, and label encoder (with auto-rebuild fallback if binary format differs)."""
-    global model, vectorizer, label_encoder
+    """Load model, vectorizer, label encoder, and sentiment models (with auto-train fallback)."""
+    global model, vectorizer, label_encoder, sentiment_model, sentiment_vectorizer
     try:
         if os.path.exists(MODEL_PATH) and os.path.exists(VECTORIZER_PATH):
             model = joblib.load(MODEL_PATH)
@@ -39,15 +43,26 @@ def load_model():
                 label_encoder = joblib.load(LABEL_ENCODER_PATH)
             else:
                 label_encoder = None
-            return True
-    except Exception:
-        from train import train_model
-        train_model()
-        model = joblib.load(MODEL_PATH)
-        vectorizer = joblib.load(VECTORIZER_PATH)
-        label_encoder = joblib.load(LABEL_ENCODER_PATH) if os.path.exists(LABEL_ENCODER_PATH) else None
+        else:
+            from train import train_model
+            train_model()
+            model = joblib.load(MODEL_PATH)
+            vectorizer = joblib.load(VECTORIZER_PATH)
+            label_encoder = joblib.load(LABEL_ENCODER_PATH) if os.path.exists(LABEL_ENCODER_PATH) else None
+
+        if os.path.exists(SENTIMENT_MODEL_PATH) and os.path.exists(SENTIMENT_VECTORIZER_PATH):
+            sentiment_model = joblib.load(SENTIMENT_MODEL_PATH)
+            sentiment_vectorizer = joblib.load(SENTIMENT_VECTORIZER_PATH)
+        else:
+            from train import train_sentiment_model
+            train_sentiment_model()
+            sentiment_model = joblib.load(SENTIMENT_MODEL_PATH)
+            sentiment_vectorizer = joblib.load(SENTIMENT_VECTORIZER_PATH)
+
         return True
-    return False
+    except Exception as e:
+        print(f"[ai-service] Warning during load_model: {e}")
+        return False
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -342,13 +357,24 @@ def predict_intent(req: IntentRequest):
     text = sanitized_text
 
     X = vectorizer.transform([text])
+    if hasattr(X, "nnz") and X.nnz == 0:
+        return IntentResponse(
+            intent="lainnya",
+            confidence=0.0,
+            fallback=True,
+            model_version=MODEL_VERSION,
+            entities=None
+        )
+
     if hasattr(model, "predict_proba"):
         probabilities = model.predict_proba(X)[0]
         max_prob = float(max(probabilities))
         intent_idx = int(list(probabilities).index(max_prob))
     elif hasattr(model, "decision_function"):
         df_scores = model.decision_function(X)[0]
-        exp_scores = np.exp(df_scores - np.max(df_scores))
+        # Temperature scaling for multi-class SVM margins across 20 classes
+        temperature = 0.15
+        exp_scores = np.exp((df_scores - np.max(df_scores)) / temperature)
         probabilities = exp_scores / np.sum(exp_scores)
         max_prob = float(np.max(probabilities))
         intent_idx = int(np.argmax(probabilities))
@@ -356,6 +382,7 @@ def predict_intent(req: IntentRequest):
         pred_label = model.predict(X)[0]
         max_prob = 0.95
         intent_idx = int(pred_label) if isinstance(pred_label, (int, np.integer)) else 0
+
 
     if label_encoder:
         intent = label_encoder.inverse_transform([intent_idx])[0]
@@ -411,6 +438,98 @@ def extract_booking_code_endpoint(req: IntentRequest):
     code = extract_booking_code(req.text)
     return {"booking_code": code, "found": code is not None}
 
+class SentimentRequest(BaseModel):
+    text: str
+
+class SentimentResponse(BaseModel):
+    sentiment: str
+    confidence: float
+    text: str
+
+@app.post("/predict-sentiment", response_model=SentimentResponse)
+def predict_sentiment_endpoint(req: SentimentRequest):
+    """
+    Side Quest Rubric: Analisis sentimen ulasan pelanggan NARA AC (positif & negatif).
+    """
+    text = req.text.strip()
+    if not text:
+        return SentimentResponse(sentiment="positif", confidence=0.5, text="")
+
+    global sentiment_model, sentiment_vectorizer
+    if sentiment_model is None or sentiment_vectorizer is None:
+        load_model()
+
+    if sentiment_model is None or sentiment_vectorizer is None:
+        raise HTTPException(status_code=500, detail="Sentiment model not loaded")
+
+    vec = sentiment_vectorizer.transform([text])
+    pred = sentiment_model.predict(vec)[0]
+
+    confidence = 0.90
+    if hasattr(sentiment_model, "decision_function"):
+        score = float(sentiment_model.decision_function(vec)[0])
+        confidence = float(1.0 / (1.0 + np.exp(-abs(score))))
+    elif hasattr(sentiment_model, "predict_proba"):
+        probs = sentiment_model.predict_proba(vec)[0]
+        confidence = float(np.max(probs))
+
+    return SentimentResponse(
+        sentiment=str(pred),
+        confidence=round(confidence, 4),
+        text=text
+    )
+
+POLITE_REFUSAL_MESSAGE = (
+    "Maaf, NARA AC AI Assistant hanya dapat melayani konsultasi dan pertanyaan "
+    "seputar perawatan AC, servis, cuci AC, perbaikan kerusakan AC, instalasi, dan pemesanan "
+    "teknisi NARA AC. Apakah ada yang bisa kami bantu terkait AC Anda?"
+)
+
+OUT_OF_DOMAIN_PATTERNS = [
+    r"\b(resep|masak|kue|bumbu|nasi goreng|rendang)\b",
+    r"\b(python|javascript|coding|pemrograman|html|css|sql|function|def |class )\b",
+    r"\b(presiden|pemilu|partai|pilpres|politik|menteri|dpr)\b",
+    r"\b(saham|crypto|bitcoin|investasi|forex|trading)\b",
+    r"\b(obat|penyakit|dokter|gejala kanker|jantung|darah tinggi|parasetamol)\b",
+    r"\b(film|bioskop|aktor|drama korea|drakor|sinopsis)\b",
+    r"\b(cuaca besok|hujan hari ini|ramalan zodiak|horoskop)\b",
+    r"\b(ibu kota|benua|luas samudra|gunung tertinggi)\b",
+    r"\b(terjemahkan|translate|bahasa inggrisnya|bahasa jepang)\b",
+    r"\b(hitung|rumus fisika|aljabar|integral|turunan|matematika)\b",
+]
+
+class GuardrailCheckRequest(BaseModel):
+    text: str
+
+class GuardrailCheckResponse(BaseModel):
+    is_in_domain: bool
+    rejection_message: Optional[str] = None
+    category: str
+
+def evaluate_domain_guardrail(text: str) -> dict:
+    text_lower = text.lower().strip()
+    for pattern in OUT_OF_DOMAIN_PATTERNS:
+        if re.search(pattern, text_lower):
+            return {
+                "is_in_domain": False,
+                "rejection_message": POLITE_REFUSAL_MESSAGE,
+                "category": "out_of_domain",
+            }
+    return {
+        "is_in_domain": True,
+        "rejection_message": None,
+        "category": "in_domain",
+    }
+
+@app.post("/guardrail/check", response_model=GuardrailCheckResponse)
+def guardrail_check_endpoint(req: GuardrailCheckRequest):
+    res = evaluate_domain_guardrail(req.text)
+    return GuardrailCheckResponse(
+        is_in_domain=res["is_in_domain"],
+        rejection_message=res["rejection_message"],
+        category=res["category"]
+    )
+
 class Document(BaseModel):
     id: str
     title: str
@@ -457,13 +576,28 @@ def rag_answer(req: RagAnswerRequest):
     if len(sanitized_question) > max_input_length:
         sanitized_question = sanitized_question[:max_input_length]
 
+    # Evaluasi Guardrail Out-of-Domain
+    guard = evaluate_domain_guardrail(sanitized_question)
+    if not guard["is_in_domain"]:
+        return {
+            "in_domain": False,
+            "answer": POLITE_REFUSAL_MESSAGE,
+            "sources": [],
+            "mode": "refusal",
+        }
+
     q_vec = corpus["tfidf"].transform([sanitized_question])
     sims = cosine_similarity(q_vec, corpus["X"])[0]
     best_idx = int(sims.argmax())
     best_score = float(sims[best_idx])
 
     if best_score < 0.2:
-        return {"in_domain": False, "answer": "", "sources": [], "mode": "none"}
+        return {
+            "in_domain": False,
+            "answer": POLITE_REFUSAL_MESSAGE,
+            "sources": [],
+            "mode": "refusal",
+        }
 
     best_doc = corpus["docs"][best_idx]
     return {

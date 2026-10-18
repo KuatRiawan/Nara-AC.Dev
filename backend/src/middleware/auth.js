@@ -12,7 +12,7 @@ function parseToken(req) {
     }
   }
   
-  const token = req.cookies?.nara_token;
+  const token = req.cookies?.nara_token || req.query?.token;
   if (token) {
     try {
       return jwt.verify(token, config.jwtSecret);
@@ -43,7 +43,13 @@ function optionalAuth(req, _res, next) {
 
 function signToken(user) {
   return jwt.sign(
-    { sub: user.id, role: user.role, nama: user.nama, tid: user.technician_id || undefined, cid: user.customer_id || undefined },
+    { 
+      sub: user.id, 
+      role: user.role, 
+      nama: user.nama, 
+      tid: user.technician_id || user.technicianId || undefined, 
+      cid: user.customer_id || user.customerId || undefined 
+    },
     config.jwtSecret,
     { expiresIn: config.jwtExpires },
   );

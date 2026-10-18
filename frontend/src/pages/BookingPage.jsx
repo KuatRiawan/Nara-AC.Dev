@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useContext } from 'react';
+import { useState, useEffect, useMemo, useRef, useContext, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -44,6 +44,9 @@ import {
   Ticket,
   Send,
   RefreshCw,
+  CreditCard,
+  QrCode,
+  Banknote,
 } from 'lucide-react';
 
 export default function BookingPage() {
@@ -84,18 +87,62 @@ export default function BookingPage() {
     jam: '',
     jumlah_unit: 1,
     extra_items: [],
+    metode_pembayaran: 'transfer',
   });
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showRestoreDraft, setShowRestoreDraft] = useState(false);
   const [userHasInteracted, setUserHasInteracted] = useState(false);
 
-  const isSunday = (dateStr) => {
+  const [operatingSettings, setOperatingSettings] = useState({
+    open: '08:00',
+    close: '19:00',
+    days: [0, 1, 2, 3, 4, 5, 6],
+  });
+
+  const fetchOperatingSettings = useCallback(async () => {
+    try {
+      const res = await api.get('/settings/operating-hours');
+      const data = res?.data || res;
+      if (data && Array.isArray(data.days)) {
+        setOperatingSettings(data);
+      }
+    } catch (_) {}
+  }, []);
+
+  useEffect(() => {
+    fetchOperatingSettings();
+    const handleOpsUpdate = () => fetchOperatingSettings();
+    window.addEventListener('nara-ops-updated', handleOpsUpdate);
+    const handleStorage = (e) => {
+      if (e.key === 'nara_ops_updated') fetchOperatingSettings();
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('nara-ops-updated', handleOpsUpdate);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [fetchOperatingSettings]);
+
+  const isDayClosed = useCallback((dateStr) => {
     if (!dateStr) return false;
     const [y, m, d] = dateStr.split('-').map(Number);
     const dt = new Date(y, m - 1, d);
-    return dt.getDay() === 0;
-  };
+    const dow = dt.getDay(); // 0 = Minggu, 1 = Senin, dst
+    const activeDays = operatingSettings.days || [1, 2, 3, 4, 5, 6];
+    return !activeDays.includes(dow);
+  }, [operatingSettings.days]);
+
+  // Alias kompatibilitas
+  const isSunday = isDayClosed;
+
+  const operatingDaysText = useMemo(() => {
+    const dayNames = { 0: 'Minggu', 1: 'Senin', 2: 'Selasa', 3: 'Rabu', 4: 'Kamis', 5: 'Jumat', 6: 'Sabtu' };
+    const days = operatingSettings.days || [1, 2, 3, 4, 5, 6];
+    if (days.length === 7) return 'Setiap Hari (Senin – Minggu)';
+    if (days.length === 6 && !days.includes(0)) return 'Senin – Sabtu (Minggu Libur)';
+    return days.map((d) => dayNames[d]).join(', ');
+  }, [operatingSettings.days]);
 
   const getLocalDateStr = (daysAhead = 0) => {
     const d = new Date();
@@ -119,13 +166,17 @@ export default function BookingPage() {
 
   const getQuickDateBadge = (daysAhead) => {
     const dStr = getLocalDateStr(daysAhead);
-    if (isSunday(dStr)) {
-      return { label: 'Libur (Minggu)', status: 'closed' };
+    if (isDayClosed(dStr)) {
+      const [y, m, d] = dStr.split('-').map(Number);
+      const dt = new Date(y, m - 1, d);
+      const dayName = dt.toLocaleDateString('id-ID', { weekday: 'long' });
+      return { label: `Libur (${dayName})`, status: 'closed' };
     }
     if (daysAhead === 0) {
       const now = new Date();
       const currentHour = now.getHours();
-      if (currentHour >= 18) {
+      const closeHour = parseInt(operatingSettings.close?.split(':')[0] || '19', 10);
+      if (currentHour >= closeHour - 1) {
         return { label: 'Slot Habis Hari Ini', status: 'closed' };
       }
       return { label: 'Slot Tersedia', status: 'available' };
@@ -437,7 +488,7 @@ export default function BookingPage() {
         return;
       }
       if (availability && !availability.buka) {
-        setError(availability.alasan || 'CV. Nara Teknindotama libur operasional pada tanggal ini. Silakan pilih hari kerja (Senin - Sabtu).');
+        setError(availability.alasan || `CV. Nara Teknindotama libur operasional pada tanggal ini. Silakan pilih hari layanan aktif (${operatingDaysText}).`);
         return;
       }
       if (!form.jam) {
@@ -515,6 +566,8 @@ export default function BookingPage() {
         keluhan: form.keluhan.trim(),
         jumlah_unit: allItems ? allItems.reduce((acc, it) => acc + it.jumlah_unit, 0) : (parseInt(form.jumlah_unit, 10) || 1),
         ac_unit_id: form.ac_unit_id ? parseInt(form.ac_unit_id, 10) : null,
+        metode_pembayaran: form.metode_pembayaran || 'transfer',
+        skema_pembayaran: 'pay_after_service',
         idempotency_key: idempotencyKeyRef.current,
         ...(allItems ? { items: allItems } : {}),
       };
@@ -848,9 +901,11 @@ export default function BookingPage() {
                     </div>
 
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                      <span className="text-slate-500 font-semibold block mb-1">Estimasi Biaya Jasa:</span>
+                      <span className="text-slate-500 font-semibold block mb-1">Estimasi Biaya & Metode:</span>
                       <p className="font-black text-blue-600 text-base font-mono">Rp {calculation.total.toLocaleString('id-ID')}</p>
-                      <p className="text-slate-500 text-xs">Invoice Awal (Estimasi Booking)</p>
+                      <p className="text-slate-600 text-xs font-semibold mt-0.5">
+                        Metode: {form.metode_pembayaran === 'cash' ? 'Tunai di Tempat' : form.metode_pembayaran === 'qris' ? 'QRIS' : 'Transfer Bank'}
+                      </p>
                     </div>
                   </div>
 
@@ -1291,7 +1346,7 @@ export default function BookingPage() {
                         Tentukan Tanggal & Jam Servis
                       </h2>
                       <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                        Jam operasional Senin–Sabtu ({availability?.jam_operasional || '08:00–19:00'} WIB). Estimasi durasi layanan Anda: <strong>{calculation.estDuration} menit</strong>.
+                        Jam operasional {operatingDaysText} ({availability?.jam_operasional || `${operatingSettings.open}–${operatingSettings.close}`} WIB). Estimasi durasi layanan Anda: <strong>{calculation.estDuration} menit</strong>.
                       </p>
                     </div>
 
@@ -1362,7 +1417,7 @@ export default function BookingPage() {
                     <div>
                       <div role="group" aria-labelledby="booking-time-label" className="flex items-center justify-between mb-2">
                         <label id="booking-time-label" className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
-                          Pilihan Jam Kedatangan ({availability?.jam_operasional || '08:00–19:00'} WIB)
+                          Pilihan Jam Kedatangan ({availability?.jam_operasional || `${operatingSettings.open}–${operatingSettings.close}`} WIB)
                         </label>
                         {form.jam && availability?.buka && (
                           <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
@@ -1405,14 +1460,14 @@ export default function BookingPage() {
                                 {availability.alasan || 'Libur Operasional Servis'}
                               </h4>
                               <p className="text-xs text-amber-800 mt-1 leading-relaxed">
-                                CV. Nara Teknindotama melayani operasional Senin s/d Sabtu (08:00 – 19:00 WIB). Silakan pilih hari kerja berikutnya.
+                                CV. Nara Teknindotama melayani operasional {operatingDaysText} ({operatingSettings.open} – {operatingSettings.close} WIB). Silakan pilih hari layanan aktif berikutnya.
                               </p>
                               <button
                                 type="button"
-                                onClick={() => setQuickDate(isSunday(getLocalDateStr(1)) ? 2 : 1)}
+                                onClick={() => setQuickDate(isDayClosed(getLocalDateStr(1)) ? 2 : 1)}
                                 className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold cursor-pointer"
                               >
-                                <span>Pilih Hari Kerja Berikutnya</span>
+                                <span>Pilih Hari Layanan Berikutnya</span>
                                 <ArrowRight className="w-3.5 h-3.5" />
                               </button>
                             </div>
@@ -1781,6 +1836,136 @@ export default function BookingPage() {
                       )}
                     </div>
 
+                    {/* Pemilihan Metode Pembayaran */}
+                    <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="w-4 h-4 text-blue-600" />
+                            <h3 className="text-sm font-black text-slate-900">Pilih Metode Pembayaran</h3>
+                          </div>
+                          <p className="text-xs text-slate-500 font-medium mt-0.5">
+                            Silakan tentukan metode pembayaran yang Anda inginkan
+                          </p>
+                        </div>
+                        <span className="self-start sm:self-auto text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>Bayar Setelah Selesai</span>
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {/* Option 1: Transfer Bank */}
+                        <div
+                          onClick={() => setForm(prev => ({ ...prev, metode_pembayaran: 'transfer' }))}
+                          className={cn(
+                            "relative p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between select-none",
+                            form.metode_pembayaran === 'transfer'
+                              ? "border-blue-600 bg-blue-50/40 shadow-xs ring-2 ring-blue-500/10"
+                              : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 bg-white"
+                          )}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className={cn(
+                              "w-8 h-8 rounded-xl flex items-center justify-center font-bold transition-colors",
+                              form.metode_pembayaran === 'transfer' ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
+                            )}>
+                              <CreditCard className="w-4 h-4" />
+                            </div>
+                            <div className={cn(
+                              "w-4 h-4 rounded-full flex items-center justify-center border transition-all",
+                              form.metode_pembayaran === 'transfer' ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 bg-white"
+                            )}>
+                              {form.metode_pembayaran === 'transfer' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="font-black text-slate-900 text-xs block">Transfer Bank</span>
+                            <span className="text-[11px] text-slate-500 font-medium">BCA & Mandiri Resmi</span>
+                          </div>
+                        </div>
+
+                        {/* Option 2: QRIS */}
+                        <div
+                          onClick={() => setForm(prev => ({ ...prev, metode_pembayaran: 'qris' }))}
+                          className={cn(
+                            "relative p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between select-none",
+                            form.metode_pembayaran === 'qris'
+                              ? "border-blue-600 bg-blue-50/40 shadow-xs ring-2 ring-blue-500/10"
+                              : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 bg-white"
+                          )}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className={cn(
+                              "w-8 h-8 rounded-xl flex items-center justify-center font-bold transition-colors",
+                              form.metode_pembayaran === 'qris' ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
+                            )}>
+                              <QrCode className="w-4 h-4" />
+                            </div>
+                            <div className={cn(
+                              "w-4 h-4 rounded-full flex items-center justify-center border transition-all",
+                              form.metode_pembayaran === 'qris' ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 bg-white"
+                            )}>
+                              {form.metode_pembayaran === 'qris' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="font-black text-slate-900 text-xs block">QRIS</span>
+                            <span className="text-[11px] text-slate-500 font-medium">Semua E-Wallet / Bank</span>
+                          </div>
+                        </div>
+
+                        {/* Option 3: Tunai (Cash) */}
+                        <div
+                          onClick={() => setForm(prev => ({ ...prev, metode_pembayaran: 'cash' }))}
+                          className={cn(
+                            "relative p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between select-none",
+                            form.metode_pembayaran === 'cash'
+                              ? "border-blue-600 bg-blue-50/40 shadow-xs ring-2 ring-blue-500/10"
+                              : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 bg-white"
+                          )}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className={cn(
+                              "w-8 h-8 rounded-xl flex items-center justify-center font-bold transition-colors",
+                              form.metode_pembayaran === 'cash' ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
+                            )}>
+                              <Banknote className="w-4 h-4" />
+                            </div>
+                            <div className={cn(
+                              "w-4 h-4 rounded-full flex items-center justify-center border transition-all",
+                              form.metode_pembayaran === 'cash' ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 bg-white"
+                            )}>
+                              {form.metode_pembayaran === 'cash' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="font-black text-slate-900 text-xs block">Tunai (Cash)</span>
+                            <span className="text-[11px] text-slate-500 font-medium">Bayar di Tempat ke Teknisi</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Penjelasan ringkas sesuai opsi yang dipilih */}
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-600 leading-relaxed">
+                        {form.metode_pembayaran === 'transfer' && (
+                          <span>
+                            <strong>Transfer Bank:</strong> Rekening resmi BCA & Mandiri a.n. <strong>CV. Nara Teknindotama</strong> akan tercantum pada invoice dan halaman tracking tiket. Bukti pembayaran dapat diunggah langsung via portal.
+                          </span>
+                        )}
+                        {form.metode_pembayaran === 'qris' && (
+                          <span>
+                            <strong>QRIS:</strong> QR Code resmi terbit pada e-invoice dan dapat dipindai langsung lewat BCA, Mandiri, GoPay, OVO, Dana, atau ShopeePay.
+                          </span>
+                        )}
+                        {form.metode_pembayaran === 'cash' && (
+                          <span>
+                            <strong>Bayar Tunai di Tempat:</strong> Pembayaran tunai langsung diserahkan kepada teknisi setelah seluruh pengerjaan selesai dites dingin dan beres.
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
                     <div className="space-y-2 text-xs text-slate-600 bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -1792,7 +1977,7 @@ export default function BookingPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Percent className="w-4 h-4 text-sky-600 shrink-0" />
-                        <span>Tersedia pembayaran Transfer Bank, QRIS, maupun Tunai</span>
+                        <span>Metode Pembayaran Terpilih: <strong>{form.metode_pembayaran === 'cash' ? 'Tunai di Tempat' : form.metode_pembayaran === 'qris' ? 'QRIS' : 'Transfer Bank'}</strong></span>
                       </div>
                     </div>
 

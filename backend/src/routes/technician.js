@@ -245,4 +245,51 @@ router.get('/schedule', TECH, validate(Joi.object({
   res.json({ data: r.rows });
 }));
 
+const notifPageQ = {
+  limit: Joi.number().integer().min(1).max(100).default(50),
+  offset: Joi.number().integer().min(0).default(0),
+};
+
+router.get('/notifications', TECH, validate(Joi.object({ unread: Joi.boolean(), ...notifPageQ }), 'query'), wrap(async (req, res) => {
+  const { unread, limit = 50, offset = 0 } = req.valid.query;
+  const technicianId = tid(req);
+  const conds = ["target_role = 'technician'", 'target_id = $1'];
+  const params = [technicianId];
+  if (unread) {
+    conds.push('is_read = false');
+  }
+  const where = conds.join(' AND ');
+  const [totalRes, unreadRes, rowsRes] = await Promise.all([
+    query(`SELECT COUNT(*)::int AS count FROM notifications WHERE ${where}`, params),
+    query("SELECT COUNT(*)::int AS count FROM notifications WHERE target_role = 'technician' AND target_id = $1 AND is_read = false", [technicianId]),
+    query(`SELECT * FROM notifications WHERE ${where} ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`, [...params, limit, offset]),
+  ]);
+  res.json({
+    data: rowsRes.rows,
+    meta: {
+      total: totalRes.rows[0].count,
+      unread_count: unreadRes.rows[0].count,
+      limit,
+      offset,
+    },
+  });
+}));
+
+const markTechNotificationRead = wrap(async (req, res) => {
+  const technicianId = tid(req);
+  await query("UPDATE notifications SET is_read = true WHERE id = $1 AND target_role = 'technician' AND target_id = $2", [req.params.id, technicianId]);
+  res.json({ success: true, id: Number(req.params.id) });
+});
+
+const markAllTechNotificationsRead = wrap(async (req, res) => {
+  const technicianId = tid(req);
+  await query("UPDATE notifications SET is_read = true WHERE target_role = 'technician' AND target_id = $1", [technicianId]);
+  res.json({ success: true });
+});
+
+router.patch('/notifications/:id/read', TECH, validate(idParam, 'params'), markTechNotificationRead);
+router.post('/notifications/:id/read', TECH, validate(idParam, 'params'), markTechNotificationRead);
+router.patch('/notifications/read-all', TECH, markAllTechNotificationsRead);
+router.post('/notifications/read-all', TECH, markAllTechNotificationsRead);
+
 module.exports = router;

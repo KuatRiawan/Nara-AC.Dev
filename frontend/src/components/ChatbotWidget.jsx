@@ -96,7 +96,12 @@ export default function ChatbotWidget({
       
       let action = null;
       if (actions && actions.length > 0) {
-        action = actions[0]; // Take first action
+        const rawAction = actions[0];
+        const actionText = rawAction.text || rawAction.label || (rawAction.type === 'open_booking' ? 'Pesan Servis Sekarang' : rawAction.type === 'open_status' ? 'Cek Status Pengerjaan' : null);
+        const actionLink = rawAction.link || rawAction.path || rawAction.url || (rawAction.type === 'open_booking' ? '/booking' : rawAction.type === 'open_status' ? '/status' : '/booking');
+        if (actionText) {
+          action = { text: actionText, link: actionLink };
+        }
       } else if (rute === 'booking_flow' || (rute && rute.includes('booking'))) {
         action = { text: 'Pesan Sekarang', link: '/booking' };
       } else if (rute?.includes('status')) {
@@ -201,9 +206,9 @@ export default function ChatbotWidget({
                 )}>
                   <div>{formatBotText(m.text)}</div>
                   
-                  {m.action && (
+                  {m.action && m.action.text && (
                     <Link 
-                      to={m.action.link} 
+                      to={m.action.link || '/booking'} 
                       onClick={handleClose}
                       className="inline-block mt-3 text-center bg-blue-50 text-blue-700 font-bold py-2 px-4 rounded-xl hover:bg-blue-100 transition-colors w-full border border-blue-100 shadow-sm"
                     >

@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import api from '../../api';
-import { Calendar as CalendarIcon, Clock, Wrench, Plus, Search, CheckCircle2, AlertCircle, AlertTriangle, Phone, MapPin, ExternalLink, Copy, Check, ChevronDown, RefreshCw, X, Eye, MessageSquare, UserCheck, UserPlus, ArrowUpDown, CalendarClock, Printer, Receipt, CreditCard, Send, CheckSquare, XSquare, DollarSign, Upload } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, Wrench, Plus, Search, CheckCircle2, AlertCircle, AlertTriangle, Phone, MapPin, ExternalLink, Copy, Check, ChevronDown, RefreshCw, X, Eye, MessageSquare, UserCheck, UserPlus, ArrowUpDown, CalendarClock, Printer, Receipt, CreditCard, Send, CheckSquare, XSquare, DollarSign, Upload, Maximize2, ZoomIn } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -9,6 +9,20 @@ import { useToast } from '../../components/ui/toast';
 import { getErrorMessage } from '../../utils/errors';
 import AdminCreateBookingModal from '../../components/admin/AdminCreateBookingModal';
 import OfficialInvoicePaper from '../../components/OfficialInvoicePaper';
+
+const API_ORIGIN = (import.meta.env.VITE_API_URL && !import.meta.env.VITE_API_URL.startsWith('/')) 
+  ? new URL(import.meta.env.VITE_API_URL).origin 
+  : 'http://localhost:4000';
+
+const getFileUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const clean = url.startsWith('/') ? url : `/${url}`;
+  if (typeof window !== 'undefined' && window.location.port === '5173' && clean.startsWith('/api/')) {
+    return clean;
+  }
+  return `${API_ORIGIN}${clean}`;
+};
 
 export default function AdminBookings({
   bookings = [],
@@ -26,6 +40,7 @@ export default function AdminBookings({
   const [filterTechnician, setFilterTechnician] = useState('all');
   const [sortBy, setSortBy] = useState('schedule_asc'); // schedule_asc | schedule_desc | created_desc
   const [selectedBookingForDetail, setSelectedBookingForDetail] = useState(null);
+  const [isFullscreenProofOpen, setIsFullscreenProofOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.location) return;
@@ -176,12 +191,6 @@ export default function AdminBookings({
 
     if (!newRescheduleDate) {
       showError('Silakan pilih tanggal baru.');
-      return;
-    }
-
-    const targetDateObj = new Date(newRescheduleDate + 'T00:00:00');
-    if (targetDateObj.getDay() === 0) {
-      showError('Hari Minggu adalah libur operasional CV. Nara Teknindotama. Silakan pilih hari Senin s/d Sabtu.');
       return;
     }
 
@@ -1351,17 +1360,35 @@ export default function AdminBookings({
                     </div>
 
                     {selectedBookingForDetail.bukti_pembayaran_url && (
-                      <div className="flex items-center justify-between bg-white p-2 rounded-lg border border-slate-200">
-                        <span className="text-2xs text-slate-500 truncate max-w-[200px]">
-                          {selectedBookingForDetail.bukti_pembayaran_url}
-                        </span>
-                        <a
-                          href={selectedBookingForDetail.bukti_pembayaran_url}
-                          target="_blank" rel="noopener noreferrer"
-                          className="text-2xs font-bold text-blue-600 hover:underline flex items-center gap-1"
+                      <div className="bg-white p-2.5 rounded-xl border border-slate-200 space-y-2">
+                        <div 
+                          onClick={() => setIsFullscreenProofOpen(true)}
+                          className="group relative max-h-48 w-full flex items-center justify-center bg-slate-50 rounded-lg overflow-hidden border border-slate-100 p-1 cursor-zoom-in hover:border-blue-400 transition-all"
+                          title="Klik untuk melihat ukuran penuh langsung di halaman ini"
                         >
-                          <ExternalLink className="w-3 h-3" /> Lihat Bukti
-                        </a>
+                          <img
+                            src={getFileUrl(selectedBookingForDetail.bukti_pembayaran_url)}
+                            alt="Bukti Transfer"
+                            className="max-h-44 w-auto object-contain rounded group-hover:scale-[1.02] transition-transform duration-200"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                          <div className="absolute bottom-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900/80 text-white text-[10px] font-medium px-1.5 py-0.5 rounded flex items-center gap-1 shadow-md pointer-events-none">
+                            <ZoomIn className="w-3 h-3" />
+                            <span>Perbesar</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-2xs text-slate-500 truncate max-w-[180px]">
+                            {selectedBookingForDetail.bukti_pembayaran_url}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setIsFullscreenProofOpen(true)}
+                            className="text-2xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-100/70 flex items-center gap-1 cursor-pointer bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 transition-colors shadow-2xs"
+                          >
+                            <Maximize2 className="w-3 h-3" /> Buka Foto Penuh (Di Sini)
+                          </button>
+                        </div>
                       </div>
                     )}
 
@@ -1641,6 +1668,64 @@ export default function AdminBookings({
           </div>
         </div>,
         document.body
+      )}
+
+      {/* In-page Fullscreen Lightbox Modal for Payment Proof */}
+      {isFullscreenProofOpen && selectedBookingForDetail?.bukti_pembayaran_url && (
+        <div 
+          className="fixed inset-0 z-[70] bg-slate-950/85 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 animate-in fade-in duration-150"
+          onClick={() => setIsFullscreenProofOpen(false)}
+        >
+          {/* Top Bar */}
+          <div 
+            className="flex items-center justify-between w-full max-w-5xl mx-auto py-2 text-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-sm sm:text-base text-white">Foto Bukti Transfer Pelanggan</span>
+              <span className="text-xs bg-slate-800 text-slate-300 font-mono px-2 py-0.5 rounded-md border border-slate-700">
+                {selectedBookingForDetail.kode_booking || `#${selectedBookingForDetail.id}`}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsFullscreenProofOpen(false)}
+                className="bg-slate-800/90 hover:bg-slate-700 text-white border-slate-600 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+                <span>Tutup (ESC)</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Center Image */}
+          <div 
+            className="flex-1 w-full flex items-center justify-center p-2 min-h-0"
+            onClick={() => setIsFullscreenProofOpen(false)}
+          >
+            <div 
+              className="relative max-h-[85vh] max-w-[95vw] flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img 
+                src={getFileUrl(selectedBookingForDetail.bukti_pembayaran_url)} 
+                alt="Foto Bukti Transfer Ukuran Penuh" 
+                className="max-h-[82vh] max-w-[92vw] w-auto h-auto object-contain rounded-2xl shadow-2xl border border-white/15 bg-slate-900/40"
+              />
+            </div>
+          </div>
+
+          {/* Bottom Bar Hints */}
+          <div 
+            className="text-center text-xs text-slate-400 py-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Klik di luar gambar atau tombol Tutup untuk kembali
+          </div>
+        </div>
       )}
 
       <style>{`

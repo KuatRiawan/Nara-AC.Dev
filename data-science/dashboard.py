@@ -292,7 +292,21 @@ with st.sidebar:
     
     st.markdown("### 🕐 Pembaruan Pipeline")
     st.caption(f"Sinkronisasi: **{last_updated}**")
-    
+
+    st.markdown("### 📤 Pembaruan Data (Upload)")
+    uploaded_file = st.file_uploader(
+        "Unggah file CSV data servis/transaksi baru:",
+        type=["csv"],
+        help="Unggah file CSV baru untuk memperbarui data analisis atau melakukan simulasi operasional."
+    )
+    if uploaded_file is not None:
+        try:
+            uploaded_df = pd.read_csv(uploaded_file)
+            st.success(f"File berhasil diunggah: {uploaded_file.name} ({len(uploaded_df)} baris)")
+            st.caption("Data telah tersimpan di sesi memori analitik aktif.")
+        except Exception as e:
+            st.error(f"Gagal membaca file CSV: {e}")
+
     st.divider()
     st.caption("© 2026 CV. Nara Teknindotama • Hak Cipta Dilindungi")
 

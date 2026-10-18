@@ -192,13 +192,24 @@ def run_governed_pipeline(source_dir=None):
     y_pred_ord = np.maximum(0.0, order_model.predict(X_test_ord))
     y_base_ord = np.maximum(0.0, test_df["past_mean_7d_orders"].values)
 
-    ord_mae = float(np.mean(np.abs(y_test_ord - y_pred_ord)))
-    ord_rmse = float(np.sqrt(np.mean((y_test_ord - y_pred_ord) ** 2)))
-    ord_wape = calculate_wape(y_test_ord, y_pred_ord)
-
+    # Model 1: Baseline Moving Average 7-Day (Heuristic)
     base_ord_mae = float(np.mean(np.abs(y_test_ord - y_base_ord)))
     base_ord_rmse = float(np.sqrt(np.mean((y_test_ord - y_base_ord) ** 2)))
     base_ord_wape = calculate_wape(y_test_ord, y_base_ord)
+
+    # Model 2: Ordinary Least Squares / Linear Regression (alpha=0.0)
+    ols_model = RidgeRegressorCompat(alpha=0.0).fit(X_train_ord, y_train_ord)
+    y_pred_ols = np.maximum(0.0, ols_model.predict(X_test_ord))
+    ols_mae = float(np.mean(np.abs(y_test_ord - y_pred_ols)))
+    ols_rmse = float(np.sqrt(np.mean((y_test_ord - y_pred_ols) ** 2)))
+    ols_wape = calculate_wape(y_test_ord, y_pred_ols)
+
+    # Model 3: Ridge Regression with L2 Regularization (alpha=10.0)
+    order_model = RidgeRegressorCompat(alpha=10.0).fit(X_train_ord, y_train_ord)
+    y_pred_ord = np.maximum(0.0, order_model.predict(X_test_ord))
+    ord_mae = float(np.mean(np.abs(y_test_ord - y_pred_ord)))
+    ord_rmse = float(np.sqrt(np.mean((y_test_ord - y_pred_ord) ** 2)))
+    ord_wape = calculate_wape(y_test_ord, y_pred_ord)
 
     weekly_actual = pd.Series(y_test_ord).rolling(7).sum().dropna().values
     weekly_pred = pd.Series(y_pred_ord).rolling(7).sum().dropna().values
@@ -208,6 +219,36 @@ def run_governed_pipeline(source_dir=None):
     weekly_rmse = float(np.sqrt(np.mean((weekly_actual - weekly_pred) ** 2)))
     weekly_wape = calculate_wape(weekly_actual, weekly_pred)
     weekly_base_wape = calculate_wape(weekly_actual, weekly_base)
+
+    model_comparisons = [
+        {
+            "model_name": "Baseline Moving Average 7-Day",
+            "type": "Heuristic Baseline",
+            "MAE": round(base_ord_mae, 4),
+            "RMSE": round(base_ord_rmse, 4),
+            "WAPE": round(base_ord_wape, 4),
+            "status": "Pembanding Heuristik",
+            "deskripsi": "Rata-rata bergulir 7 hari terakhir tanpa pembelajaran pola hari dalam seminggu."
+        },
+        {
+            "model_name": "Linear Regression (Ordinary Least Squares)",
+            "type": "Linear Model (No Regularization)",
+            "MAE": round(ols_mae, 4),
+            "RMSE": round(ols_rmse, 4),
+            "WAPE": round(ols_wape, 4),
+            "status": "Pembanding Linier",
+            "deskripsi": "Regresi linear multivariat standar tanpa penalti bobot L2."
+        },
+        {
+            "model_name": "Autoregressive Ridge Regression (alpha=10.0)",
+            "type": "Regularized Linear Model",
+            "MAE": round(ord_mae, 4),
+            "RMSE": round(ord_rmse, 4),
+            "WAPE": round(ord_wape, 4),
+            "status": "Terpilih (Best Model)",
+            "deskripsi": "Model dengan regularisasi L2 yang mereduksi multikolinieritas antar-lag dan siklus mingguan."
+        }
+    ]
 
     full_order_model = RidgeRegressorCompat(alpha=10.0).fit(ts_sorted[order_features].values, ts_sorted["jumlah_order_reguler"].values)
     history_orders = list(ts_sorted["jumlah_order_reguler"].values.astype(float))
@@ -268,6 +309,9 @@ def run_governed_pipeline(source_dir=None):
         "split_info": {
             "train_period": "2025-05-05 s/d 2026-07-31 (453 hari)",
             "test_period": "2026-08-01 s/d 2026-10-13 (74 hari)",
+            "train_ratio": "86%",
+            "test_ratio": "14%",
+            "prevention_data_leakage": "Temporal chronological split: data uji sepenuhnya berada di masa depan relatif terhadap data latih, mencegah kebocoran informasi masa depan ke masa lalu."
         },
         "metrik": {
             "daily_order_MAE": round(ord_mae, 4),
@@ -276,11 +320,21 @@ def run_governed_pipeline(source_dir=None):
             "baseline_naive7d_MAE": round(base_ord_mae, 4),
             "baseline_naive7d_RMSE": round(base_ord_rmse, 4),
             "baseline_naive7d_WAPE": round(base_ord_wape, 4),
+            "ols_linear_MAE": round(ols_mae, 4),
+            "ols_linear_RMSE": round(ols_rmse, 4),
+            "ols_linear_WAPE": round(ols_wape, 4),
             "weekly_7d_sum_MAE": round(weekly_mae, 4),
             "weekly_7d_sum_RMSE": round(weekly_rmse, 4),
             "weekly_7d_sum_WAPE": round(weekly_wape, 4),
             "weekly_7d_baseline_WAPE": round(weekly_base_wape, 4),
         },
+        "model_comparisons": model_comparisons,
+        "model_limitations": (
+            "Model deret waktu mengasumsikan pola musiman (seasonality) dan tren historis yang relatif stabil. "
+            "Keterbatasan model muncul apabila terjadi peristiwa luar biasa di luar data latih (misal: gelombang panas ekstrem "
+            "yang belum pernah tercatat, bencana alam gempa bumi, atau kebijakan pembatasan mobilitas sosial tak terduga). "
+            "Dalam kondisi tersebut, model memerlukan penyesuaian manual oleh tim manajemen operasional NARA AC."
+        ),
         "prediksi": forecast_days,
     }
 

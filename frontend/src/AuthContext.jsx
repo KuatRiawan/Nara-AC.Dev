@@ -74,7 +74,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = useCallback(async (email, password) => {
-    const res = await api.post('/auth/login', { email, password });
+    const res = await api.post('/auth/customer/login', { email, password });
     setUser(res.user);
     await fetchCsrfToken();
     return res;

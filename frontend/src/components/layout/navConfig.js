@@ -1,5 +1,4 @@
-
-import { LayoutDashboard, Calendar as CalendarIcon, CalendarCheck, User, Users, Wrench, Settings, MoreHorizontal, ClipboardList, History, Package, Bot, AirVent, Receipt, Star, Tag, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Calendar as CalendarIcon, CalendarCheck, User, Users, Wrench, Settings, MoreHorizontal, ClipboardList, History, Package, Bot, AirVent, Receipt, Star, Tag, ShieldCheck, Bell } from 'lucide-react';
 
 export const adminNavItems = [
   {
@@ -154,8 +153,51 @@ export const technicianNavItems = [
   }
 ];
 
+export const customerNavItems = [
+  {
+    name: 'Dashboard',
+    shortName: 'Beranda',
+    path: '/customer/dashboard',
+    icon: LayoutDashboard,
+    priority: 'primary',
+    group: 'Menu Utama'
+  },
+  {
+    name: 'Booking Servis AC',
+    shortName: 'Booking',
+    path: '/booking',
+    icon: CalendarCheck,
+    priority: 'primary',
+    group: 'Menu Utama'
+  },
+  {
+    name: 'Unit AC Saya',
+    shortName: 'Unit AC',
+    path: '/customer/ac-units',
+    icon: AirVent,
+    priority: 'primary',
+    group: 'Servis & Garansi'
+  },
+  {
+    name: 'Riwayat Servis',
+    shortName: 'Riwayat',
+    path: '/customer/history',
+    icon: History,
+    priority: 'primary',
+    group: 'Servis & Garansi'
+  },
+  {
+    name: 'Pengaturan & Profil',
+    shortName: 'Pengaturan',
+    path: '/customer/settings',
+    icon: Settings,
+    priority: 'primary',
+    group: 'Akun'
+  }
+];
+
 export const getMobileNavItems = (role) => {
-  const items = role === 'admin' ? adminNavItems : technicianNavItems;
+  const items = role === 'admin' ? adminNavItems : role === 'customer' ? customerNavItems : technicianNavItems;
   const primaryItems = items.filter(item => item.priority === 'primary');
   const secondaryItems = items.filter(item => item.priority === 'secondary');
   
@@ -177,6 +219,7 @@ export const getMobileNavItems = (role) => {
 };
 
 export const getSidebarNavItems = (role) => {
+  if (role === 'customer') return customerNavItems;
   return role === 'admin' ? adminNavItems : technicianNavItems;
 };
 
@@ -187,14 +230,42 @@ export const isActivePath = (currentPath, targetPath) => {
   if (targetPath === '/technician/dashboard') {
     return currentPath === '/technician/dashboard' || currentPath === '/technician/dashboard/';
   }
+  if (targetPath === '/customer/dashboard') {
+    return currentPath === '/customer/dashboard' || currentPath === '/customer/dashboard/' || currentPath === '/customer';
+  }
   return currentPath.startsWith(targetPath);
 };
 
 export const getBreadcrumbItems = (pathname, role) => {
   const items = [];
+
+  if (role === 'customer') {
+    if (pathname === '/customer/dashboard' || pathname === '/customer' || pathname === '/customer/') {
+      return [{ label: 'Beranda', to: '/customer/dashboard' }];
+    }
+    if (pathname.startsWith('/customer/ac-units')) {
+      return [
+        { label: 'Beranda', to: '/customer/dashboard' },
+        { label: 'Unit AC Saya', to: '/customer/ac-units' }
+      ];
+    }
+    if (pathname.startsWith('/customer/history')) {
+      return [
+        { label: 'Beranda', to: '/customer/dashboard' },
+        { label: 'Riwayat Servis', to: '/customer/history' }
+      ];
+    }
+    if (pathname.startsWith('/customer/settings') || pathname.startsWith('/customer/profile')) {
+      return [
+        { label: 'Beranda', to: '/customer/dashboard' },
+        { label: 'Pengaturan & Profil', to: '/customer/settings' }
+      ];
+    }
+    return [{ label: 'Beranda', to: '/customer/dashboard' }];
+  }
   
   const findNavItem = (path) => {
-    const navItems = role === 'admin' ? adminNavItems : technicianNavItems;
+    const navItems = role === 'admin' ? adminNavItems : role === 'customer' ? customerNavItems : technicianNavItems;
     return navItems.find(item => {
       if (item.path === path) return true;
       if (path.startsWith(item.path + '/')) return true;
@@ -208,10 +279,10 @@ export const getBreadcrumbItems = (pathname, role) => {
     return remaining === '' || remaining.startsWith('/');
   };
   
-  const parts = pathname.split('/').filter(p => p && p !== 'admin' && p !== 'technician');
+  const parts = pathname.split('/').filter(p => p && p !== 'admin' && p !== 'technician' && p !== 'customer');
   
-  const basePath = role === 'admin' ? '/admin' : '/technician';
-  const baseItem = role === 'admin' ? adminNavItems[0] : technicianNavItems[0];
+  const basePath = role === 'admin' ? '/admin' : role === 'customer' ? '/customer/dashboard' : '/technician';
+  const baseItem = role === 'admin' ? adminNavItems[0] : role === 'customer' ? customerNavItems[0] : technicianNavItems[0];
   
   if (pathname === basePath || pathname === `${basePath}/`) {
     return [{ label: baseItem.name, to: basePath }];
@@ -337,6 +408,12 @@ export const getBreadcrumbItems = (pathname, role) => {
       return [
         { label: 'Beranda', to: '/technician/dashboard' },
         { label: 'Riwayat', to: '/technician/history' }
+      ];
+    }
+    if (pathname.startsWith('/technician/notifications')) {
+      return [
+        { label: 'Beranda', to: '/technician/dashboard' },
+        { label: 'Notifikasi', to: '/technician/notifications' }
       ];
     }
     if (pathname.startsWith('/technician/profile')) {

@@ -45,9 +45,18 @@ router.get('/dashboard/kpi', validate(Joi.object({}), 'query'), wrap(async (_req
   });
 }));
 
-router.get('/customers', validate(Joi.object({ q: Joi.string().trim().max(80).allow(''), aktif: Joi.boolean(), ...pageQ }), 'query'), wrap(async (req, res) => {
-  const { q, aktif } = req.valid.query;
-  const { page, limit, offset } = paging(req.valid.query);
+router.get('/customers', validate(Joi.object({
+  q: Joi.string().trim().max(80).allow(''),
+  aktif: Joi.boolean(),
+  page: Joi.number().integer().min(1),
+  limit: Joi.number().integer().min(1).max(1000),
+  all: Joi.boolean(),
+}), 'query'), wrap(async (req, res) => {
+  const { q, aktif, all } = req.valid.query;
+  const requestedLimit = all ? 1000 : (req.valid.query.limit || 1000);
+  const { page, limit, offset } = all
+    ? { page: 1, limit: 1000, offset: 0 }
+    : paging({ ...req.valid.query, limit: requestedLimit });
   const params = []; const where = [];
   if (q) { params.push(`%${q}%`); where.push(`(c.nama ILIKE $${params.length} OR c.kontak ILIKE $${params.length} OR c.alamat ILIKE $${params.length} OR c.kode_pelanggan ILIKE $${params.length})`); }
   if (aktif !== undefined) { params.push(aktif); where.push(`c.aktif = $${params.length}`); }

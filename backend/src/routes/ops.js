@@ -112,6 +112,12 @@ router.get('/analytics/trends', requireAuth(['admin']), validate(Joi.object({
   res.json({ period, data });
 }));
 
+router.get('/analytics/dashboard-views', requireAuth(['admin']), wrap(async (req, res) => {
+  const period = req.query.period || '7d';
+  const data = await analytics.dashboardAnalyticsCharts(period);
+  res.json({ period, data });
+}));
+
 const handlePredictions = wrap(async (_req, res) => {
   const p = await analytics.latestPredictions();
   if (!p) {

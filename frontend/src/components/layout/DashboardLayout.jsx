@@ -72,13 +72,18 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
     if (path.startsWith('/admin/inventory')) return 'Inventaris Sparepart & Freon';
     if (path.startsWith('/admin/reports')) return 'Log Aktivitas Sistem';
     if (path.startsWith('/admin/analytics')) return 'AI & Analitik Operasional';
-    if (path.startsWith('/admin/settings') || path.startsWith('/admin/profile')) return 'Pengaturan & Profil Akun';
+    if (path === '/admin/settings' || path.startsWith('/admin/profile')) return 'Pengaturan & Profil Akun';
     if (path.startsWith('/admin/notifications')) return 'Pusat Notifikasi Sistem';
     if (path === '/technician/dashboard' || path === '/technician/dashboard/' || path === '/technician') return 'Dashboard Teknisi';
     if (path.startsWith('/technician/jobs')) return 'Tugas Pekerjaan';
     if (path.startsWith('/technician/schedule')) return 'Jadwal Teknisi';
     if (path.startsWith('/technician/history')) return 'Riwayat Pekerjaan';
+    if (path.startsWith('/technician/notifications')) return 'Pusat Notifikasi Teknisi';
     if (path.startsWith('/technician/profile')) return 'Profil Teknisi';
+    if (path === '/customer/dashboard' || path === '/customer/dashboard/' || path === '/customer') return 'Dashboard Pelanggan';
+    if (path.startsWith('/customer/ac-units')) return 'Database Unit AC Saya';
+    if (path.startsWith('/customer/history')) return 'Riwayat Servis AC';
+    if (path.startsWith('/customer/settings') || path.startsWith('/customer/profile')) return 'Pengaturan Akun & Profil';
     return 'NARA AC Dashboard';
   };
 
@@ -115,7 +120,7 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
             isSidebarCollapsed ? "justify-center px-2" : "px-5"
           )}>
             <Link 
-              to={currentRole === 'admin' ? '/admin' : '/technician'}
+              to={currentRole === 'admin' ? '/admin' : currentRole === 'customer' ? '/customer/dashboard' : '/technician'}
               className="flex items-center group transition-transform hover:opacity-95 min-w-0 overflow-hidden"
               title="NARA AC • Sistem Layanan Service AC"
             >
@@ -166,20 +171,20 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
                       isSidebarCollapsed ? "max-w-0 opacity-0 pointer-events-none" : "max-w-[200px] opacity-100"
                     )}>
                       <span className="truncate">{item.name}</span>
-                      {item.path === '/admin/notifications' && unreadCount > 0 && (
+                      {(item.path === '/admin/notifications' || item.path === '/technician/notifications') && unreadCount > 0 && (
                         <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-black rounded-full bg-rose-600 text-white shrink-0">
                           {unreadCount > 99 ? '99+' : unreadCount}
                         </span>
                       )}
                     </span>
 
-                    {isSidebarCollapsed && item.path === '/admin/notifications' && unreadCount > 0 && (
+                    {isSidebarCollapsed && (item.path === '/admin/notifications' || item.path === '/technician/notifications') && unreadCount > 0 && (
                       <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-600 ring-2 ring-white" />
                     )}
 
                     {isSidebarCollapsed && (
                       <div className="absolute left-full ml-3 px-3 py-1.5 bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xl whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 border border-slate-800">
-                        {item.name} {item.path === '/admin/notifications' && unreadCount > 0 ? `(${unreadCount})` : ''}
+                        {item.name} {(item.path === '/admin/notifications' || item.path === '/technician/notifications') && unreadCount > 0 ? `(${unreadCount})` : ''}
                       </div>
                     )}
                   </Link>
@@ -194,7 +199,7 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
               isSidebarCollapsed ? "flex-col p-2 gap-2" : "flex-row p-1.5 justify-between gap-2"
             )}>
               <Link
-                to={currentRole === 'admin' ? '/admin/settings' : '/technician/profile'}
+                to={currentRole === 'admin' ? '/admin/settings' : currentRole === 'customer' ? '/customer/settings' : '/technician/profile'}
                 className={cn(
                   "flex items-center rounded-xl hover:bg-slate-50 transition-colors group cursor-pointer overflow-hidden",
                   isSidebarCollapsed ? "justify-center p-1 w-full" : "gap-2.5 min-w-0 flex-1 p-1"
@@ -209,10 +214,10 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
                   isSidebarCollapsed ? "max-w-0 opacity-0 pointer-events-none" : "max-w-[140px] opacity-100 flex-1 min-w-0"
                 )}>
                   <p className="text-xs font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors">
-                    {user?.nama || (currentRole === 'admin' ? 'Admin Utama' : 'Teknisi')}
+                    {user?.nama || (currentRole === 'admin' ? 'Admin Utama' : currentRole === 'customer' ? 'Pelanggan NARA AC' : 'Teknisi')}
                   </p>
                   <p className="text-xs font-medium text-slate-500 truncate">
-                    {user?.email || 'admin@nara-ac.local'}
+                    {user?.email || (currentRole === 'customer' ? 'member@nara-ac.local' : 'admin@nara-ac.local')}
                   </p>
                 </div>
               </Link>
@@ -248,8 +253,21 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
             </div>
 
             <div className="flex items-center gap-3 lg:gap-4 shrink-0">
+              {currentRole === 'customer' && (
+                <Link
+                  to="/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-sky-200/90 bg-sky-50/70 hover:bg-sky-100 text-sky-800 hover:text-blue-700 text-xs font-bold transition-all duration-200 shadow-2xs hover:shadow-xs group cursor-pointer"
+                  title="Buka Website Publik NARA AC di tab baru"
+                >
+                  <Globe className="w-3.5 h-3.5 text-blue-600 transition-transform group-hover:rotate-12" />
+                  <span>Lihat Website</span>
+                  <ExternalLink className="w-3 h-3 text-sky-600/70 ml-0.5" />
+                </Link>
+              )}
 
-              {currentRole === 'admin' && onOpenNotif && (
+              {onOpenNotif && (
                 <button
                   onClick={onOpenNotif}
                   className="relative p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer border border-transparent hover:border-slate-200 shadow-2xs group"
@@ -258,14 +276,14 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
                 >
                   <Bell className="w-4.5 h-4.5 transition-transform group-hover:scale-105" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-rose-600 text-white text-[10px] font-black rounded-full h-4.5 min-w-[18px] px-1 flex items-center justify-center border-2 border-white shadow-xs">
+                    <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-black rounded-full h-4.5 min-w-[18px] px-1 flex items-center justify-center border-2 border-white shadow-xs">
                       {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                   )}
                 </button>
               )}
 
-              {currentRole === 'admin' && onOpenNotif && (
+              {onOpenNotif && (
                 <div className="h-6 w-px bg-slate-200 hidden lg:block"></div>
               )}
 
@@ -286,24 +304,26 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
               <div className="flex flex-col">
                 <span className="text-xs font-black text-slate-900 leading-tight">NARA AC</span>
                 <span className="text-xs font-semibold text-slate-500">
-                  {currentRole === 'admin' ? 'Sistem Manajemen' : 'Aplikasi Teknisi'}
+                  {currentRole === 'admin' ? 'Sistem Manajemen' : currentRole === 'customer' ? 'Portal Pelanggan' : 'Aplikasi Teknisi'}
                 </span>
               </div>
             </div>
 
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <Link
-                to="/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 text-slate-600 hover:text-blue-600 hover:bg-sky-50 rounded-xl transition-colors cursor-pointer"
-                aria-label="Buka Landing Page NARA AC"
-                title="Buka Landing Page NARA AC"
-              >
-                <Globe className="w-5 h-5 text-blue-600" />
-              </Link>
+              {currentRole === 'customer' && (
+                <Link
+                  to="/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 text-slate-600 hover:text-blue-600 hover:bg-sky-50 rounded-xl transition-colors cursor-pointer"
+                  aria-label="Buka Landing Page NARA AC"
+                  title="Buka Landing Page NARA AC"
+                >
+                  <Globe className="w-5 h-5 text-blue-600" />
+                </Link>
+              )}
 
-              {currentRole === 'admin' && onOpenNotif && (
+              {onOpenNotif && (
                 <button
                   onClick={onOpenNotif}
                   className="p-2 text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors relative cursor-pointer"
@@ -311,7 +331,7 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
                 >
                   <Bell className="w-5 h-5" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-rose-600 text-white text-[9px] font-black rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center border-2 border-white shadow-xs">
+                    <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-black rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center border-2 border-white shadow-xs">
                       {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                   )}
@@ -373,20 +393,20 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
               </div>
               <div className="min-w-0 flex-1">
                 <h4 className="font-bold text-slate-900 text-xs truncate">
-                  {user?.nama || (currentRole === 'admin' ? 'Admin Utama' : 'Teknisi Lapangan')}
+                  {user?.nama || (currentRole === 'admin' ? 'Admin Utama' : currentRole === 'customer' ? 'Pelanggan NARA AC' : 'Teknisi Lapangan')}
                 </h4>
                 <p className="text-xs text-slate-500 truncate mt-0.5">
-                  {user?.email || (currentRole === 'admin' ? 'admin@nara-ac.local' : 'teknisi@nara-ac.local')}
+                  {user?.email || (currentRole === 'customer' ? 'member@nara-ac.local' : currentRole === 'admin' ? 'admin@nara-ac.local' : 'teknisi@nara-ac.local')}
                 </p>
                 <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-100 text-blue-800 border border-blue-200">
-                  {currentRole === 'admin' ? 'Admin Sistem' : 'Teknisi'}
+                  {currentRole === 'admin' ? 'Admin Sistem' : currentRole === 'customer' ? 'Member NARA AC' : 'Teknisi'}
                 </span>
               </div>
             </div>
 
             <div className="p-2 space-y-1">
               <Link
-                to={currentRole === 'admin' ? '/admin/settings' : '/technician/profile'}
+                to={currentRole === 'admin' ? '/admin/settings' : currentRole === 'customer' ? '/customer/settings' : '/technician/profile'}
                 onClick={() => setIsMobileProfileOpen(false)}
                 className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-50 hover:text-blue-600 font-semibold text-xs transition-colors"
               >
@@ -405,17 +425,19 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
                 </Link>
               )}
 
-              <Link
-                to="/"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setIsMobileProfileOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-50 hover:text-blue-600 font-semibold text-xs transition-colors"
-              >
-                <Globe className="w-4 h-4 text-blue-600" />
-                <span>Lihat Website Publik</span>
-                <ExternalLink className="w-3 h-3 text-slate-400 ml-auto" />
-              </Link>
+              {currentRole === 'customer' && (
+                <Link
+                  to="/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setIsMobileProfileOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-50 hover:text-blue-600 font-semibold text-xs transition-colors"
+                >
+                  <Globe className="w-4 h-4 text-blue-600" />
+                  <span>Lihat Website Publik</span>
+                  <ExternalLink className="w-3 h-3 text-slate-400 ml-auto" />
+                </Link>
+              )}
             </div>
 
             <div className="p-2 border-t border-slate-100 bg-slate-50/50">

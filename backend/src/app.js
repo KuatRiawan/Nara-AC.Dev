@@ -32,6 +32,7 @@ function createApp() {
       },
     },
     crossOriginEmbedderPolicy: false, // diperlukan agar SPA dapat load gambar eksternal
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
   }));
   if (process.env.APP_ENV === 'staging' || process.env.IS_STAGING === 'true') {
     app.use((_req, res, next) => {

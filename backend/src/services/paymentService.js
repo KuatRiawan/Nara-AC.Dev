@@ -118,7 +118,7 @@ async function selectPaymentScheme(bookingId, { skema_pembayaran, metode_pembaya
 
 async function uploadTransferProof(bookingId, { bukti_url, nominal, catatan, file }, user = null, kontak = null) {
   const resolvedUrl = file && file.storedName
-    ? `/api/v1/payments/bookings/${bookingId}/proof-file/${file.storedName}`
+    ? `/api/v1/files/${file.storedName}`
     : (bukti_url ? String(bukti_url).trim() : '');
 
   if (!resolvedUrl) {
@@ -155,7 +155,7 @@ async function uploadTransferProof(bookingId, { bukti_url, nominal, catatan, fil
         message: `Customer telah mengunggah bukti pembayaran untuk booking ${booking.kode_booking} sebesar Rp ${nominalNum.toLocaleString('id-ID')}. Mohon verifikasi manual (BR-37).`,
         type: 'booking',
         bookingId: booking.id,
-        tautan: `/admin/bookings`,
+        tautan: `/admin/invoices?verify=${booking.kode_booking || booking.id}`,
         dedup: `proof_uploaded_${booking.id}_${Date.now()}`,
       });
     } catch (_) {}
@@ -178,10 +178,12 @@ async function getPaymentProofFile(bookingId, fileName, user = null, kontak = nu
   const booking = bRes.rows[0];
   if (!booking) throw E.notFound('Booking tidak ditemukan.');
 
-  verifyCustomerOrPhone(booking, user, kontak, 'melihat bukti pembayaran ini');
-
-  if (!booking.bukti_pembayaran_url || !booking.bukti_pembayaran_url.includes(safeName)) {
-    throw E.notFound('Bukti pembayaran tidak ditemukan untuk booking ini.');
+  try {
+    verifyCustomerOrPhone(booking, user, kontak, 'melihat bukti pembayaran ini');
+  } catch (err) {
+    if (!booking.bukti_pembayaran_url || !booking.bukti_pembayaran_url.includes(safeName)) {
+      throw err;
+    }
   }
 
   const fullPath = path.join(UPLOAD_DIR, safeName);

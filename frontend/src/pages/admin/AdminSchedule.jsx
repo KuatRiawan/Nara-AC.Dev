@@ -226,12 +226,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
       return;
     }
 
-    const targetDateObj = new Date(newRescheduleDate + 'T00:00:00');
-    if (targetDateObj.getDay() === 0) {
-      showError('Hari Minggu adalah libur operasional CV. Nara Teknindotama. Silakan pilih hari Senin s/d Sabtu.');
-      return;
-    }
-
     setIsSubmittingReschedule(true);
     try {
       const isoPayload = `${newRescheduleDate}T${newRescheduleTime || '09:00'}:00+07:00`;

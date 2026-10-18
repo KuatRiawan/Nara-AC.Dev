@@ -31,7 +31,7 @@ import api from '../../api';
 import { useToast } from '../../components/ui/toast';
 import { useBusinessProfile, buildWhatsAppUrl } from '../../hooks/useBusinessProfile';
 
-export default function CustomerDashboard() {
+export default function CustomerDashboard({ onOpenNotif }) {
   const { user } = useContext(AuthContext);
   const { error: showError, success: showSuccess } = useToast();
   const { whatsappNumber } = useBusinessProfile();
@@ -40,31 +40,8 @@ export default function CustomerDashboard() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [copiedCode, setCopiedCode] = useState(false);
-
-  const [showNotifModal, setShowNotifModal] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [loadingNotifs, setLoadingNotifs] = useState(false);
   const [showWarrantyModal, setShowWarrantyModal] = useState(false);
   const prevUnreadRef = useRef(null);
-  const showNotifModalRef = useRef(showNotifModal);
-
-  useEffect(() => {
-    showNotifModalRef.current = showNotifModal;
-  }, [showNotifModal]);
-
-  const fetchNotifications = useCallback(async (isSilent = false) => {
-    if (!isSilent) setLoadingNotifs(true);
-    try {
-      const res = await api.get('/customer/notifications?limit=10&page=1');
-      setNotifications(Array.isArray(res?.data) ? res.data : (res?.data?.data || (Array.isArray(res) ? res : [])));
-    } catch (err) {
-      if (!isSilent) {
-        showError('Gagal memuat notifikasi: ' + (err.response?.data?.error?.message || err.message));
-      }
-    } finally {
-      if (!isSilent) setLoadingNotifs(false);
-    }
-  }, [showError]);
 
   const fetchDashboardData = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
@@ -77,9 +54,6 @@ export default function CustomerDashboard() {
         showSuccess('Notifikasi Baru: Ada booking atau pembaruan status baru diterima!');
       }
       prevUnreadRef.current = newUnread;
-      if (showNotifModalRef.current) {
-        fetchNotifications(true);
-      }
     } catch (err) {
       if (!isSilent) {
         showError('Gagal memuat dashboard: ' + (err.response?.data?.error?.message || err.message));
@@ -89,7 +63,7 @@ export default function CustomerDashboard() {
         setLoading(false);
       }
     }
-  }, [showError, showSuccess, fetchNotifications]);
+  }, [showError, showSuccess]);
 
   useEffect(() => {
     fetchDashboardData(false);
@@ -123,66 +97,18 @@ export default function CustomerDashboard() {
   }, [fetchDashboardData]);
 
   useEffect(() => {
-    const handleOpenNotif = () => {
-      setShowNotifModal(true);
-      fetchNotifications(false);
-    };
-    window.addEventListener('nara-open-customer-notifs', handleOpenNotif);
-
     if (location.search.includes('notif=') || location.search.includes('modal=notif')) {
-      handleOpenNotif();
-    }
+      if (onOpenNotif) onOpenNotif();
+      else window.dispatchEvent(new CustomEvent('nara-open-customer-notifs'));
 
-    return () => {
-      window.removeEventListener('nara-open-customer-notifs', handleOpenNotif);
-    };
-  }, [location.search, fetchNotifications]);
-
-  const handleOpenNotifications = () => {
-    setShowNotifModal(true);
-    fetchNotifications(false);
-  };
-
-  const handleMarkSingleRead = async (id, e) => {
-    if (e) e.stopPropagation();
-    try {
-      await api.patch(`/customer/notifications/${id}/read`);
-      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
-      setData((prev) => (prev ? { ...prev, unread_notifications: Math.max(0, (prev.unread_notifications || 1) - 1) } : prev));
-    } catch (err) {
-      showError('Gagal menandai notifikasi: ' + (err.response?.data?.error?.message || err.message));
+      // Bersihkan query param agar drawer tidak looping terbuka kembali saat ditutup
+      const searchParams = new URLSearchParams(location.search);
+      searchParams.delete('notif');
+      searchParams.delete('modal');
+      const cleanSearch = searchParams.toString();
+      navigate(location.pathname + (cleanSearch ? `?${cleanSearch}` : ''), { replace: true });
     }
-  };
-
-  const handleCustomerNotificationClick = (item) => {
-    if (!item.is_read) {
-      handleMarkSingleRead(item.id);
-    }
-    let target = item.tautan;
-    const bId = item.booking_id || item.reference_id;
-    if (!target && bId) {
-      target = `/status/${item.kode_booking || bId}`;
-    }
-    if (!target) {
-      const match = (item.message + ' ' + item.title).match(/\b(AC-[A-Z0-9]+|NARA-AC-[A-Z0-9]+)\b/i);
-      if (match) target = `/status/${match[1]}`;
-    }
-    if (target) {
-      setShowNotifModal(false);
-      navigate(target);
-    }
-  };
-
-  const handleMarkAllRead = async () => {
-    try {
-      await api.post('/customer/notifications/read-all', {});
-      showSuccess('Semua notifikasi ditandai sudah dibaca');
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-      setData((prev) => (prev ? { ...prev, unread_notifications: 0 } : prev));
-    } catch (err) {
-      showError('Gagal memperbarui notifikasi: ' + (err.response?.data?.error?.message || err.message));
-    }
-  };
+  }, [location.search, onOpenNotif, location.pathname, navigate]);
 
   const handleCopyCode = (code) => {
     if (!code) return;
@@ -215,8 +141,8 @@ export default function CustomerDashboard() {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="h-44 bg-slate-200/80 rounded-3xl" />
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+          {[1, 2, 3].map((i) => (
             <div key={i} className="h-28 bg-white rounded-2xl border border-slate-200/60" />
           ))}
         </div>
@@ -291,14 +217,6 @@ export default function CustomerDashboard() {
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-300" />
                 Diskon Jasa 10% Aktif
               </span>
-              <button
-                onClick={() => navigate('/customer/settings')}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-colors cursor-pointer"
-                title="Kelola Profil & Pengaturan Akun"
-              >
-                <Settings className="w-3.5 h-3.5 text-sky-200" />
-                <span>Pengaturan Akun</span>
-              </button>
             </div>
 
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
@@ -336,7 +254,7 @@ export default function CustomerDashboard() {
         </div>
       </div>
 
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -389,33 +307,6 @@ export default function CustomerDashboard() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.12 }}
-          onClick={handleOpenNotifications}
-          className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-amber-200 transition-all cursor-pointer group flex flex-col justify-between"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Notifikasi</span>
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center relative">
-              <Bell className="w-5 h-5" />
-              {(data?.unread_notifications || 0) > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white" />
-              )}
-            </div>
-          </div>
-          <div className="mt-2">
-            <p className="text-3xl font-black text-amber-700">
-              {data?.unread_notifications || 0}
-            </p>
-            <p className="text-xs text-amber-600 font-semibold mt-0.5 flex items-center gap-1">
-              <span>Belum dibaca</span>
-              <ChevronRight className="w-3.5 h-3.5 text-amber-400" />
-            </p>
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.16 }}
           onClick={() => navigate('/booking')}
           className="bg-gradient-to-br from-blue-50 to-sky-50/70 p-5 rounded-2xl border border-blue-200/80 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
         >
@@ -688,104 +579,7 @@ export default function CustomerDashboard() {
         </div>
       </div>
 
-      <AnimatePresence>
-        {showNotifModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden"
-            >
-              <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                    <Bell className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="font-black text-slate-900 text-sm">Notifikasi &amp; Pengingat</h3>
-                    <p className="text-xs text-slate-500">Update status servis &amp; info akun</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowNotifModal(false)}
-                  className="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
 
-              <div className="p-5 max-h-[60vh] overflow-y-auto space-y-3">
-                {loadingNotifs ? (
-                  <div className="py-8 text-center text-xs text-slate-500">Memuat notifikasi...</div>
-                ) : notifications.length === 0 ? (
-                  <div className="py-8 text-center">
-                    <Bell className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                    <p className="text-xs font-bold text-slate-600">Tidak ada notifikasi baru</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Semua info dan update servis sudah terpantau.</p>
-                  </div>
-                ) : (
-                  notifications.map((item) => (
-                    <div
-                      key={item.id}
-                      onClick={() => handleCustomerNotificationClick(item)}
-                      className={cn(
-                        'p-3.5 rounded-2xl border text-xs transition-all cursor-pointer',
-                        item.is_read
-                          ? 'bg-slate-50/60 border-slate-200/60 text-slate-600 hover:bg-slate-100/80 hover:border-slate-300'
-                          : 'bg-blue-50/60 border-blue-200 text-slate-800 font-medium hover:bg-blue-100/60 hover:border-blue-300 shadow-2xs'
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <h4 className="font-black text-slate-900 text-xs">{item.title}</h4>
-                        {!item.is_read ? (
-                          <button
-                            type="button"
-                            onClick={(e) => handleMarkSingleRead(item.id, e)}
-                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800 bg-blue-100/80 hover:bg-blue-200/80 px-2 py-0.5 rounded-full transition-colors cursor-pointer shrink-0"
-                            title="Tandai sudah dibaca"
-                          >
-                            <Check className="w-3 h-3" />
-                            <span>Tandai dibaca</span>
-                          </button>
-                        ) : (
-                          <span className="text-[10px] text-slate-400">Sudah dibaca</span>
-                        )}
-                      </div>
-                      <p className="text-slate-600 text-xs mt-1 leading-relaxed">{item.message}</p>
-                      <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400">
-                        <span>{item.created_at ? new Date(item.created_at).toLocaleString('id-ID') : ''}</span>
-                        <span className="font-semibold text-blue-600 flex items-center gap-0.5 hover:underline">
-                          Buka detail →
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <div className="p-4 border-t border-slate-100 bg-slate-50/60 flex items-center justify-between">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleMarkAllRead}
-                  disabled={loadingNotifs || notifications.length === 0}
-                  className="text-xs text-slate-600 hover:text-slate-900 cursor-pointer font-bold"
-                >
-                  Tandai Semua Dibaca
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => setShowNotifModal(false)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold px-4 cursor-pointer"
-                >
-                  Tutup
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       <AnimatePresence>
         {showWarrantyModal && (

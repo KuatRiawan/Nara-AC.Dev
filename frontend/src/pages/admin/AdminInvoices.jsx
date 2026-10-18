@@ -9,8 +9,23 @@ import { useToast } from '../../components/ui/toast';
 import OfficialInvoicePaper from '../../components/OfficialInvoicePaper';
 import { 
   Receipt, Search, Printer, CheckCircle2, Clock, CreditCard, Building2, X, Check, Edit3, 
-  Plus, Trash2, Loader2, RefreshCw, Upload, Send, DollarSign, ShieldAlert, AlertTriangle, Eye, ExternalLink
+  Plus, Trash2, Loader2, RefreshCw, Upload, Send, DollarSign, ShieldAlert, AlertTriangle, Eye, ExternalLink,
+  XCircle, Maximize2, ZoomIn
 } from 'lucide-react';
+
+const API_ORIGIN = (import.meta.env.VITE_API_URL && !import.meta.env.VITE_API_URL.startsWith('/')) 
+  ? new URL(import.meta.env.VITE_API_URL).origin 
+  : 'http://localhost:4000';
+
+const getFileUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const clean = url.startsWith('/') ? url : `/${url}`;
+  if (typeof window !== 'undefined' && window.location.port === '5173' && clean.startsWith('/api/')) {
+    return clean;
+  }
+  return `${API_ORIGIN}${clean}`;
+};
 
 export default function AdminInvoices({ bookings: propBookings, onBookingUpdated }) {
   const { error: showError, success: showSuccess } = useToast();
@@ -27,6 +42,26 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
     if (typeof window === 'undefined' || !window.location) return;
     const params = new URLSearchParams(window.location.search);
     const targetBookingId = params.get('bookingId') || params.get('id');
+    const verifyTarget = params.get('verify') || params.get('verifyBookingId');
+
+    if (verifyTarget && bookings.length > 0) {
+      const found = bookings.find(b => 
+        String(b.id) === String(verifyTarget) || 
+        String(b.kode_booking || '').toUpperCase() === String(verifyTarget).toUpperCase()
+      );
+      if (found) {
+        setStatusFilter('verify');
+        openVerifyModal(found);
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.delete('verify');
+          url.searchParams.delete('verifyBookingId');
+          window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+        } catch {}
+      }
+      return;
+    }
+
     if (!targetBookingId || bookings.length === 0) return;
     const found = bookings.find(b => String(b.id) === String(targetBookingId) || String(b.kode_booking || '').toUpperCase() === String(targetBookingId).toUpperCase());
     if (found) {
@@ -45,6 +80,7 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
 
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
   const [selectedVerifyBooking, setSelectedVerifyBooking] = useState(null);
+  const [isFullscreenProofOpen, setIsFullscreenProofOpen] = useState(false);
   const [verifyNominal, setVerifyNominal] = useState('');
   const [verifyCatatan, setVerifyCatatan] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -61,6 +97,10 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
+        if (isFullscreenProofOpen) {
+          setIsFullscreenProofOpen(false);
+          return;
+        }
         if (isModalOpen) setIsModalOpen(false);
         if (isVerifyModalOpen) setIsVerifyModalOpen(false);
         if (isRefundModalOpen) setIsRefundModalOpen(false);
@@ -69,7 +109,7 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isModalOpen, isVerifyModalOpen, isRefundModalOpen]);
+  }, [isFullscreenProofOpen, isModalOpen, isVerifyModalOpen, isRefundModalOpen]);
 
   const [paymentSettings, setPaymentSettings] = useState(() => {
     try {
@@ -318,6 +358,7 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
     setSelectedVerifyBooking(booking);
     setVerifyNominal(booking.total || booking.total_biaya || '');
     setVerifyCatatan('');
+    setIsFullscreenProofOpen(false);
     setIsVerifyModalOpen(true);
   };
 
@@ -1112,30 +1153,41 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
             <div className="space-y-2 text-xs">
               <span className="font-bold text-slate-700 block">Gambar / Lampiran Bukti Transfer:</span>
               {selectedVerifyBooking.bukti_pembayaran_url ? (
-                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col items-center">
-                  {selectedVerifyBooking.bukti_pembayaran_url.startsWith('http') || selectedVerifyBooking.bukti_pembayaran_url.startsWith('/uploads') ? (
-                    <img 
-                      src={selectedVerifyBooking.bukti_pembayaran_url} 
-                      alt="Bukti Transfer" 
-                      className="max-h-60 rounded-xl object-contain shadow-xs" 
-                    />
-                  ) : (
-                    <div className="p-4 text-center font-mono text-slate-700 bg-white rounded-xl border border-slate-200 w-full break-all">
-                      {selectedVerifyBooking.bukti_pembayaran_url}
-                    </div>
-                  )}
-                  <a 
-                    href={selectedVerifyBooking.bukti_pembayaran_url} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="text-2xs font-bold text-blue-600 hover:underline mt-2 flex items-center gap-1"
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col items-center gap-2">
+                  <div 
+                    onClick={() => setIsFullscreenProofOpen(true)}
+                    className="group relative max-h-72 w-full flex items-center justify-center bg-white rounded-xl overflow-hidden border border-slate-200 p-1 shadow-2xs cursor-zoom-in hover:border-blue-400 transition-all"
+                    title="Klik untuk melihat ukuran penuh langsung di halaman ini"
                   >
-                    <span>Buka Tautan Lampiran Penuh</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
+                    <img 
+                      src={getFileUrl(selectedVerifyBooking.bukti_pembayaran_url)} 
+                      alt="Bukti Transfer" 
+                      className="max-h-68 w-auto mx-auto object-contain rounded-lg group-hover:scale-[1.02] transition-transform duration-200"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const fallbackDiv = document.getElementById('proof-fallback-msg');
+                        if (fallbackDiv) fallbackDiv.style.display = 'block';
+                      }}
+                    />
+                    <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900/80 text-white text-[11px] font-medium px-2 py-1 rounded-md flex items-center gap-1 shadow-md pointer-events-none">
+                      <ZoomIn className="w-3.5 h-3.5" />
+                      <span>Klik perbesar</span>
+                    </div>
+                    <div id="proof-fallback-msg" style={{ display: 'none' }} className="p-4 text-center text-slate-500 font-mono text-xs">
+                      Foto bukti transfer: {selectedVerifyBooking.bukti_pembayaran_url}
+                    </div>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setIsFullscreenProofOpen(true)}
+                    className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-100/70 mt-1 inline-flex items-center gap-1.5 cursor-pointer bg-blue-50 px-3.5 py-1.5 rounded-xl border border-blue-200 transition-colors shadow-2xs"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                    <span>Buka Lampiran Ukuran Penuh (Di Sini)</span>
+                  </button>
                 </div>
               ) : (
-                <p className="text-xs text-slate-500 italic p-3 bg-slate-50 rounded-xl">Pelanggan belum mengunggah URL lampiran bukti transfer.</p>
+                <p className="text-xs text-slate-500 italic p-3 bg-slate-50 rounded-xl">Pelanggan belum mengunggah lampiran bukti transfer.</p>
               )}
             </div>
 
@@ -1207,6 +1259,64 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* In-page Fullscreen Lightbox Modal for Payment Proof */}
+      {isFullscreenProofOpen && selectedVerifyBooking?.bukti_pembayaran_url && (
+        <div 
+          className="fixed inset-0 z-[70] bg-slate-950/85 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 animate-in fade-in duration-150"
+          onClick={() => setIsFullscreenProofOpen(false)}
+        >
+          {/* Top Bar */}
+          <div 
+            className="flex items-center justify-between w-full max-w-5xl mx-auto py-2 text-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-sm sm:text-base text-white">Lampiran Bukti Transfer</span>
+              <span className="text-xs bg-slate-800 text-slate-300 font-mono px-2 py-0.5 rounded-md border border-slate-700">
+                {selectedVerifyBooking.kode_booking || `#${selectedVerifyBooking.id}`}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsFullscreenProofOpen(false)}
+                className="bg-slate-800/90 hover:bg-slate-700 text-white border-slate-600 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+                <span>Tutup (ESC)</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Center Image */}
+          <div 
+            className="flex-1 w-full flex items-center justify-center p-2 min-h-0"
+            onClick={() => setIsFullscreenProofOpen(false)}
+          >
+            <div 
+              className="relative max-h-[85vh] max-w-[95vw] flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img 
+                src={getFileUrl(selectedVerifyBooking.bukti_pembayaran_url)} 
+                alt="Lampiran Bukti Transfer Ukuran Penuh" 
+                className="max-h-[82vh] max-w-[92vw] w-auto h-auto object-contain rounded-2xl shadow-2xl border border-white/15 bg-slate-900/40"
+              />
+            </div>
+          </div>
+
+          {/* Bottom Bar Hints */}
+          <div 
+            className="text-center text-xs text-slate-400 py-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Klik di luar gambar atau tombol Tutup untuk kembali ke verifikasi
           </div>
         </div>
       )}

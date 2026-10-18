@@ -44,6 +44,19 @@ describe('Admin Invoices Payment Status Persistence (UX-003)', () => {
       total_biaya: 285000,
       jadwal_mulai: '2026-10-14T10:00:00Z',
     },
+    {
+      id: 103,
+      kode_booking: 'AC-103C',
+      status: 'scheduled',
+      status_pembayaran: 'pending',
+      status_verifikasi_pembayaran: 'menunggu_verifikasi',
+      bukti_pembayaran_url: '/api/v1/files/proof_test.jpg',
+      customer: { nama: 'Citra Dewi', kontak: '081333444555' },
+      layanan: { nama: 'Cuci AC Inverter', harga: 90000 },
+      jumlah_unit: 1,
+      total_biaya: 90000,
+      jadwal_mulai: '2026-10-18T10:00:00Z',
+    },
   ];
 
   beforeEach(() => {
@@ -119,4 +132,56 @@ describe('Admin Invoices Payment Status Persistence (UX-003)', () => {
       expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining('Database connection error'));
     });
   });
+
+  it('renders payment proof verification modal without throwing ReferenceError', async () => {
+    render(<AdminInvoices />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Citra Dewi')[0]).toBeInTheDocument();
+    });
+
+    const verifyBtns = screen.getAllByRole('button', { name: /Verifikasi Bukti/i });
+    expect(verifyBtns.length).toBeGreaterThan(0);
+    fireEvent.click(verifyBtns[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText('Verifikasi Bukti Transfer')).toBeInTheDocument();
+      expect(screen.getByText(/Tolak Bukti/i)).toBeInTheDocument();
+      expect(screen.getByText(/Terima & Tandai Lunas/i)).toBeInTheDocument();
+    });
+  });
+
+  it('opens in-page fullscreen lightbox when clicking preview button and closes on ESC', async () => {
+    render(<AdminInvoices />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Citra Dewi')[0]).toBeInTheDocument();
+    });
+
+    const verifyBtns = screen.getAllByRole('button', { name: /Verifikasi Bukti/i });
+    fireEvent.click(verifyBtns[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText('Verifikasi Bukti Transfer')).toBeInTheDocument();
+    });
+
+    const openFullBtn = screen.getByRole('button', { name: /Buka Lampiran Ukuran Penuh/i });
+    expect(openFullBtn).toBeInTheDocument();
+    fireEvent.click(openFullBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Lampiran Bukti Transfer')).toBeInTheDocument();
+      expect(screen.getByText(/Tutup \(ESC\)/i)).toBeInTheDocument();
+    });
+
+    // Press Escape to close lightbox
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Lampiran Bukti Transfer')).not.toBeInTheDocument();
+      // Verification modal remains open
+      expect(screen.getByText('Verifikasi Bukti Transfer')).toBeInTheDocument();
+    });
+  });
 });
+
