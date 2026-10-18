@@ -14,7 +14,7 @@ Transaksi pemesanan, pembayaran, dan garansi dalam sistem NARA AC dikendalikan o
 stateDiagram-v2
     [*] --> pending: Pelanggan Submit Form Booking
     pending --> confirmed: Admin Assign Teknisi / Auto-Confirm
-    pending --> cancelled: Dibatalkan Pelanggan (>24 Jam) / Admin
+    pending --> cancelled: Dibatalkan Pelanggan (Lebih dari 24 Jam) / Admin
     confirmed --> on_the_way: Teknisi Menuju Lokasi
     confirmed --> cancelled: Dibatalkan dengan Alasan Khusus
     on_the_way --> in_progress: Teknisi Tiba & Mulai Pengerjaan

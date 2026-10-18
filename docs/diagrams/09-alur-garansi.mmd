@@ -3,34 +3,34 @@ flowchart TD
     %% DIAGRAM ALUR GARANSI & PENGAJUAN KLAIM - NARA AC
     %% =========================================================================
 
-    Start([Mulai: Pelanggan Mengalami Kendala Pasca Servis]) --> CheckDone{Apakah Booking Selesai & Terkonfirmasi?}
-    CheckDone -- Tidak --> NotEligible1[Tolak: Garansi Hanya Berlaku Setelah Pekerjaan Selesai]
+    Start(["Mulai: Pelanggan Mengalami Kendala Pasca Servis"]) --> CheckDone{"Apakah Booking Selesai & Terkonfirmasi?"}
+    CheckDone -->|"Tidak"| NotEligible1["Tolak: Garansi Hanya Berlaku Setelah Pekerjaan Selesai"]
 
-    CheckDone -- Ya --> CheckPeriod{Masa Garansi Masih Berlaku?\n(Standar: 14 Hari, Deep Clean: 30 Hari, Freon: 45 Hari)}
-    CheckPeriod -- Lewat Batas Waktu --> Expired[Tolak: Masa Garansi Telah Kedaluwarsa\nArahkan ke Booking Servis Baru]
+    CheckDone -->|"Ya"| CheckPeriod{"Masa Garansi Masih Berlaku?<br/>(Standar: 14 Hari, Deep Clean: 30 Hari, Freon: 45 Hari)"}
+    CheckPeriod -->|"Lewat Batas Waktu"| Expired["Tolak: Masa Garansi Telah Kedaluwarsa<br/>Arahkan ke Booking Servis Baru"]
 
-    CheckPeriod -- Masih Berlaku --> CheckActiveClaim{Apakah Ada Klaim yang Sedang Berjalan?}
-    CheckActiveClaim -- Ada Klaim Aktif --> OneClaimRule[Tolak: Maksimal 1 Klaim Aktif per Transaksi]
+    CheckPeriod -->|"Masih Berlaku"| CheckActiveClaim{"Apakah Ada Klaim yang Sedang Berjalan?"}
+    CheckActiveClaim -->|"Ada Klaim Aktif"| OneClaimRule["Tolak: Maksimal 1 Klaim Aktif per Transaksi"]
 
-    CheckActiveClaim -- Belum Ada Klaim Aktif --> ReviewCheck{Sudah Pernah Mengisi Ulasan & Rating?}
-    ReviewCheck -- Belum Pernah --> Step1Review[Langkah 1: Isi Rating Bintang & Ulasan Pengalaman]
-    ReviewCheck -- Sudah Pernah --> Step2Claim[Langkah 2: Isi Formulir Pengaduan Garansi]
+    CheckActiveClaim -->|"Belum Ada Klaim Aktif"| ReviewCheck{"Sudah Pernah Mengisi Ulasan & Rating?"}
+    ReviewCheck -->|"Belum Pernah"| Step1Review["Langkah 1: Isi Rating Bintang & Ulasan Pengalaman"]
+    ReviewCheck -->|"Sudah Pernah"| Step2Claim["Langkah 2: Isi Formulir Pengaduan Garansi"]
     Step1Review --> Step2Claim
 
-    Step2Claim --> FillDetails[Tulis Deskripsi Kendala & Unggah Foto Bukti Kerusakan]
-    FillDetails --> SubmitClaimDB[(Simpan Klaim Status: 'pending'\nNotifikasi ke Admin Operasional)]
+    Step2Claim --> FillDetails["Tulis Deskripsi Kendala & Unggah Foto Bukti Kerusakan"]
+    FillDetails --> SubmitClaimDB[("Simpan Klaim Status: 'pending'<br/>Notifikasi ke Admin Operasional")]
 
-    SubmitClaimDB --> AdminReview[Admin Operasional Evaluasi Bukti & Riwayat di /admin/claims]
-    AdminReview --> AdminDecision{Keputusan Kelayakan Klaim?}
+    SubmitClaimDB --> AdminReview["Admin Operasional Evaluasi Bukti & Riwayat di /admin/claims"]
+    AdminReview --> AdminDecision{"Keputusan Kelayakan Klaim?"}
 
-    AdminDecision -- Ditolak (Kerusakan Luar/Bukan Hasil Servis) --> RejectClaim[(Status: 'rejected'\nBeri Alasan Penolakan Tertulis)]
-    RejectClaim --> OfferPaidBooking{Pelanggan Bersedia Servis Berbayar?}
-    OfferPaidBooking -- Ya --> ConvertToPaid[Konversi Pengaduan Menjadi Booking Reguler]
-    OfferPaidBooking -- Tidak --> EndKlaim([Klaim Ditutup])
+    AdminDecision -->|"Ditolak (Bukan Hasil Servis)"| RejectClaim[("Status: 'rejected'<br/>Beri Alasan Penolakan Tertulis")]
+    RejectClaim --> OfferPaidBooking{"Pelanggan Bersedia Servis Berbayar?"}
+    OfferPaidBooking -->|"Ya"| ConvertToPaid["Konversi Pengaduan Menjadi Booking Reguler"]
+    OfferPaidBooking -->|"Tidak"| EndKlaim(["Klaim Ditutup"])
     ConvertToPaid --> EndKlaim
 
-    AdminDecision -- Disetujui (Memenuhi Syarat Garansi) --> ScheduleVisit[(Jadwalkan Kunjungan Inspeksi Ulang\nBiaya Kunjungan: Rp 0 / Gratis)]
-    ScheduleVisit --> DispatchTech[Tugaskan Teknisi untuk Perbaikan Ulang Tanpa Biaya]
-    DispatchTech --> ReInspectionDone[Teknisi Selesaikan Perbaikan & Lapor Hasil]
-    ReInspectionDone --> ResolveClaim[(Status Klaim: 'resolved' / Selesai Tuntas)]
+    AdminDecision -->|"Disetujui (Syarat Terpenuhi)"| ScheduleVisit[("Jadwalkan Kunjungan Inspeksi Ulang<br/>Biaya Kunjungan: Rp 0 / Gratis")]
+    ScheduleVisit --> DispatchTech["Tugaskan Teknisi untuk Perbaikan Ulang Tanpa Biaya"]
+    DispatchTech --> ReInspectionDone["Teknisi Selesaikan Perbaikan & Lapor Hasil"]
+    ReInspectionDone --> ResolveClaim[("Status Klaim: 'resolved' / Selesai Tuntas")]
     ResolveClaim --> EndKlaim

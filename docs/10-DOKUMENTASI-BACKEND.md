@@ -61,7 +61,7 @@ flowchart TD
     Validate --> Service["Logika Bisnis (Services)"]
     Service --> DB[("PostgreSQL Transaction (Pool)")]
     DB --> Res["JSON Response"]
-    Service -.->|Error Ditangkap| ErrHandler["Global Error Handler"]
+    Service -.->|"Error Ditangkap"| ErrHandler["Global Error Handler"]
     ErrHandler --> ResErr["Standar Error JSON (4xx / 5xx)"]
 ```
 

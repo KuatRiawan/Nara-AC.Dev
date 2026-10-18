@@ -3,28 +3,28 @@ flowchart TD
     %% DIAGRAM ALUR PEMESANAN (BOOKING) SERVIS AC - CV. NARA TEKNINDOTAMA
     %% =========================================================================
 
-    Start([Mulai: Pelanggan Buka Halaman Booking]) --> Step1[1. Pilih Layanan AC & Jumlah Unit]
-    Step1 --> CalcDuration[Sistem Hitung Durasi: Durasi Layanan x Jumlah Unit]
-    CalcDuration --> Step2[2. Isi Data Lokasi & Alamat Domisili]
-    Step2 --> Step3[3. Pilih Tanggal & Slot Jam Servis]
+    Start(["Mulai: Pelanggan Buka Halaman Booking"]) --> Step1["1. Pilih Layanan AC & Jumlah Unit"]
+    Step1 --> CalcDuration["Sistem Hitung Durasi: Durasi Layanan x Jumlah Unit"]
+    CalcDuration --> Step2["2. Isi Data Lokasi & Alamat Domisili"]
+    Step2 --> Step3["3. Pilih Tanggal & Slot Jam Servis"]
     
-    Step3 --> CheckHours{Apakah Jam Mulai + Durasi <= 19:00 WIB?}
-    CheckHours -- Tidak --> RejectClosing[Tolak: DURATION_EXCEEDS_CLOSING\nJam Operasional 08:00 - 19:00 WIB]
+    Step3 --> CheckHours{"Apakah Jam Mulai + Durasi &lt;= 19:00 WIB?"}
+    CheckHours -->|"Tidak"| RejectClosing["Tolak: DURATION_EXCEEDS_CLOSING<br/>Jam Operasional 08:00 - 19:00 WIB"]
     RejectClosing --> Step3
 
-    CheckHours -- Ya --> CheckCapacity{Kapasitas Slot & Teknisi Tersedia?}
-    CheckCapacity -- Penuh --> RejectConflict[Tolak: 409 Conflict\nSlot Penuh, Pilih Jam Lain]
+    CheckHours -->|"Ya"| CheckCapacity{"Kapasitas Slot & Teknisi Tersedia?"}
+    CheckCapacity -->|"Penuh"| RejectConflict["Tolak: 409 Conflict<br/>Slot Penuh, Pilih Jam Lain"]
     RejectConflict --> Step3
 
-    CheckCapacity -- Tersedia --> Step4[4. Pilih Skema & Metode Pembayaran]
-    Step4 --> CheckMember{Apakah Pelanggan Member Terdaftar?}
-    CheckMember -- Ya --> ApplyDiscount[Terapkan Diskon Member 10%\nKhusus Biaya Jasa / Service Fee]
-    CheckMember -- Tidak --> NormalPrice[Harga Normal Sesuai Katalog]
+    CheckCapacity -->|"Tersedia"| Step4["4. Pilih Skema & Metode Pembayaran"]
+    Step4 --> CheckMember{"Apakah Pelanggan Member Terdaftar?"}
+    CheckMember -->|"Ya"| ApplyDiscount["Terapkan Diskon Member 10%<br/>Khusus Biaya Jasa / Service Fee"]
+    CheckMember -->|"Tidak"| NormalPrice["Harga Normal Sesuai Katalog"]
 
-    ApplyDiscount --> CreateBookingDB[(Simpan Transaksi Booking ke Basis Data)]
+    ApplyDiscount --> CreateBookingDB[("Simpan Transaksi Booking ke Basis Data")]
     NormalPrice --> CreateBookingDB
 
-    CreateBookingDB --> GenerateCode[Buat Kode Unik NARA-AC...\n& Faktur Estimasi Awal]
-    GenerateCode --> DirectToStatus[Arahkan ke Halaman Status Tracking]
-    DirectToStatus --> WaitAdmin[Menunggu Konfirmasi & Penugasan Teknisi oleh Admin]
-    WaitAdmin --> End([Selesai Alur Booking])
+    CreateBookingDB --> GenerateCode["Buat Kode Unik NARA-AC...<br/>& Faktur Estimasi Awal"]
+    GenerateCode --> DirectToStatus["Arahkan ke Halaman Status Tracking"]
+    DirectToStatus --> WaitAdmin["Menunggu Konfirmasi & Penugasan Teknisi oleh Admin"]
+    WaitAdmin --> End(["Selesai Alur Booking"])

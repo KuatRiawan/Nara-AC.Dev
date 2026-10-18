@@ -4,61 +4,61 @@ flowchart TD
     %% =========================================================================
 
     subgraph Pelanggan["Pelanggan"]
-        P1([Buka Halaman Booking]) --> P2[Pilih Layanan, Unit, & Jam Servis]
-        P2 --> P3[Kirim Formulir Pemesanan]
-        P4[Terima Estimasi Awal & Kode Booking]
-        P5[Unggah Bukti Transfer / Pilih Tunai]
-        P6[Menerima Teknisi di Lokasi]
-        P7[Memeriksa AC & Konfirmasi Hasil Servis]
-        P8[Beri Rating & Ulasan Kepuasan]
+        P1(["Buka Halaman Booking"]) --> P2["Pilih Layanan, Unit, & Jam Servis"]
+        P2 --> P3["Kirim Formulir Pemesanan"]
+        P4["Terima Estimasi Awal & Kode Booking"]
+        P5["Unggah Bukti Transfer / Pilih Tunai"]
+        P6["Menerima Teknisi di Lokasi"]
+        P7["Memeriksa AC & Konfirmasi Hasil Servis"]
+        P8["Beri Rating & Ulasan Kepuasan"]
     end
 
     subgraph Sistem["Sistem Backend & DB"]
-        S1{Validasi Jam Operasional\n08:00 - 19:00 WIB}
-        S2{Cek Ketersediaan Teknisi & Slot}
-        S3[(Simpan Booking Status: 'pending')]
-        S4[Kalkulasi Otoritatif: Diskon Member 10% Jasa]
-        S5[(Update Status: 'confirmed' & Notifikasi)]
-        S6[(Simpan Bukti Pembayaran Status: 'unverified')]
-        S7[(Update Status: 'in_progress')]
-        S8[(Simpan Laporan, Checklist, & Foto)]
-        S9{48 Jam Berlalu Tanpa Sanggahan?}
-        S10[(Otomatis Status: 'done' & Konfirmasi: TRUE)]
-        S11[Buka Hak Akses Ulasan & Mulai Masa Garansi]
+        S1{"Validasi Jam Operasional<br/>08:00 - 19:00 WIB"}
+        S2{"Cek Ketersediaan Teknisi & Slot"}
+        S3[("Simpan Booking Status: 'pending'")]
+        S4["Kalkulasi Otoritatif: Diskon Member 10% Jasa"]
+        S5[("Update Status: 'confirmed' & Notifikasi")]
+        S6[("Simpan Bukti Pembayaran Status: 'unverified'")]
+        S7[("Update Status: 'in_progress'")]
+        S8[("Simpan Laporan, Checklist, & Foto")]
+        S9{"48 Jam Berlalu Tanpa Sanggahan?"}
+        S10[("Otomatis Status: 'done' & Konfirmasi: TRUE")]
+        S11["Buka Hak Akses Ulasan & Mulai Masa Garansi"]
     end
 
     subgraph AdminOperasional["Admin Operasional"]
-        A1[Menerima Notifikasi Booking Baru]
-        A2[Pilih Teknisi Tersedia Berdasarkan Wilayah]
-        A3[Verifikasi Bukti Transfer Bank]
-        A4{Bukti Transfer Valid?}
-        A5[(Tandai Pembayaran: 'paid' / Lunas)]
-        A6[Tolak Bukti / Minta Unggah Ulang]
+        A1["Menerima Notifikasi Booking Baru"]
+        A2["Pilih Teknisi Tersedia Berdasarkan Wilayah"]
+        A3["Verifikasi Bukti Transfer Bank"]
+        A4{"Bukti Transfer Valid?"}
+        A5[("Tandai Pembayaran: 'paid' / Lunas")]
+        A6["Tolak Bukti / Minta Unggah Ulang"]
     end
 
     subgraph TeknisiLapangan["Teknisi Lapangan"]
-        T1[Terima Notifikasi Penugasan di Konsol]
-        T2[Ubah Status: 'Teknisi Menuju Lokasi']
-        T3[Tiba di Lokasi & Mulai Pengerjaan]
-        T4[Unggah Foto SEBELUM Servis]
-        T5[Lakukan Pembersihan & Isi Checklist]
-        T6[Unggah Foto SESUDAH Servis]
-        T7[Catat Suku Cadang Terpakai Jika Ada]
-        T8[Kirim Laporan Penyelesaian]
+        T1["Terima Notifikasi Penugasan di Konsol"]
+        T2["Ubah Status: 'Teknisi Menuju Lokasi'"]
+        T3["Tiba di Lokasi & Mulai Pengerjaan"]
+        T4["Unggah Foto SEBELUM Servis"]
+        T5["Lakukan Pembersihan & Isi Checklist"]
+        T6["Unggah Foto SESUDAH Servis"]
+        T7["Catat Suku Cadang Terpakai Jika Ada"]
+        T8["Kirim Laporan Penyelesaian"]
     end
 
     %% Hubungan Antar Swimlane
     P3 --> S1
-    S1 -- Valid --> S2
-    S2 -- Ada Slot --> S4
+    S1 -->|"Valid"| S2
+    S2 -->|"Ada Slot"| S4
     S4 --> S3
     S3 --> P4
     P4 --> P5
     P5 --> S6
     S6 --> A3
     A3 --> A4
-    A4 -- Valid --> A5
-    A4 -- Palsu/Kurang --> A6
+    A4 -->|"Valid"| A5
+    A4 -->|"Palsu / Kurang"| A6
     A6 --> P5
 
     S3 --> A1
@@ -78,8 +78,8 @@ flowchart TD
     T8 --> S8
 
     S8 --> P7
-    P7 -- Konfirmasi Mandiri --> S11
-    P7 -- Tidak Merespon --> S9
-    S9 -- Ya --> S10
+    P7 -->|"Konfirmasi Mandiri"| S11
+    P7 -->|"Tidak Merespon"| S9
+    S9 -->|"Ya"| S10
     S10 --> S11
     S11 --> P8

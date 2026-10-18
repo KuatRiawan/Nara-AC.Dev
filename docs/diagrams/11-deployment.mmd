@@ -4,69 +4,71 @@ flowchart TB
     %% =========================================================================
 
     subgraph InternetClients["Klien Publik & Perangkat Pengguna"]
-        BrowserClient["Web Browser Pengguna\n(Chrome / Safari / Firefox / Edge)"]
-        MobileTech["Smartphone Teknisi Lapangan\n(PWA / Web Mobile)"]
+        BrowserClient["Web Browser Pengguna<br/>(Chrome / Safari / Firefox / Edge)"]
+        MobileTech["Smartphone Teknisi Lapangan<br/>(PWA / Web Mobile)"]
         WhatsAppUser["Aplikasi WhatsApp Pelanggan"]
     end
 
     subgraph IngressLayer["Lapisan Jaringan & Reverse Proxy"]
         DNS["DNS Domain (narateknindotama.com)"]
-        TLS["Sertifikat SSL/TLS Let's Encrypt (HTTPS Port 443)"]
+        TLS["Sertifikat SSL/TLS Lets Encrypt (HTTPS Port 443)"]
         Nginx["Reverse Proxy Nginx / Cloudflare Edge"]
     end
 
     subgraph AppServerNode["Host Server Aplikasi (Ubuntu Linux / VPS Production)"]
         subgraph StaticFrontendNode["Frontend Static Serving"]
-            ViteDist["Berkas Hasil Build Produksi (frontend/dist/)\nHTML5 SPA + CSS + JS Bundles"]
+            ViteDist["Berkas Hasil Build Produksi (frontend/dist/)<br/>HTML5 SPA + CSS + JS Bundles"]
         end
 
         subgraph BackendNode["Node.js Cluster (PM2 Process Manager)"]
-            ExpressAPI["Express API Server (Node 18+)\nPort Internal: 4000\nWorkers: 2-4 Proses"]
-            NodeCron["In-Process Background Scheduler\nCron Servis Harian 07:00 WIB"]
+            ExpressAPI["Express API Server (Node 18+)<br/>Port Internal: 4000<br/>Workers: 2-4 Proses"]
+            NodeCron["In-Process Background Scheduler<br/>Cron Servis Harian 07:00 WIB"]
         end
 
         subgraph AIServiceNode["Python AI Subsystem"]
-            UvicornFastAPI["FastAPI NLP Service (Python 3.9+)\nPort Internal: 8000\nModel: intent_model.pkl"]
+            UvicornFastAPI["FastAPI NLP Service (Python 3.9+)<br/>Port Internal: 8000<br/>Model: intent_model.pkl"]
         end
 
         subgraph DSServiceNode["Data Science Subsystem"]
-            StreamlitApp["Streamlit Dashboard (Python 3.9+)\nPort Internal: 8501"]
+            StreamlitApp["Streamlit Dashboard (Python 3.9+)<br/>Port Internal: 8501"]
         end
 
         subgraph LocalDiskStorage["Penyimpanan Berkas Server"]
-            UploadsDir["backend/uploads/\nFoto Sebelum/Sesudah & Bukti Transfer"]
+            UploadsDir["backend/uploads/<br/>Foto Sebelum/Sesudah & Bukti Transfer"]
         end
     end
 
     subgraph DatabaseNode["Lapisan Basis Data Terkelola"]
-        PostgresProd[("PostgreSQL Server 14+\nPort: 5432\nBasis Data: nara_ac\nPenyimpanan Data Persisten SSD")]
-        PGBackup[("Penyimpanan Cadangan Harian\n(Automated Daily Dump pg_dump)")]
+        PostgresProd[("PostgreSQL Server 14+<br/>Port: 5432<br/>Basis Data: nara_ac<br/>Penyimpanan Data Persisten SSD")]
+        PGBackup[("Penyimpanan Cadangan Harian<br/>(Automated Daily Dump pg_dump)")]
     end
 
     subgraph ExternalGateways["Layanan SaaS Eksternal"]
-        WAGatewaySaaS["WhatsApp Business API Gateway\n(Fonnte / Meta Cloud API)"]
-        GoogleGeminiCloud["Google Gemini AI API\n(gemini-flash-lite)"]
+        WAGatewaySaaS["WhatsApp Business API Gateway<br/>(Fonnte / Meta Cloud API)"]
+        GoogleGeminiCloud["Google Gemini AI API<br/>(gemini-flash-lite)"]
     end
 
     %% Koneksi Klien ke Ingress
-    BrowserClient -->|HTTPS :443| DNS --> TLS --> Nginx
-    MobileTech -->|HTTPS :443| DNS
-    WhatsAppUser <-->|WhatsApp Network| WAGatewaySaaS
+    BrowserClient -->|"HTTPS :443"| DNS
+    MobileTech -->|"HTTPS :443"| DNS
+    DNS --> TLS
+    TLS --> Nginx
+    WhatsAppUser -->|"Jaringan WhatsApp"| WAGatewaySaaS
 
     %% Nginx Routing
-    Nginx -->|Route / | ViteDist
-    Nginx -->|Route /api/* & /health| ExpressAPI
-    Nginx -->|Route /ai/* (Internal Proxy)| UvicornFastAPI
-    Nginx -->|Route /analytics-ds/* (Admin Only)| StreamlitApp
+    Nginx -->|"Route /"| ViteDist
+    Nginx -->|"Route /api/* & /health"| ExpressAPI
+    Nginx -->|"Route /ai/* (Internal Proxy)"| UvicornFastAPI
+    Nginx -->|"Route /analytics-ds/* (Admin Only)"| StreamlitApp
 
     %% Backend Komunikasi
-    ExpressAPI -->|Kueri Relasional TCP :5432| PostgresProd
-    ExpressAPI -->|Simpan Berkas Multipart| UploadsDir
-    ExpressAPI -->|HTTP REST Internal :8000| UvicornFastAPI
-    ExpressAPI -->|REST API Outbound| WAGatewaySaaS
-    ExpressAPI -->|REST API Outbound| GoogleGeminiCloud
-    WAGatewaySaaS -->|Webhook Inbound POST /api/v1/whatsapp/webhook| Nginx
+    ExpressAPI -->|"Kueri Relasional TCP :5432"| PostgresProd
+    ExpressAPI -->|"Simpan Berkas Multipart"| UploadsDir
+    ExpressAPI -->|"HTTP REST Internal :8000"| UvicornFastAPI
+    ExpressAPI -->|"REST API Outbound"| WAGatewaySaaS
+    ExpressAPI -->|"REST API Outbound"| GoogleGeminiCloud
+    WAGatewaySaaS -->|"Webhook Inbound POST /api/v1/whatsapp/webhook"| Nginx
 
     %% Data Science & Backup
-    StreamlitApp -->|Read-Only Connection| PostgresProd
-    PostgresProd -->|Cron Backup Otomatis 02:00 WIB| PGBackup
+    StreamlitApp -->|"Read-Only Connection"| PostgresProd
+    PostgresProd -->|"Cron Backup Otomatis 02:00 WIB"| PGBackup

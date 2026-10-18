@@ -19,7 +19,7 @@ sequenceDiagram
     
     Pelanggan->>FE: Isi Alamat, Kontak, & Klik "Konfirmasi Pemesanan"
     FE->>API: POST /api/v1/bookings { layanan_id, tanggal, jam_mulai, kontak, ... }
-    Note over API: Validasi Otoritatif Server:<br/>1. Diskon Member 10% Jasa<br/>2. Jam Selesai <= 19:00 WIB
+    Note over API: Validasi Otoritatif Server:<br/>1. Diskon Member 10% Jasa<br/>2. Jam Selesai &lt;= 19:00 WIB
     API->>DB: INSERT INTO bookings, booking_items (BEGIN ... COMMIT)
     DB-->>API: Rekaman Berhasil Disimpan (kode_booking: NARA-AC...)
     API-->>FE: HTTP 201 Created { kode_booking, invoice_estimasi }

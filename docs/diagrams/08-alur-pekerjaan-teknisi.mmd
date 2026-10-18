@@ -3,30 +3,30 @@ flowchart TD
     %% DIAGRAM ALUR EKSEKUSI PEKERJAAN TEKNISI - NARA AC
     %% =========================================================================
 
-    Start([Mulai: Teknisi Buka Konsol /technician]) --> ViewTasks[1. Periksa Daftar Tugas Booking Hari Ini]
-    ViewTasks --> SelectJob[2. Pilih Tugas & Lihat Detail Unit, Alamat, Kontak]
-    SelectJob --> StatusOTW[3. Update Status: 'Teknisi Menuju Lokasi']
+    Start(["Mulai: Teknisi Buka Konsol /technician"]) --> ViewTasks["1. Periksa Daftar Tugas Booking Hari Ini"]
+    ViewTasks --> SelectJob["2. Pilih Tugas & Lihat Detail Unit, Alamat, Kontak"]
+    SelectJob --> StatusOTW["3. Update Status: 'Teknisi Menuju Lokasi'"]
 
-    StatusOTW --> ArriveLocation[4. Tiba di Lokasi Pelanggan & Lapor Diri]
-    ArriveLocation --> StatusInProgress[5. Mulai Pengerjaan: Status 'in_progress']
+    StatusOTW --> ArriveLocation["4. Tiba di Lokasi Pelanggan & Lapor Diri"]
+    ArriveLocation --> StatusInProgress["5. Mulai Pengerjaan: Status 'in_progress'"]
 
-    StatusInProgress --> PhotoBefore[6. Ambil & Unggah Foto Kondisi SEBELUM Servis]
-    PhotoBefore --> DiagnosticCheck[7. Lakukan Diagnosa Awal]
+    StatusInProgress --> PhotoBefore["6. Ambil & Unggah Foto Kondisi SEBELUM Servis"]
+    PhotoBefore --> DiagnosticCheck["7. Lakukan Diagnosa Awal"]
 
-    DiagnosticCheck --> NeedParts{Ditemukan Kerusakan / Butuh Suku Cadang?}
-    NeedParts -- Ya --> ProposeParts[Ajukan Penggantian Sparepart & Estimasi Tambahan]
-    ProposeParts --> DualApproval{Persetujuan Ganda Pelanggan & Admin?}
-    DualApproval -- Ditolak --> CancelParts[Batalkan Penggantian, Lanjut Servis Standar]
-    DualApproval -- Disetujui --> RecordParts[(Catat Suku Cadang & Biaya Tambahan di Work Order)]
+    DiagnosticCheck --> NeedParts{"Ditemukan Kerusakan / Butuh Suku Cadang?"}
+    NeedParts -->|"Ya"| ProposeParts["Ajukan Penggantian Sparepart & Estimasi Tambahan"]
+    ProposeParts --> DualApproval{"Persetujuan Ganda Pelanggan & Admin?"}
+    DualApproval -->|"Ditolak"| CancelParts["Batalkan Penggantian, Lanjut Servis Standar"]
+    DualApproval -->|"Disetujui"| RecordParts[("Catat Suku Cadang & Biaya Tambahan di Work Order")]
     CancelParts --> ServiceAction
     RecordParts --> ServiceAction
 
-    NeedParts -- Tidak --> ServiceAction[8. Eksekusi Pekerjaan: Cuci Filter, Evaporator, Pipa]
-    ServiceAction --> FillChecklist[9. Lengkapi Lembar Checklist Diagnostik Wajib\n(Tekanan Freon, Arus Ampere, Aliran Drainase)]
-    FillChecklist --> PhotoAfter[10. Ambil & Unggah Foto Kondisi SESUDAH Servis]
+    NeedParts -->|"Tidak"| ServiceAction["8. Eksekusi Pekerjaan: Cuci Filter, Evaporator, Pipa"]
+    ServiceAction --> FillChecklist["9. Lengkapi Lembar Checklist Diagnostik Wajib<br/>(Tekanan Freon, Arus Ampere, Aliran Drainase)"]
+    FillChecklist --> PhotoAfter["10. Ambil & Unggah Foto Kondisi SESUDAH Servis"]
 
-    PhotoAfter --> WriteNotes[11. Tulis Catatan Rekomendasi Pemeliharaan]
-    WriteNotes --> SubmitReport[12. Kirim Laporan Kerja Lengkap ke Server]
-    SubmitReport --> UpdateDone[(Status Booking: 'done' / Selesai Dikerjakan)]
-    UpdateDone --> HandoverCustomer[13. Serah Terima Unit dengan Pelanggan di Lokasi]
-    HandoverCustomer --> End([Selesai Tugas Teknisi])
+    PhotoAfter --> WriteNotes["11. Tulis Catatan Rekomendasi Pemeliharaan"]
+    WriteNotes --> SubmitReport["12. Kirim Laporan Kerja Lengkap ke Server"]
+    SubmitReport --> UpdateDone[("Status Booking: 'done' / Selesai Dikerjakan")]
+    UpdateDone --> HandoverCustomer["13. Serah Terima Unit dengan Pelanggan di Lokasi"]
+    HandoverCustomer --> End(["Selesai Tugas Teknisi"])

@@ -3,38 +3,38 @@ flowchart TD
     %% DIAGRAM ALUR PEMBAYARAN & FAKTUR RESMI - NARA AC
     %% =========================================================================
 
-    Start([Mulai: Pelanggan Menerima Faktur]) --> CheckPhase{Fase Faktur?}
-    CheckPhase -- Booking Awal --> InitialInv[Faktur Estimasi Awal\n(ESTIMASI AWAL - Biaya Servis Terjadwal)]
-    CheckPhase -- Selesai Servis --> FinalInv[Faktur Pajak Final\n(INVOICE FINAL - Servis + Suku Cadang Aktual)]
+    Start(["Mulai: Pelanggan Menerima Faktur"]) --> CheckPhase{"Fase Faktur?"}
+    CheckPhase -->|"Booking Awal"| InitialInv["Faktur Estimasi Awal<br/>(ESTIMASI AWAL - Biaya Servis Terjadwal)"]
+    CheckPhase -->|"Selesai Servis"| FinalInv["Faktur Pajak Final<br/>(INVOICE FINAL - Servis + Suku Cadang Aktual)"]
 
-    InitialInv --> ChooseMethod{Pilih Metode Pembayaran}
+    InitialInv --> ChooseMethod{"Pilih Metode Pembayaran"}
     FinalInv --> ChooseMethod
 
-    ChooseMethod -- Tunai (Cash) --> CashCollect[Dibayarkan Tunai ke Teknisi di Lokasi]
-    CashCollect --> TechReportCash[Teknisi Konfirmasi Penerimaan Tunai di Laporan]
-    TechReportCash --> MarkPaidAdmin[Admin Validasi & Status Menjadi 'paid']
+    ChooseMethod -->|"Tunai (Cash)"| CashCollect["Dibayarkan Tunai ke Teknisi di Lokasi"]
+    CashCollect --> TechReportCash["Teknisi Konfirmasi Penerimaan Tunai di Laporan"]
+    TechReportCash --> MarkPaidAdmin["Admin Validasi & Status Menjadi 'paid'"]
 
-    ChooseMethod -- QRIS --> QRISScan[Pelanggan Pindai Kode QRIS Statis/Dinamis]
-    QRISScan --> UploadProof
+    ChooseMethod -->|"QRIS"| QRISScan["Pelanggan Pindai Kode QRIS Statis/Dinamis"]
+    QRISScan --> UploadProof["Pelanggan Unggah Bukti Transfer di StatusPage"]
 
-    ChooseMethod -- Transfer Bank --> BankTransfer[Transfer ke Rekening Resmi CV. Nara Teknindotama\n(BCA / Mandiri)]
-    BankTransfer --> UploadProof[Pelanggan Unggah Bukti Transfer di StatusPage]
+    ChooseMethod -->|"Transfer Bank"| BankTransfer["Transfer ke Rekening Resmi CV. Nara Teknindotama<br/>(BCA / Mandiri)"]
+    BankTransfer --> UploadProof
 
-    UploadProof --> ValidateFile{Validasi Magic-Byte Berkas\nJPEG, PNG, WEBP <= 5 MB}
-    ValidateFile -- Gagal/Bukan Gambar Asli --> RejectUpload[Tolak: File Tidak Valid / Rusak]
+    UploadProof --> ValidateFile{"Validasi Magic-Byte Berkas<br/>JPEG, PNG, WEBP &lt;= 5 MB"}
+    ValidateFile -->|"Gagal / Bukan Gambar Asli"| RejectUpload["Tolak: File Tidak Valid / Rusak"]
     RejectUpload --> UploadProof
 
-    ValidateFile -- Valid --> SaveDisk[(Simpan ke Storage Lokal backend/uploads/)]
-    SaveDisk --> UpdateStatusPending[(Status Pembayaran: 'unverified' / Menunggu Audit)]
-    UpdateStatusPending --> AdminReview[Admin Operasional Buka Menu /admin/invoices]
+    ValidateFile -->|"Valid"| SaveDisk[("Simpan ke Storage Lokal backend/uploads/")]
+    SaveDisk --> UpdateStatusPending[("Status Pembayaran: 'unverified' / Menunggu Audit")]
+    UpdateStatusPending --> AdminReview["Admin Operasional Buka Menu /admin/invoices"]
 
-    AdminReview --> CheckAmount{Kesesuaian Nominal Transfer?}
-    CheckAmount -- Tepat Sesuai Total --> ApprovePayment[(Status: 'paid' / LUNAS\nTerbitkan Kuitansi)]
-    CheckAmount -- Kurang Bayar --> PartialPayment[(Catat Kekurangan: 'kurang_bayar'\nTagihkan Sisa Pembayaran)]
-    CheckAmount -- Lebih Bayar --> OverPayment[(Catat Kelebihan: 'lebih_bayar'\nProses Pengembalian Dana / Refund)]
-    CheckAmount -- Bukti Palsu / Tidak Masuk --> RejectPayment[Tolak Bukti Pembayaran\nMinta Transfer Ulang]
+    AdminReview --> CheckAmount{"Kesesuaian Nominal Transfer?"}
+    CheckAmount -->|"Tepat Sesuai Total"| ApprovePayment[("Status: 'paid' / LUNAS<br/>Terbitkan Kuitansi")]
+    CheckAmount -->|"Kurang Bayar"| PartialPayment[("Catat Kekurangan: 'kurang_bayar'<br/>Tagihkan Sisa Pembayaran")]
+    CheckAmount -->|"Lebih Bayar"| OverPayment[("Catat Kelebihan: 'lebih_bayar'<br/>Proses Pengembalian Dana / Refund")]
+    CheckAmount -->|"Bukti Palsu / Tidak Masuk"| RejectPayment["Tolak Bukti Pembayaran<br/>Minta Transfer Ulang"]
 
-    ApprovePayment --> SendWAOpt{Kirim Salinan via WhatsApp?}
-    SendWAOpt -- Ya --> WADispatch[Kirim Tautan Faktur Resmi ke WhatsApp Pelanggan]
-    SendWAOpt -- Tidak --> Selesai([Selesai Alur Pembayaran])
+    ApprovePayment --> SendWAOpt{"Kirim Salinan via WhatsApp?"}
+    SendWAOpt -->|"Ya"| WADispatch["Kirim Tautan Faktur Resmi ke WhatsApp Pelanggan"]
+    SendWAOpt -->|"Tidak"| Selesai(["Selesai Alur Pembayaran"])
     WADispatch --> Selesai

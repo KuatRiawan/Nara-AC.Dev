@@ -35,18 +35,21 @@ flowchart TD
 
     subgraph DataTier["4. Lapisan Basis Data Relasional"]
         PGPool["pg.Pool Connection Pool (Max 20)"]
-        PostgresDB[("PostgreSQL 14+\n34 Tabel Relasional\n21 File Migrasi")]
-        LocalMedia[("Penyimpanan File Lokal\nbackend/uploads/")]
+        PostgresDB[("PostgreSQL 14+<br/>34 Tabel Relasional<br/>21 File Migrasi")]
+        LocalMedia[("Penyimpanan File Lokal<br/>backend/uploads/")]
     end
 
     subgraph MLTier["5. Lapisan AI & Data Science"]
-        FastAPINLP["FastAPI NLP Microservice (:8000)\n20 Intent Classifier & Slot Extraction"]
+        FastAPINLP["FastAPI NLP Microservice (:8000)<br/>20 Intent Classifier & Slot Extraction"]
         StreamlitDash["Streamlit Analytics Dashboard (:8501)"]
         DataPipeline["Ingestion Pipeline (data-science/)"]
     end
 
-    SPA -->|HTTP REST| NginxProxy
-    NginxProxy --> SecurityHeaders --> RateLimiting --> DoubleCSRF --> ExpressRouter
+    SPA -->|"HTTP REST"| NginxProxy
+    NginxProxy --> SecurityHeaders
+    SecurityHeaders --> RateLimiting
+    RateLimiting --> DoubleCSRF
+    DoubleCSRF --> ExpressRouter
     ExpressRouter --> AuthService
     ExpressRouter --> BookingService
     ExpressRouter --> WorkflowService

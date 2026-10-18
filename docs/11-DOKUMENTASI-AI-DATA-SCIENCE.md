@@ -16,14 +16,14 @@ Modul AI NARA AC bertindak sebagai asisten virtual cerdas yang terhubung dengan 
 ```mermaid
 flowchart LR
     WA["Pelanggan WhatsApp"] --> Backend["Express Backend (:4000)"]
-    Backend -->|HTTP POST X-API-Key| AI["FastAPI AI Service (:8000)"]
+    Backend -->|"HTTP POST X-API-Key"| AI["FastAPI AI Service (:8000)"]
     AI --> TFIDF["TF-IDF Vectorizer"]
     TFIDF --> IntentModel["Intent Classifier (20 Kelas)"]
     IntentModel --> EntityExt["Entity Extractor (Regex & Rules)"]
     EntityExt --> IntentRes["Intent & Entitas JSON"]
     IntentRes --> Backend
     Backend --> DB[("PostgreSQL")]
-    Backend -->|Balasan Otomatis / Eskalasi| WA
+    Backend -->|"Balasan Otomatis / Eskalasi"| WA
 ```
 
 ---
