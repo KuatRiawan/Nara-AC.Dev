@@ -64,3 +64,14 @@ Seluruh diagram tersimpan dalam format teks murni `.mmd` di folder [`docs/diagra
 - [`10-alur-pengingat-whatsapp.mmd`](./diagrams/10-alur-pengingat-whatsapp.mmd)
 - [`11-deployment.mmd`](./diagrams/11-deployment.mmd)
 
+---
+
+## Tangkapan Layar & Aset Dokumentasi
+Berkas gambar antarmuka aplikasi tersimpan pada folder [`docs/assets/`](./assets/):
+- [`00-logo-nara-ac.png`](./assets/00-logo-nara-ac.png) — Logo Resmi CV. Nara Teknindotama
+- [`01-beranda-landing-page.png`](./assets/01-beranda-landing-page.png) — Halaman Beranda Utama & Kalkulator Estimasi
+- [`02-formulir-booking.png`](./assets/02-formulir-booking.png) — Formulir Pemesanan Servis AC (Multi-Step Form)
+- [`03-pelacakan-status.png`](./assets/03-pelacakan-status.png) — Pelacakan Tiket Digital Real-Time & E-Invoice
+- [`04-portal-masuk-staff.png`](./assets/04-portal-masuk-staff.png) — Portal Masuk Staf & Workspace Teknisi/Admin
+
+
