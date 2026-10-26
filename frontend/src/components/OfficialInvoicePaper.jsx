@@ -124,8 +124,14 @@ export default function OfficialInvoicePaper({ booking, isPaidOverride, paymentS
   }, [b.subtotal_jasa, invoiceItems]);
 
   const sparepartItems = useMemo(() => {
-    if (Array.isArray(b.sparepart_items) && b.sparepart_items.length > 0) {
-      return b.sparepart_items.map((p) => ({
+    const list = Array.isArray(b.sparepart_items) && b.sparepart_items.length > 0
+      ? b.sparepart_items
+      : (Array.isArray(b.items) && b.items.length > 0
+          ? b.items.filter((it) => it.jenis === 'sparepart')
+          : []);
+
+    if (list.length > 0) {
+      return list.map((p) => ({
         nama: p.nama_layanan || p.nama || p.nama_item || 'Suku Cadang / Material',
         qty: Number(p.jumlah_unit || p.qty || p.jumlah || 1),
         satuan: p.satuan || 'pcs',
@@ -147,7 +153,7 @@ export default function OfficialInvoicePaper({ booking, isPaidOverride, paymentS
       }));
     }
     return [];
-  }, [b.sparepart_items, b.pemakaian_inventory]);
+  }, [b.sparepart_items, b.items, b.pemakaian_inventory]);
 
   const subtotalSparepart = useMemo(() => {
     if (b.subtotal_sparepart !== undefined) return Number(b.subtotal_sparepart);
@@ -157,20 +163,14 @@ export default function OfficialInvoicePaper({ booking, isPaidOverride, paymentS
   const subtotal = subtotalJasa + subtotalSparepart;
 
   const { discount, discountLabel } = useMemo(() => {
-    if (b.discount !== undefined) {
+    if (b.discount !== undefined && Number(b.discount) > 0) {
       return {
         discount: Number(b.discount),
-        discountLabel: b.discount_reason || b.discount_label || 'Diskon Membership 10% (Khusus Biaya Jasa)',
-      };
-    }
-    if (isMember) {
-      return {
-        discount: Math.round(subtotalJasa * 0.1),
-        discountLabel: 'Diskon Membership 10% (Khusus Biaya Jasa)',
+        discountLabel: b.discount_reason || b.discount_label || 'Diskon Khusus',
       };
     }
     return { discount: 0, discountLabel: '' };
-  }, [subtotalJasa, isMember, b.discount, b.discount_reason, b.discount_label]);
+  }, [b.discount, b.discount_reason, b.discount_label]);
 
   const total = b.total !== undefined ? Number(b.total) : (subtotal - discount);
 
@@ -308,8 +308,8 @@ export default function OfficialInvoicePaper({ booking, isPaidOverride, paymentS
           <div className="text-sm font-bold text-slate-900 flex items-center gap-2">
             <span>{customerNama}</span>
             {isMember && (
-              <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">
-                Member (-10% Jasa)
+              <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold">
+                Member Resmi
               </span>
             )}
           </div>

@@ -290,7 +290,6 @@ async function createBooking(input, actor = { label: 'customer' }, now = new Dat
     const end = computeEnd(start, totalDurationMinutes, ops.slot_minutes);
     const isAdmin = typeof actor?.label === 'string' && (actor.label.startsWith('admin') || actor.label === 'admin');
     assertSlotAllowed(start, end, ops, now, isAdmin);
-    await assertCapacity(client, start, end, null);
 
     let cust = null;
     if (actor?.customerId) {
@@ -305,7 +304,7 @@ async function createBooking(input, actor = { label: 'customer' }, now = new Dat
         [input.nama, kontak, input.alamat],
       )).rows[0];
     }
-    if (actor?.userId) {
+    if (actor?.userId && actor?.role === 'customer') {
       await client.query(
         'UPDATE users SET customer_id = $1 WHERE id = $2 AND (customer_id IS NULL OR customer_id != $1)',
         [cust.id, actor.userId]
@@ -331,6 +330,8 @@ async function createBooking(input, actor = { label: 'customer' }, now = new Dat
       )).rows;
       return bMapped;
     }
+
+    await assertCapacity(client, start, end, null);
 
     let booking;
     for (let i = 0; i < 8 && !booking; i += 1) {
@@ -418,9 +419,11 @@ async function getBookingDetail(id, user) {
   }
   const b = mapBooking(row);
   b.items = (await query(
-    `SELECT bi.id, bi.layanan_id, s.nama_layanan, s.kategori, bi.jumlah_unit, bi.harga_satuan, bi.subtotal, bi.catatan
+    `SELECT bi.id, bi.layanan_id, COALESCE(bi.nama_item, s.nama_layanan) AS nama_layanan,
+            COALESCE(bi.jenis, s.kategori, 'jasa') AS jenis, s.kategori,
+            bi.jumlah_unit, bi.harga_satuan, bi.subtotal, bi.catatan, bi.nama_item
      FROM booking_items bi
-     JOIN service_catalog s ON s.id = bi.layanan_id
+     LEFT JOIN service_catalog s ON s.id = bi.layanan_id
      WHERE bi.booking_id = $1 ORDER BY bi.id`, [id],
   )).rows;
   if (!b.items.length) {
@@ -667,9 +670,11 @@ async function publicStatusByCode(codeRaw) {
   )).rows;
 
   const items = (await query(
-    `SELECT bi.id, bi.layanan_id, s.nama_layanan, s.kategori, bi.jumlah_unit, bi.harga_satuan, bi.subtotal, bi.catatan
+    `SELECT bi.id, bi.layanan_id, COALESCE(bi.nama_item, s.nama_layanan) AS nama_layanan,
+            COALESCE(bi.jenis, s.kategori, 'jasa') AS jenis, s.kategori,
+            bi.jumlah_unit, bi.harga_satuan, bi.subtotal, bi.catatan, bi.nama_item
      FROM booking_items bi
-     JOIN service_catalog s ON s.id = bi.layanan_id
+     LEFT JOIN service_catalog s ON s.id = bi.layanan_id
      WHERE bi.booking_id = $1 ORDER BY bi.id`, [row.id],
   )).rows;
 
@@ -838,7 +843,7 @@ async function submitFeedback(id, { kode_booking: kode, kontak, feedback_token, 
       role: 'admin',
       title: isLowRating ? 'TINDAK LANJUT WAJIB: Ulasan Bintang Rendah' : 'Feedback baru',
       message: isLowRating
-        ? `[PERHATIAN ATURAN BR-24] ${b.kode_booking} diberi rating rendah (${rating}/5). Hubungi customer segera untuk klarifikasi & garansi: "${String(komentar || 'Tidak ada komentar').slice(0, 100)}"`
+        ? `[PERHATIAN] ${b.kode_booking} diberi rating rendah (${rating}/5). Hubungi customer segera untuk klarifikasi & garansi: "${String(komentar || 'Tidak ada komentar').slice(0, 100)}"`
         : `${b.kode_booking} diberi rating ${rating}/5${komentar ? `: "${String(komentar).slice(0, 80)}"` : ''}`,
       type: 'feedback',
       bookingId: id,
@@ -967,22 +972,31 @@ function calculateInvoice(booking) {
   let totalUnits = 0;
 
   if (Array.isArray(booking.items) && booking.items.length > 0) {
-    serviceItems = booking.items.map((it) => {
+    booking.items.forEach((it) => {
       const itemSubtotal = (it.subtotal !== null && it.subtotal !== undefined)
         ? Number(it.subtotal)
         : (Number(it.harga_satuan || it.harga || 0) * Number(it.jumlah_unit || 1));
-      subtotalJasa += itemSubtotal;
-      totalUnits += Number(it.jumlah_unit || 1);
-      return {
+      
+      const isSparepart = it.jenis === 'sparepart' || it.kategori === 'komponen';
+      const itemData = {
         id: it.id,
         layanan_id: it.layanan_id,
-        nama_layanan: it.nama_layanan || it.nama || booking.layanan || 'Servis AC',
+        nama_layanan: it.nama_layanan || it.nama_item || it.nama || booking.layanan || 'Servis AC',
         harga_satuan: Number(it.harga_satuan || it.harga || 0),
         jumlah_unit: Number(it.jumlah_unit || 1),
         subtotal: itemSubtotal,
         catatan: it.catatan || '',
-        jenis: 'jasa',
+        jenis: isSparepart ? 'sparepart' : 'jasa',
       };
+
+      if (isSparepart) {
+        subtotalSparepart += itemSubtotal;
+        sparepartItems.push(itemData);
+      } else {
+        subtotalJasa += itemSubtotal;
+        totalUnits += Number(it.jumlah_unit || 1);
+        serviceItems.push(itemData);
+      }
     });
   } else {
     const basePrice = Number(booking.harga) || 0;
@@ -1000,22 +1014,26 @@ function calculateInvoice(booking) {
   }
 
   if (Array.isArray(booking.pemakaian_inventory) && booking.pemakaian_inventory.length > 0) {
-    sparepartItems = booking.pemakaian_inventory.map((m) => {
+    booking.pemakaian_inventory.forEach((m) => {
       const hargaSatuan = Number(m.harga || m.harga_satuan || 0);
       const jml = Number(m.jumlah || 1);
       const itemSubtotal = hargaSatuan * jml;
-      subtotalSparepart += itemSubtotal;
-      return {
-        id: m.id,
-        item_id: m.item_id,
-        nama_layanan: `Spare Part: ${m.nama || m.item || 'Suku Cadang'}`,
-        harga_satuan: hargaSatuan,
-        jumlah_unit: jml,
-        satuan: m.satuan || 'pcs',
-        subtotal: itemSubtotal,
-        catatan: m.catatan || '',
-        jenis: 'sparepart',
-      };
+      const mName = m.nama || m.item || 'Suku Cadang';
+      const alreadyListed = sparepartItems.some((sp) => (sp.nama_layanan || '').toLowerCase().includes(mName.toLowerCase()));
+      if (itemSubtotal > 0 || !alreadyListed) {
+        subtotalSparepart += itemSubtotal;
+        sparepartItems.push({
+          id: m.id,
+          item_id: m.item_id,
+          nama_layanan: `Suku Cadang: ${mName}`,
+          harga_satuan: hargaSatuan,
+          jumlah_unit: jml,
+          satuan: m.satuan || 'pcs',
+          subtotal: itemSubtotal,
+          catatan: m.catatan || '',
+          jenis: 'sparepart',
+        });
+      }
     });
   }
 
@@ -1039,15 +1057,8 @@ function calculateInvoice(booking) {
   const subtotal = subtotalJasa + subtotalSparepart;
 
   const isMember = Boolean(booking.is_member || booking.customer_is_member || booking.has_account);
-  let discountJasa = 0;
-  let discountReason = '';
-
-  if (isMember) {
-    discountJasa = Math.round(subtotalJasa * 0.10);
-    discountReason = 'Diskon Membership 10% (Khusus Biaya Jasa)';
-  }
-
-  const discount = discountJasa;
+  const discount = 0;
+  const discountReason = '';
   const total = subtotal - discount;
 
   const totalDibayar = Number(booking.total_dibayar || booking.nominal_bayar || 0);
@@ -1194,9 +1205,234 @@ async function approveServiceFeeChange(id, { disetujui, kontak, catatan }, user)
   });
 }
 
+async function addBookingItem(id, { layanan_id, nama_item, jumlah_unit = 1, harga_satuan, catatan, jenis, inventory_item_id, inventory_qty }, user) {
+  return await withTx(async (client) => {
+    const b = await lockBooking(client, id);
+    if (user.role === 'technician' && b.teknisi_id !== user.technicianId) {
+      throw E.forbidden('Pekerjaan ini bukan penugasan Anda.');
+    }
+    if (b.status === 'cancelled') {
+      throw E.business('Tidak dapat menambahkan item pada booking yang telah dibatalkan.');
+    }
+
+    let finalLayananId = layanan_id ? Number(layanan_id) : null;
+    let finalNama = (nama_item || '').trim();
+    let finalHarga = harga_satuan !== undefined && harga_satuan !== null ? Number(harga_satuan) : null;
+    let finalQty = Math.max(1, Number(jumlah_unit) || 1);
+    let finalJenis = jenis || 'jasa';
+
+    if (finalLayananId) {
+      const sRow = (await client.query('SELECT * FROM service_catalog WHERE id = $1', [finalLayananId])).rows[0];
+      if (!sRow) throw E.validation('Layanan atau suku cadang tidak ditemukan.');
+      if (!finalNama) finalNama = sRow.nama_layanan;
+      if (finalHarga === null || isNaN(finalHarga)) finalHarga = Number(sRow.harga) || 0;
+      if (!jenis) {
+        finalJenis = (sRow.kategori === 'perbaikan' || sRow.nama_layanan.toLowerCase().includes('kapasitor') || sRow.nama_layanan.toLowerCase().includes('sparepart')) ? 'sparepart' : 'jasa';
+      }
+    } else {
+      if (!finalNama) throw E.validation('Nama item / suku cadang wajib diisi.');
+      if (finalHarga === null || isNaN(finalHarga) || finalHarga < 0) {
+        throw E.validation('Harga satuan wajib diisi dan tidak boleh negatif.');
+      }
+    }
+
+    const subtotal = Math.round(finalHarga * finalQty);
+
+    let linkedUsageId = null;
+    let finalInvItemId = inventory_item_id ? Number(inventory_item_id) : null;
+    let finalInvQty = inventory_qty !== undefined && inventory_qty !== null ? Number(inventory_qty) : null;
+
+    // Auto-detect matching inventory item if not explicitly passed
+    if (!finalInvItemId) {
+      const lower = finalNama.toLowerCase();
+      let matchQuery = null;
+      let matchParams = [];
+      if (lower.includes('kapasitor') && lower.includes('35')) {
+        matchQuery = "SELECT id, nama, stok, satuan, min_stok FROM inventory WHERE (nama ILIKE '%35uF%' OR nama ILIKE '%35 uF%') AND aktif=true LIMIT 1";
+      } else if (lower.includes('kapasitor') && lower.includes('25')) {
+        matchQuery = "SELECT id, nama, stok, satuan, min_stok FROM inventory WHERE (nama ILIKE '%25uF%' OR nama ILIKE '%25 uF%') AND aktif=true LIMIT 1";
+      } else if (lower.includes('kapasitor')) {
+        matchQuery = "SELECT id, nama, stok, satuan, min_stok FROM inventory WHERE (kategori='komponen' OR nama ILIKE '%kapasitor%') AND aktif=true ORDER BY id ASC LIMIT 1";
+      } else if (lower.includes('freon') && lower.includes('r32')) {
+        matchQuery = "SELECT id, nama, stok, satuan, min_stok FROM inventory WHERE nama ILIKE '%R32%' AND aktif=true LIMIT 1";
+      } else if (lower.includes('freon') && lower.includes('r410')) {
+        matchQuery = "SELECT id, nama, stok, satuan, min_stok FROM inventory WHERE nama ILIKE '%R410%' AND aktif=true LIMIT 1";
+      } else if (lower.includes('freon') && lower.includes('r22')) {
+        matchQuery = "SELECT id, nama, stok, satuan, min_stok FROM inventory WHERE nama ILIKE '%R22%' AND aktif=true LIMIT 1";
+      } else if (lower.includes('pipa') && lower.includes('1/4')) {
+        matchQuery = "SELECT id, nama, stok, satuan, min_stok FROM inventory WHERE nama ILIKE '%1/4%' AND aktif=true LIMIT 1";
+      } else if (lower.includes('pipa') && lower.includes('3/8')) {
+        matchQuery = "SELECT id, nama, stok, satuan, min_stok FROM inventory WHERE nama ILIKE '%3/8%' AND aktif=true LIMIT 1";
+      } else if (lower.includes('pipa')) {
+        matchQuery = "SELECT id, nama, stok, satuan, min_stok FROM inventory WHERE nama ILIKE '%Pipa%' AND aktif=true LIMIT 1";
+      } else if (lower.includes('pompa') || lower.includes('drainase')) {
+        matchQuery = "SELECT id, nama, stok, satuan, min_stok FROM inventory WHERE nama ILIKE '%Pompa Drainase%' AND aktif=true LIMIT 1";
+      } else if (lower.includes('selang')) {
+        matchQuery = "SELECT id, nama, stok, satuan, min_stok FROM inventory WHERE nama ILIKE '%Selang%' AND aktif=true LIMIT 1";
+      } else if (lower.includes('kabel')) {
+        matchQuery = "SELECT id, nama, stok, satuan, min_stok FROM inventory WHERE nama ILIKE '%Kabel%' AND aktif=true LIMIT 1";
+      } else if (lower.includes('chemical') || lower.includes('cleaner')) {
+        matchQuery = "SELECT id, nama, stok, satuan, min_stok FROM inventory WHERE nama ILIKE '%Chemical%' AND aktif=true LIMIT 1";
+      } else if (finalJenis === 'sparepart') {
+        matchQuery = `SELECT id, nama, stok, satuan, min_stok FROM inventory 
+                      WHERE aktif=true AND (
+                        $1 ILIKE '%' || nama || '%' 
+                        OR nama ILIKE '%' || $1 || '%'
+                      ) 
+                      ORDER BY id ASC LIMIT 1`;
+        matchParams = [finalNama];
+      }
+
+      if (matchQuery) {
+        const foundInv = matchParams.length
+          ? (await client.query(matchQuery, matchParams)).rows[0]
+          : (await client.query(matchQuery)).rows[0];
+
+        if (foundInv) {
+          finalInvItemId = foundInv.id;
+          finalInvQty = finalInvQty || finalQty;
+        }
+      }
+    }
+
+    // Deduct stock if linked to inventory
+    if (finalInvItemId && finalInvQty > 0) {
+      const invRow = (await client.query('SELECT * FROM inventory WHERE id = $1 FOR UPDATE', [finalInvItemId])).rows[0];
+      if (!invRow || !invRow.aktif) {
+        throw E.validation('Barang inventory tidak valid atau nonaktif.', { inventory_item_id: 'Tidak ditemukan.' });
+      }
+      if (Number(invRow.stok) < finalInvQty) {
+        throw E.business(`Stok ${invRow.nama} di gudang tidak mencukupi (tersisa ${Number(invRow.stok)} ${invRow.satuan}).`);
+      }
+
+      await client.query('UPDATE inventory SET stok = stok - $2, updated_at = NOW() WHERE id = $1', [finalInvItemId, finalInvQty]);
+
+      const usageIns = (await client.query(
+        'INSERT INTO inventory_usage (booking_id, item_id, jumlah, teknisi_id, catatan) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+        [id, finalInvItemId, finalInvQty, user.technicianId || b.teknisi_id, catatan || `Dipakai untuk ${finalNama} (${b.kode_booking})`]
+      )).rows[0];
+      linkedUsageId = usageIns.id;
+
+      const sisaStok = Number(invRow.stok) - finalInvQty;
+      await client.query(
+        `INSERT INTO inventory_adjustments (item_id, jenis, jumlah, catatan, oleh, booking_id, stok_sebelum, stok_sesudah)
+         VALUES ($1, 'usage', $2, $3, $4, $5, $6, $7)`,
+        [finalInvItemId, finalInvQty, catatan || `Dipakai pada ${b.kode_booking} (${finalNama})`, user.nama || user.role, id, invRow.stok, sisaStok]
+      );
+
+      await audit(client, user, 'material_used', 'inventory', finalInvItemId, {
+        before: { stok: Number(invRow.stok) },
+        after: { stok: sisaStok },
+        metadata: { booking: b.kode_booking, item: finalNama, jumlah: finalInvQty }
+      });
+
+      if (sisaStok <= Number(invRow.min_stok)) {
+        await notify(client, {
+          role: 'admin',
+          title: 'Stok Menipis',
+          message: `${invRow.nama} tersisa ${sisaStok} ${invRow.satuan} (minimum ${Number(invRow.min_stok)}).`,
+          type: 'inventory',
+          tautan: '/admin/inventory',
+          dedup: `lowstock:${finalInvItemId}:${sisaStok}`
+        });
+      }
+    }
+
+    const ins = (await client.query(
+      `INSERT INTO booking_items (booking_id, layanan_id, nama_item, jumlah_unit, harga_satuan, subtotal, catatan, jenis, inventory_usage_id, inventory_item_id, inventory_qty)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING *`,
+      [id, finalLayananId, finalNama, finalQty, finalHarga, subtotal, catatan || null, finalJenis, linkedUsageId, finalInvItemId, finalInvQty]
+    )).rows[0];
+
+    await client.query(
+      `INSERT INTO status_log (booking_id, status_lama, status_baru, diubah_oleh, catatan)
+       VALUES ($1, $2, $2, $3, $4)`,
+      [id, b.status, user.nama || user.role, `Tambah Tindakan/Add-On di lokasi: ${finalNama} (${finalQty}x @ Rp ${finalHarga.toLocaleString('id-ID')}) = Rp ${subtotal.toLocaleString('id-ID')}${catatan ? ' (' + catatan + ')' : ''}`]
+    );
+
+    await audit(client, user, 'booking_item_added', 'booking', id, {
+      item_id: ins.id,
+      nama: finalNama,
+      jumlah: finalQty,
+      harga_satuan: finalHarga,
+      subtotal,
+      inventory_usage_id: linkedUsageId,
+    });
+
+    return {
+      success: true,
+      message: `Berhasil menambahkan ${finalNama} ke tagihan/invoice dan memperbarui stok inventory admin.`,
+      item: ins,
+    };
+  });
+}
+
+async function removeBookingItem(id, itemId, user) {
+  return await withTx(async (client) => {
+    const b = await lockBooking(client, id);
+    if (user.role === 'technician' && b.teknisi_id !== user.technicianId) {
+      throw E.forbidden('Pekerjaan ini bukan penugasan Anda.');
+    }
+    if (b.status === 'done' || b.status === 'cancelled') {
+      throw E.business('Tidak dapat menghapus item pada booking yang sudah selesai atau dibatalkan.');
+    }
+
+    const countRes = await client.query('SELECT COUNT(*)::int AS cnt FROM booking_items WHERE booking_id = $1', [id]);
+    if (countRes.rows[0].cnt <= 1) {
+      throw E.business('Item utama booking tidak dapat dihapus. Harus menyisakan minimal 1 item.');
+    }
+
+    const itemRow = (await client.query('SELECT * FROM booking_items WHERE id = $1 AND booking_id = $2', [itemId, id])).rows[0];
+    if (!itemRow) throw E.notFound('Item tidak ditemukan pada booking ini.');
+
+    // If this item had linked inventory usage, restore the inventory stock!
+    if (itemRow.inventory_usage_id || (itemRow.inventory_item_id && itemRow.inventory_qty > 0)) {
+      const invItemId = itemRow.inventory_item_id;
+      const invQty = Number(itemRow.inventory_qty);
+      if (invItemId && invQty > 0) {
+        const invRow = (await client.query('SELECT * FROM inventory WHERE id = $1 FOR UPDATE', [invItemId])).rows[0];
+        if (invRow) {
+          const restoredStok = Number(invRow.stok) + invQty;
+          await client.query('UPDATE inventory SET stok = stok + $2, updated_at = NOW() WHERE id = $1', [invItemId, invQty]);
+          await client.query(
+            `INSERT INTO inventory_adjustments (item_id, jenis, jumlah, catatan, oleh, booking_id, stok_sebelum, stok_sesudah)
+             VALUES ($1, 'in', $2, $3, $4, $5, $6, $7)`,
+            [invItemId, invQty, `Restock otomatis: Pembatalan Add-On pada ${b.kode_booking} (${itemRow.nama_item || 'Suku Cadang'})`, user.nama || user.role, id, invRow.stok, restoredStok]
+          );
+        }
+      }
+      if (itemRow.inventory_usage_id) {
+        await client.query('DELETE FROM inventory_usage WHERE id = $1', [itemRow.inventory_usage_id]);
+      }
+    }
+
+    await client.query('DELETE FROM booking_items WHERE id = $1', [itemId]);
+
+    const itemTitle = itemRow.nama_item || 'Item Layanan';
+    await client.query(
+      `INSERT INTO status_log (booking_id, status_lama, status_baru, diubah_oleh, catatan)
+       VALUES ($1, $2, $2, $3, $4)`,
+      [id, b.status, user.nama || user.role, `Hapus Add-On: ${itemTitle} (Stok dikembalikan ke gudang)`]
+    );
+
+    await audit(client, user, 'booking_item_removed', 'booking', id, {
+      item_id: itemId,
+      nama: itemTitle
+    });
+
+    return {
+      success: true,
+      message: `Berhasil membatalkan ${itemTitle} dari invoice dan mengembalikan stok ke inventory.`,
+    };
+  });
+}
+
 module.exports = {
   getOps, createBooking, listBookings, getBookingDetail, reschedule, cancelBooking, assignTechnician, changeStatus,
   addInventoryUsage, publicStatusByCode, submitFeedback, getAvailability, TRANSITIONS, EDITABLE, computeEnd,
   assertSlotAllowed, wibDateString, mapBooking, BOOKING_SELECT, lockBooking, verifyPublicBooking,
   verifyPublicBookingOwnership, calculateInvoice, proposeServiceFeeChange, approveServiceFeeChange,
+  addBookingItem, removeBookingItem,
 };
+

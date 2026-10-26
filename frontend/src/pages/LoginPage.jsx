@@ -289,9 +289,9 @@ export default function LoginPage() {
                 <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-2.5">
                   <Gift className="w-4 h-4" />
                 </div>
-                <h2 className="text-xs font-black text-slate-800 mb-1">Diskon Eksklusif Member</h2>
+                <h2 className="text-xs font-black text-slate-800 mb-1">Prioritas Layanan Member</h2>
                 <p className="text-xs text-slate-500 leading-normal">
-                  Diskon 10% setiap pemesanan jasa servis AC langsung dari unit pertama.
+                  Prioritas penjadwalan teknisi dan histori servis unit AC langsung dari unit pertama.
                 </p>
               </div>
 
@@ -523,10 +523,7 @@ export default function LoginPage() {
                             <span>Memverifikasi Kode OTP...</span>
                           </>
                         ) : (
-                          <>
-                            <span>Verifikasi &amp; Masuk Dashboard</span>
-                            <ArrowRight className="w-4 h-4" />
-                          </>
+                          <span>Masuk</span>
                         )}
                       </Button>
 
@@ -664,10 +661,7 @@ export default function LoginPage() {
                         <span>Memverifikasi Akun...</span>
                       </>
                     ) : (
-                      <>
-                        <span>Masuk ke Dashboard</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </>
+                      <span>Masuk</span>
                     )}
                   </Button>
                 </form>

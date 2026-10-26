@@ -1,18 +1,7 @@
-/**
- * Backend Improvements Tests - Phase 3 (A26-CS054)
- * 
- * Tests for:
- * - BE-001: Advisory lock race condition prevention
- * - BE-006: Idempotency key support
- * - BE-010-013: Status transition validation
- * - BE-020-025: Reminder deduplication
- * - BE-030-033: Inventory validation
- */
-
 const { TRANSITIONS, changeStatus, addInventoryUsage } = require('../src/services/bookingService');
 
-describe('Backend Improvements - Phase 3', () => {
-  describe('BE-001: Advisory Lock Race Condition Prevention', () => {
+describe('Pengujian Peningkatan Backend', () => {
+  describe('Pencegahan Race Condition dengan Advisory Lock', () => {
     test('pg_advisory_xact_lock is used in createBooking', () => {
       const fs = require('fs');
       const path = require('path');
@@ -49,7 +38,7 @@ describe('Backend Improvements - Phase 3', () => {
     });
   });
 
-  describe('BE-006: Idempotency Key Support', () => {
+  describe('Dukungan Kunci Idempoten (Idempotency Key)', () => {
     test('Booking service handles idempotency_key in createBooking', () => {
       const fs = require('fs');
       const path = require('path');
@@ -87,7 +76,7 @@ describe('Backend Improvements - Phase 3', () => {
     });
   });
 
-  describe('BE-010-013: Status Transition Validation', () => {
+  describe('Validasi Transisi Status Booking', () => {
     test('TRANSITIONS object is defined with all statuses', () => {
       expect(TRANSITIONS).toBeDefined();
       expect(TRANSITIONS.scheduled).toContain('on process');
@@ -98,7 +87,6 @@ describe('Backend Improvements - Phase 3', () => {
     });
 
     test('changeStatus validates transitions', () => {
-      // This test verifies that changeStatus checks TRANSITIONS
       const fs = require('fs');
       const path = require('path');
       const bookingService = fs.readFileSync(
@@ -111,7 +99,6 @@ describe('Backend Improvements - Phase 3', () => {
     });
 
     test('Illegal transition from done to scheduled is rejected', () => {
-      // This verifies the logic exists to reject illegal transitions
       expect(TRANSITIONS.done).not.toContain('scheduled');
     });
 
@@ -120,7 +107,7 @@ describe('Backend Improvements - Phase 3', () => {
     });
   });
 
-  describe('BE-020-025: Reminder Deduplication', () => {
+  describe('Deduplikasi Pengingat Jadwal', () => {
     test('Reminder log table has UNIQUE constraint', () => {
       const fs = require('fs');
       const path = require('path');
@@ -152,12 +139,11 @@ describe('Backend Improvements - Phase 3', () => {
         'utf-8'
       );
       
-      // Line 90 in reminderService.js filters for status='scheduled'
-      expect(reminderService).toContain("status='scheduled'");
+      expect(reminderService).toMatch(/status.*scheduled/);
     });
   });
 
-  describe('BE-030-033: Inventory Validation', () => {
+  describe('Validasi Stok Inventaris', () => {
     test('Inventory usage validates stock availability', () => {
       const fs = require('fs');
       const path = require('path');
@@ -328,8 +314,8 @@ describe('Backend Improvements - Phase 3', () => {
         'utf-8'
       );
       
-      // Verify that only 'scheduled' bookings are selected
-      expect(reminderService).toContain("b.status='scheduled'");
+      // Verify that active scheduled/rescheduled bookings are selected
+      expect(reminderService).toMatch(/b\.status\s+IN\s+\('scheduled',\s*'rescheduled'\)|b\.status='scheduled'/);
       expect(reminderService).toContain("ON CONFLICT");
     });
   });

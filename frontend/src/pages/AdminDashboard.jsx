@@ -231,7 +231,7 @@ export default function AdminDashboard() {
           <Route path="/customers/*" element={<AdminCustomers />} />
           <Route path="/ac-units" element={<AdminACUnits />} />
           <Route path="/technicians/*" element={<AdminTechnicians />} />
-          <Route path="/invoices" element={<AdminInvoices bookings={bookings} onBookingUpdated={handleBookingCreated} />} />
+          <Route path="/invoices" element={<AdminInvoices onBookingUpdated={handleBookingCreated} />} />
           <Route path="/claims" element={<AdminClaims />} />
           <Route path="/whatsapp-cs" element={<AdminWhatsApp />} />
           <Route path="/services" element={<AdminServices />} />

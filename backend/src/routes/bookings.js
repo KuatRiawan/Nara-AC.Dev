@@ -281,10 +281,10 @@ router.patch('/bookings/:id/payment-status', requireAuth(['admin']), validate(id
 
     await query(
       `UPDATE bookings
-       SET status_pembayaran = $1,
-           status_verifikasi_pembayaran = CASE WHEN $1 = 'paid' THEN 'diverifikasi' ELSE status_verifikasi_pembayaran END,
-           verified_by = CASE WHEN $1 = 'paid' THEN $3 ELSE verified_by END,
-           verified_at = CASE WHEN $1 = 'paid' THEN COALESCE(verified_at, NOW()) ELSE verified_at END,
+       SET status_pembayaran = $1::text,
+           status_verifikasi_pembayaran = CASE WHEN $1::text = 'paid' THEN 'diverifikasi' ELSE status_verifikasi_pembayaran END,
+           verified_by = CASE WHEN $1::text = 'paid' THEN $3 ELSE verified_by END,
+           verified_at = CASE WHEN $1::text = 'paid' THEN COALESCE(verified_at, NOW()) ELSE verified_at END,
            updated_at = NOW()
        WHERE id = $2`,
       [status_pembayaran, bookingId, req.user ? req.user.id : null]

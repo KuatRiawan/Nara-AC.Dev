@@ -31,6 +31,7 @@ describe('Booking rules, lifecycle, auth, and DB integrity', () => {
 
   async function cleanup() {
     await query(`DELETE FROM bookings WHERE kontak LIKE '${PREFIX}%'`);
+    await query(`DELETE FROM customers WHERE kontak LIKE '${PREFIX}%' OR nama IN ('Rules Tester', 'Multi Service Tester', 'Duration Tester', 'Workflow Tester')`);
   }
 
   beforeAll(async () => {
@@ -46,7 +47,6 @@ describe('Booking rules, lifecycle, auth, and DB integrity', () => {
 
   afterAll(async () => {
     await cleanup();
-    await pool.end();
   });
 
   describe('Skenario D: edge cases', () => {
@@ -259,15 +259,15 @@ describe('Booking rules, lifecycle, auth, and DB integrity', () => {
       expect(res.body.jumlah_unit).toBe(3);
       expect(res.body.items).toHaveLength(2);
       expect(res.body.items[0]).toMatchObject({ layanan_id: 1, jumlah_unit: 2, harga_satuan: 75000, subtotal: 150000 });
-      expect(res.body.items[1]).toMatchObject({ layanan_id: 2, jumlah_unit: 1, harga_satuan: 350000, subtotal: 350000 });
+      expect(res.body.items[1]).toMatchObject({ layanan_id: 2, jumlah_unit: 1, harga_satuan: 150000, subtotal: 150000 });
 
       // Verifikasi invoice publik
       const invRes = await request(app).get(`/api/v1/public/bookings/${res.body.kode_booking}/invoice`);
       expect(invRes.status).toBe(200);
       expect(invRes.body.units).toBe(3);
-      expect(invRes.body.subtotal).toBe(500000);
+      expect(invRes.body.subtotal).toBe(300000);
       expect(invRes.body.discount).toBe(0); // Diskon eksklusif hanya untuk member
-      expect(invRes.body.total).toBe(500000);
+      expect(invRes.body.total).toBe(300000);
       expect(invRes.body.items).toHaveLength(2);
 
       // Verifikasi detail admin

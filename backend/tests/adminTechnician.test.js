@@ -24,7 +24,10 @@ describe('Admin management & technician workflow', () => {
     expect(res.status).toBe(201);
     return res.body;
   };
-  const cleanup = () => query(`DELETE FROM bookings WHERE kontak LIKE '${PREFIX}%'`);
+  const cleanup = async () => {
+    await query(`DELETE FROM bookings WHERE kontak LIKE '${PREFIX}%'`);
+    await query(`DELETE FROM customers WHERE kontak LIKE '${PREFIX}%' OR nama = 'Workflow Tester'`);
+  };
 
   beforeAll(async () => {
     app = createApp();
@@ -42,7 +45,6 @@ describe('Admin management & technician workflow', () => {
 
   afterAll(async () => {
     await cleanup();
-    await pool.end();
   });
 
   describe('Section 10: admin', () => {
@@ -146,7 +148,7 @@ describe('Admin management & technician workflow', () => {
     });
 
     test('selesaikan pekerjaan → done, dan riwayat status tercatat', async () => {
-      // BR-18 & BR-19: Lampirkan foto before dan after sesuai SOP
+      // Lampirkan foto before dan after sesuai SOP
       await query(
         `INSERT INTO work_order_photos (booking_id, tipe, url_foto, catatan, file_name, mime_type, ukuran_byte, diunggah_oleh)
          VALUES ($1, 'before', '/api/v1/files/before.jpg', 'Kondisi awal', 'before.jpg', 'image/jpeg', 1024, 'Teknisi Test'),

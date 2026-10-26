@@ -2,7 +2,8 @@ const WIB_OFFSET_MIN = 7 * 60;
 const DAY_MS = 86400000;
 
 function wibParts(date) {
-  const d = new Date(date.getTime() + WIB_OFFSET_MIN * 60000);
+  const dt = date instanceof Date ? date : new Date(date);
+  const d = new Date(dt.getTime() + WIB_OFFSET_MIN * 60000);
   return {
     y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate(),
     h: d.getUTCHours(), min: d.getUTCMinutes(), dow: d.getUTCDay(),

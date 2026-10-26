@@ -352,7 +352,7 @@ export default function CustomerHistory() {
                       <span>Masa Berlaku Garansi Telah Berakhir</span>
                     </p>
                     <p className="leading-relaxed">
-                      Masa garansi layanan ini telah berakhir. Silakan buat pesanan servis baru dengan diskon member 10%.
+                      Masa garansi layanan ini telah berakhir. Silakan buat pesanan servis baru untuk perawatan berkala unit AC Anda.
                     </p>
                   </div>
                 ) : !hasQualifyingReview ? (

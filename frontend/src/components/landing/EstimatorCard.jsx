@@ -7,58 +7,72 @@ import { Button } from '../ui/button';
 export default function EstimatorCard({ services = [] }) {
   const navigate = useNavigate();
   const [unitCount, setUnitCount] = useState(2);
-  const [selectedService, setSelectedService] = useState('core'); // 'standard' | 'core' | 'core_freon'
+  const [selectedService, setSelectedService] = useState('semioh'); // 'standard' | 'foam' | 'semioh' | 'overhaul'
 
   const serviceOptions = useMemo(() => {
     const list = Array.isArray(services) ? services : [];
     const std = list.find(s => s.kode === 'SRV-CUCI-01' || (s.nama_layanan || '').toLowerCase().includes('standard') || s.id === 1);
-    const cr = list.find(s => s.kode === 'SRV-CUCI-CORE' || ((s.nama_layanan || '').toLowerCase().includes('core') && !(s.nama_layanan || '').toLowerCase().includes('freon')) || s.id === 4);
-    const cf = list.find(s => s.kode === 'SRV-CUCI-FREON' || ((s.nama_layanan || '').toLowerCase().includes('freon') && (s.nama_layanan || '').toLowerCase().includes('core')) || s.id === 5);
+    const foam = list.find(s => s.kode === 'SRV-CUCI-051-RMH-FOAM' || (s.nama_layanan || '').toLowerCase().includes('foam') || s.id === 44);
+    const cr = list.find(s => s.kode === 'SRV-CUCI-CORE' || ((s.nama_layanan || '').toLowerCase().includes('semi') && (s.nama_layanan || '').toLowerCase().includes('overhaul')) || s.id === 4);
+    const cf = list.find(s => s.kode === 'SRV-CUCI-FREON' || ((s.nama_layanan || '').toLowerCase().includes('overhaul') && !(s.nama_layanan || '').toLowerCase().includes('semi')) || s.id === 5);
 
     return {
       standard: {
         id: 'standard',
+        tierKey: 'biasa',
         serviceId: std?.id || 1,
-        name: std?.nama_layanan || 'Cuci AC Standar',
+        name: 'Cuci AC Standard',
         badge: 'Rutin',
         basePrice: std?.harga !== undefined ? Number(std.harga) : 75000,
         durationPerUnit: std?.durasi_menit !== undefined ? Number(std.durasi_menit) : 60,
         warranty: '14 Hari',
         desc: 'Pembersihan filter & evaporator ringan',
       },
-      core: {
-        id: 'core',
+      foam: {
+        id: 'foam',
+        tierKey: 'foam',
+        serviceId: foam?.id || 44,
+        name: 'Cuci Foam / Sabun',
+        badge: 'Chemical Foam',
+        basePrice: foam?.harga !== undefined ? Number(foam.harga) : 115000,
+        durationPerUnit: foam?.durasi_menit !== undefined ? Number(foam.durasi_menit) : 75,
+        warranty: '14 Hari',
+        desc: 'Chemical foaming agent rontokkan lendir & kerak',
+      },
+      semioh: {
+        id: 'semioh',
+        tierKey: 'semioh',
         serviceId: cr?.id || 4,
-        name: cr?.nama_layanan || 'Cuci AC Core (Deep Clean)',
-        badge: 'Best Value',
-        basePrice: cr?.harga !== undefined ? Number(cr.harga) : 120000,
+        name: 'Cuci Semi Overhaul',
+        badge: 'Paling Diminati',
+        basePrice: cr?.harga !== undefined ? Number(cr.harga) : 200000,
         durationPerUnit: cr?.durasi_menit !== undefined ? Number(cr.durasi_menit) : 90,
         warranty: '30 Hari',
-        desc: 'Bongkar blower, talang air & chemical wash',
+        desc: 'Bongkar blower, talang air & tuntas bocor air',
       },
-      core_freon: {
-        id: 'core_freon',
+      overhaul: {
+        id: 'overhaul',
+        tierKey: 'overhaul',
         serviceId: cf?.id || 5,
-        name: cf?.nama_layanan || 'Paket Core + Isi Freon',
-        badge: 'Lengkap',
-        basePrice: cf?.harga !== undefined ? Number(cf.harga) : 220000,
-        durationPerUnit: cf?.durasi_menit !== undefined ? Number(cf.durasi_menit) : 105,
+        name: 'Cuci Overhaul Total',
+        badge: 'Restorasi Total',
+        basePrice: cf?.harga !== undefined ? Number(cf.harga) : 350000,
+        durationPerUnit: cf?.durasi_menit !== undefined ? Number(cf.durasi_menit) : 120,
         warranty: '45 Hari',
-        desc: 'Deep clean total + isi freon murni presisi',
+        desc: 'Bongkar total & perendaman chemical soak menyeluruh',
       },
     };
   }, [services]);
 
   const calculation = useMemo(() => {
-    const s = serviceOptions[selectedService] || serviceOptions.core;
+    const s = serviceOptions[selectedService] || serviceOptions.semioh;
     const subtotal = s.basePrice * unitCount;
-    const memberDiscount = Math.round(subtotal * 0.1);
     const total = subtotal;
     const estTime = Math.round((s.durationPerUnit * unitCount) * (unitCount > 1 ? 0.85 : 1));
 
     return {
       subtotal,
-      memberDiscount,
+      memberDiscount: 0,
       total,
       estTime,
       serviceName: s.name,
@@ -67,8 +81,8 @@ export default function EstimatorCard({ services = [] }) {
   }, [selectedService, unitCount, serviceOptions]);
 
   const handleBookingRedirect = () => {
-    const s = serviceOptions[selectedService] || serviceOptions.core;
-    navigate(`/booking?service=${selectedService}&layanan=${s.serviceId}&units=${unitCount}`);
+    const s = serviceOptions[selectedService] || serviceOptions.semioh;
+    navigate(`/booking?kategori=cuci&tier=${s.tierKey}&layanan=${s.serviceId}&units=${unitCount}`);
   };
 
   return (
@@ -197,9 +211,9 @@ export default function EstimatorCard({ services = [] }) {
             <div className="flex items-center justify-between text-xs text-blue-700 bg-blue-50/80 px-2.5 py-1.5 rounded-lg border border-blue-200/80">
               <span className="font-semibold flex items-center gap-1">
                 <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                Benefit Member:
+                Standar Layanan:
               </span>
-              <span className="font-bold">Hemat 10% (-Rp {calculation.memberDiscount.toLocaleString('id-ID')})</span>
+              <span className="font-bold">Teknisi Tersertifikasi &amp; SOP Presisi</span>
             </div>
 
             <div className="pt-2 border-t border-sky-200 flex items-center justify-between">

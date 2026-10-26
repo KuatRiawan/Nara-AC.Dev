@@ -436,7 +436,7 @@ npm run build
 # Outcome: Built in ~1.1s, 0 errors, chunks generated in frontend/dist/
 
 # 3. Backend End-to-End Business Rules & Security Suite (Node Test Runner)
-node --test backend/tests/e2e_audit_verification.test.js
+node --test backend/tests/e2e_journey.test.js
 # Outcome: 9/9 Scenarios PASS (100% PASS across Scenarios A through J)
 
 # 4. Backend Syntax Verification (all 39 modules)

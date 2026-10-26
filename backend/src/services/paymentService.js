@@ -81,14 +81,14 @@ async function selectPaymentScheme(bookingId, { skema_pembayaran, metode_pembaya
   if (skema_pembayaran) {
     const schemeConfig = settings.schemes[skema_pembayaran];
     if (!schemeConfig || !schemeConfig.enabled) {
-      throw E.badRequest(`Skema pembayaran "${skema_pembayaran}" sedang tidak tersedia (BR-34).`);
+      throw E.badRequest(`Skema pembayaran "${skema_pembayaran}" sedang tidak tersedia.`);
     }
   }
 
   if (metode_pembayaran) {
     const methodConfig = settings.methods[metode_pembayaran];
     if (!methodConfig || !methodConfig.enabled) {
-      throw E.badRequest(`Metode pembayaran "${metode_pembayaran}" sedang tidak tersedia (BR-36).`);
+      throw E.badRequest(`Metode pembayaran "${metode_pembayaran}" sedang tidak tersedia.`);
     }
   }
 
@@ -111,7 +111,7 @@ async function selectPaymentScheme(bookingId, { skema_pembayaran, metode_pembaya
     return {
       success: true,
       booking: updated,
-      message: 'Skema dan metode pembayaran berhasil diperbarui. Booking tetap aktif (BR-38).',
+      message: 'Skema dan metode pembayaran berhasil diperbarui. Booking tetap aktif.',
     };
   });
 }
@@ -122,7 +122,7 @@ async function uploadTransferProof(bookingId, { bukti_url, nominal, catatan, fil
     : (bukti_url ? String(bukti_url).trim() : '');
 
   if (!resolvedUrl) {
-    throw E.badRequest('Bukti pembayaran berupa foto/gambar atau tautan bukti wajib dilampirkan (BR-37).');
+    throw E.badRequest('Bukti pembayaran berupa foto/gambar atau tautan bukti wajib dilampirkan.');
   }
 
   const nominalNum = Number(nominal);
@@ -152,7 +152,7 @@ async function uploadTransferProof(bookingId, { bukti_url, nominal, catatan, fil
         role: 'admin',
         id: null,
         title: 'Bukti Pembayaran Baru Diunggah',
-        message: `Customer telah mengunggah bukti pembayaran untuk booking ${booking.kode_booking} sebesar Rp ${nominalNum.toLocaleString('id-ID')}. Mohon verifikasi manual (BR-37).`,
+        message: `Customer telah mengunggah bukti pembayaran untuk booking ${booking.kode_booking} sebesar Rp ${nominalNum.toLocaleString('id-ID')}. Mohon verifikasi manual.`,
         type: 'booking',
         bookingId: booking.id,
         tautan: `/admin/invoices?verify=${booking.kode_booking || booking.id}`,
@@ -162,7 +162,7 @@ async function uploadTransferProof(bookingId, { bukti_url, nominal, catatan, fil
 
     return {
       success: true,
-      message: 'Bukti pembayaran berhasil diunggah dan sedang menunggu verifikasi manual admin (BR-37).',
+      message: 'Bukti pembayaran berhasil diunggah dan sedang menunggu verifikasi manual admin.',
       bukti_pembayaran_url: resolvedUrl,
       booking: updated,
     };
@@ -197,7 +197,7 @@ async function getPaymentProofFile(bookingId, fileName, user = null, kontak = nu
 
 async function verifyPaymentProof(bookingId, { disetujui, catatan, nominal_disetujui }, adminUser) {
   if (typeof disetujui !== 'boolean') {
-    throw E.badRequest('Status verifikasi disetujui (true/false) wajib ditentukan (BR-37).');
+    throw E.badRequest('Status verifikasi disetujui (true/false) wajib ditentukan.');
   }
 
   return withTx(async (client) => {
@@ -212,7 +212,8 @@ async function verifyPaymentProof(bookingId, { disetujui, catatan, nominal_diset
     let updated;
     if (disetujui) {
       const itemsRes = await client.query(`
-        SELECT bi.*, sc.nama_layanan
+        SELECT bi.*, COALESCE(bi.nama_item, sc.nama_layanan) AS nama_layanan,
+               COALESCE(bi.jenis, sc.kategori, 'jasa') AS jenis, sc.kategori
         FROM booking_items bi
         LEFT JOIN service_catalog sc ON sc.id = bi.layanan_id
         WHERE bi.booking_id = $1
@@ -291,7 +292,7 @@ async function verifyPaymentProof(bookingId, { disetujui, catatan, nominal_diset
 async function processRefund(bookingId, { nominal_refund, catatan }, adminUser) {
   const nominal = Number(nominal_refund);
   if (!nominal || nominal <= 0) {
-    throw E.badRequest('Nominal refund harus lebih dari 0 (BR-41).');
+    throw E.badRequest('Nominal refund harus lebih dari 0.');
   }
 
   return withTx(async (client) => {
@@ -311,7 +312,7 @@ async function processRefund(bookingId, { nominal_refund, catatan }, adminUser) 
 
     return {
       success: true,
-      message: `Pengembalian kelebihan pembayaran sebesar Rp ${nominal.toLocaleString('id-ID')} berhasil diproses (BR-41).`,
+      message: `Pengembalian kelebihan pembayaran sebesar Rp ${nominal.toLocaleString('id-ID')} berhasil diproses.`,
       booking: updated,
     };
   });
@@ -370,7 +371,8 @@ async function queueAndDispatchWhatsAppInvoice(bookingId, { tipe_invoice = 'auto
   }
 
   const itemsRes = await db.query(`
-    SELECT bi.*, sc.nama_layanan
+    SELECT bi.*, COALESCE(bi.nama_item, sc.nama_layanan) AS nama_layanan,
+           COALESCE(bi.jenis, sc.kategori, 'jasa') AS jenis, sc.kategori
     FROM booking_items bi
     LEFT JOIN service_catalog sc ON sc.id = bi.layanan_id
     WHERE bi.booking_id = $1
@@ -423,7 +425,7 @@ async function queueAndDispatchWhatsAppInvoice(bookingId, { tipe_invoice = 'auto
 
   try {
     if (simulatedFailure) {
-      throw new Error('Simulated WhatsApp Gateway Network Timeout (BR-43)');
+      throw new Error('Simulated WhatsApp Gateway Network Timeout');
     }
 
     const updatedLog = (await db.query(`
@@ -440,7 +442,7 @@ async function queueAndDispatchWhatsAppInvoice(bookingId, { tipe_invoice = 'auto
       success: true,
       status: 'sent',
       log: updatedLog,
-      message: 'Invoice berhasil dikirim ke nomor WhatsApp pelanggan (BR-42).',
+      message: 'Invoice berhasil dikirim ke nomor WhatsApp pelanggan.',
     };
   } catch (err) {
     const updatedLog = (await db.query(`
@@ -458,7 +460,7 @@ async function queueAndDispatchWhatsAppInvoice(bookingId, { tipe_invoice = 'auto
       status: 'failed',
       log: updatedLog,
       error: err.message,
-      message: 'Pengiriman WhatsApp gagal, dijadwalkan untuk pengiriman ulang otomatis (BR-42).',
+      message: 'Pengiriman WhatsApp gagal, dijadwalkan untuk pengiriman ulang otomatis.',
     };
   }
 }

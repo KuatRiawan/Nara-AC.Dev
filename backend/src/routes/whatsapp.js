@@ -97,7 +97,7 @@ router.post('/dispatch-reminders', requireAuth(['admin']), validate(Joi.object({
 
   res.json({
     success: true,
-    message: 'Semua pengingat WhatsApp berhasil diproses (BR-47).',
+    message: 'Semua pengingat WhatsApp berhasil diproses.',
     data: {
       pengingat_h_minus_1: hMinus1Result,
       pengingat_perawatan_berkala: maintenanceResult,

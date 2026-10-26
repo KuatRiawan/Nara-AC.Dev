@@ -241,7 +241,7 @@ export default function StaffLoginPage() {
                     <Input
                       id="staff-login-email"
                       type="email"
-                      placeholder="admin@nara-ac.local atau teknisi@..."
+                      placeholder="nama@narateknindotama.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="h-11 pl-10 text-xs font-semibold rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
@@ -303,23 +303,39 @@ export default function StaffLoginPage() {
                       <span>Memverifikasi Akun Staf...</span>
                     </>
                   ) : (
-                    <>
-                      <span>Masuk ke Panel Kerja</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
+                    <span>Masuk</span>
                   )}
                 </Button>
               </form>
 
-              <div className="mt-6 pt-5 border-t border-slate-100 text-center space-y-2 relative z-10">
-                <p className="text-xs text-slate-600">
-                  Bukan staf atau teknisi Nara AC?{' '}
-                  <Link to="/login" className="font-bold text-blue-600 hover:underline">
-                    Masuk ke Portal Pelanggan
-                  </Link>
-                </p>
+              <div className="mt-6 pt-5 border-t border-slate-100 space-y-3 relative z-10">
+                <Link
+                  to="/login"
+                  className="group block p-3.5 rounded-2xl bg-gradient-to-r from-slate-50 via-blue-50/30 to-sky-50/50 hover:from-blue-50/70 hover:via-sky-50 hover:to-blue-100/60 border border-slate-200/90 hover:border-blue-300 shadow-xs hover:shadow-md transition-all duration-200 text-left cursor-pointer"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-blue-200/80 text-blue-600 flex items-center justify-center shrink-0 shadow-xs group-hover:bg-blue-600 group-hover:text-white transition-all duration-200">
+                        <User className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-2xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-blue-600 transition-colors">
+                          Bukan staf atau teknisi Nara AC?
+                        </div>
+                        <div className="text-xs font-bold text-slate-900 group-hover:text-blue-700 transition-colors mt-0.5">
+                          Portal Pelanggan
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="px-3.5 py-1.5 rounded-xl bg-white group-hover:bg-blue-600 text-blue-600 group-hover:text-white border border-blue-200/90 group-hover:border-blue-600 text-xs font-bold shadow-2xs group-hover:shadow-xs transition-all duration-200 shrink-0">
+                      Beralih
+                    </div>
+                  </div>
+                </Link>
+
                 <div className="flex items-center justify-center gap-1.5 text-2xs text-slate-400">
-                  <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
                   <span>Sistem terlindungi enkripsi end-to-end</span>
                 </div>
               </div>

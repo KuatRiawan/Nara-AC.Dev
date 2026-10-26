@@ -226,9 +226,7 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
       const basePrice = b.layanan?.harga || b.harga || 75000;
       const subtotal = basePrice * unit;
       const isMember = Boolean(b.is_member || b.customer_is_member || b.customer?.has_account);
-      const discount = b.diskon !== undefined && b.diskon !== null
-        ? Number(b.diskon)
-        : (isMember ? Math.round(subtotal * 0.10) : 0);
+      const discount = (b.diskon !== undefined && b.diskon !== null) ? Number(b.diskon) : 0;
       todayOmzet += (b.total_biaya !== undefined && b.total_biaya !== null ? Number(b.total_biaya) : (subtotal - discount));
 
       if (counts[b.status] !== undefined) counts[b.status]++;

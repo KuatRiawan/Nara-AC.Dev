@@ -6,7 +6,7 @@ const { generateCsrfToken } = require('../src/middleware/csrf');
 const paymentService = require('../src/services/paymentService');
 const bookingService = require('../src/services/bookingService');
 
-describe('Phase 5: Payments & Invoices (BR-34 s/d BR-43)', () => {
+describe('Phase 5: Pembayaran & Invoice', () => {
   let app;
   let adminToken;
   let adminHeaders;
@@ -64,8 +64,8 @@ describe('Phase 5: Payments & Invoices (BR-34 s/d BR-43)', () => {
     await query('DELETE FROM customers WHERE id = $1', [customerId]);
   });
 
-  test('BR-34: Admin dapat melihat dan mengatur skema pembayaran yang aktif', async () => {
-    // GET settings
+  test('Admin dapat melihat dan mengatur skema pembayaran yang aktif', async () => {
+    // Ambil pengaturan
     const getRes = await request(app).get('/api/v1/payments/settings');
     expect(getRes.status).toBe(200);
     expect(getRes.body.success).toBe(true);
@@ -73,7 +73,7 @@ describe('Phase 5: Payments & Invoices (BR-34 s/d BR-43)', () => {
     expect(getRes.body.data.schemes).toHaveProperty('dp_50');
     expect(getRes.body.data.schemes).toHaveProperty('pay_after_service');
 
-    // PUT settings (Admin updates available schemes)
+    // Admin memperbarui skema pembayaran
     const updateRes = await request(app)
       .put('/api/v1/payments/settings')
       .set(adminHeaders)
@@ -88,7 +88,7 @@ describe('Phase 5: Payments & Invoices (BR-34 s/d BR-43)', () => {
     expect(updateRes.body.data.schemes.dp_50.enabled).toBe(true);
   });
 
-  test('BR-35, BR-36, BR-38: Customer memilih skema pembayaran (dp_50) dan booking tetap aktif', async () => {
+  test('Customer memilih skema pembayaran (dp_50) dan booking tetap aktif', async () => {
     const res = await request(app)
       .post(`/api/v1/payments/bookings/${bookingId}/scheme`)
       .set(customerHeaders)
@@ -102,12 +102,12 @@ describe('Phase 5: Payments & Invoices (BR-34 s/d BR-43)', () => {
     expect(res.body.booking.skema_pembayaran).toBe('dp_50');
     expect(res.body.booking.metode_pembayaran).toBe('transfer');
 
-    // BR-38: Booking yang belum dibayar tetap aktif (status scheduled, status_pembayaran pending)
+    // Booking yang belum dibayar tetap aktif (status scheduled, status_pembayaran pending)
     expect(res.body.booking.status).toBe('scheduled');
     expect(res.body.booking.status_pembayaran).toBe('pending');
   });
 
-  test('BR-36: Menolak pemilihan metode atau skema pembayaran yang tidak valid', async () => {
+  test('Menolak pemilihan metode atau skema pembayaran yang tidak valid', async () => {
     const res = await request(app)
       .post(`/api/v1/payments/bookings/${bookingId}/scheme`)
       .set(customerHeaders)
@@ -118,7 +118,7 @@ describe('Phase 5: Payments & Invoices (BR-34 s/d BR-43)', () => {
     expect(res.status).toBe(400);
   });
 
-  test('BR-37: Transfer bank mewajibkan unggahan bukti pembayaran', async () => {
+  test('Transfer bank mewajibkan unggahan bukti pembayaran', async () => {
     // Validasi gagal jika tanpa bukti_url
     const badRes = await request(app)
       .post(`/api/v1/payments/bookings/${bookingId}/proof`)
@@ -144,7 +144,7 @@ describe('Phase 5: Payments & Invoices (BR-34 s/d BR-43)', () => {
     expect(res.body.booking.bukti_pembayaran_url).toMatch(/transfer_bca_123.jpg/);
   });
 
-  test('BR-37: Admin melakukan verifikasi manual bukti pembayaran (Disetujui)', async () => {
+  test('Admin melakukan verifikasi manual bukti pembayaran (Disetujui)', async () => {
     const res = await request(app)
       .patch(`/api/v1/payments/bookings/${bookingId}/verify`)
       .set(adminHeaders)
@@ -161,19 +161,17 @@ describe('Phase 5: Payments & Invoices (BR-34 s/d BR-43)', () => {
     expect(res.body.booking.verified_at).toBeDefined();
   });
 
-  test('BR-39 & BR-40: Perhitungan invoice awal (proforma) dan penagihan kekurangan pembayaran', async () => {
+  test('Perhitungan invoice awal (proforma) dan penagihan kekurangan pembayaran', async () => {
     const booking = (await query(`${bookingService.BOOKING_SELECT} WHERE b.id = $1`, [bookingId])).rows[0];
     const invoice = bookingService.calculateInvoice(booking);
 
     expect(invoice.invoice_type).toBe('initial'); // Belum selesai = Invoice Awal
     expect(invoice.total_dibayar).toBe(45000);
-    // Layanan 1 (Cuci AC Standard) seharga 90.000 (diskon member 10% jika ada atau 90.000 normal)
-    // Karena baru bayar DP 45.000, balance_due harus positif (ditagihkan)
-    expect(invoice.balance_due).toBeGreaterThan(0); // BR-40: Kekurangan pembayaran ditagihkan
+    expect(invoice.balance_due).toBeGreaterThan(0); // Kekurangan pembayaran ditagihkan
     expect(invoice.refund_amount).toBe(0);
   });
 
-  test('BR-39 & BR-41: Invoice final diterbitkan saat selesai dan kelebihan bayar dikembalikan', async () => {
+  test('Invoice final diterbitkan saat selesai dan kelebihan bayar dikembalikan', async () => {
     // Simulasikan booking selesai dengan pembayaran berlebih (misal total bayar 150.000, tapi biaya hanya 90.000)
     await query(`
       UPDATE bookings
@@ -184,11 +182,11 @@ describe('Phase 5: Payments & Invoices (BR-34 s/d BR-43)', () => {
     const bookingDone = (await query(`${bookingService.BOOKING_SELECT} WHERE b.id = $1`, [bookingId])).rows[0];
     const invoiceFinal = bookingService.calculateInvoice(bookingDone);
 
-    expect(invoiceFinal.invoice_type).toBe('final'); // BR-39: Invoice final setelah pekerjaan selesai
-    expect(invoiceFinal.refund_amount).toBeGreaterThan(0); // BR-41: Kelebihan pembayaran dikembalikan
+    expect(invoiceFinal.invoice_type).toBe('final'); // Invoice final setelah pekerjaan selesai
+    expect(invoiceFinal.refund_amount).toBeGreaterThan(0); // Kelebihan pembayaran dikembalikan
     expect(invoiceFinal.balance_due).toBe(0);
 
-    // Proses refund oleh admin (BR-41)
+    // Proses pengembalian kelebihan bayar oleh admin
     const refundRes = await request(app)
       .post(`/api/v1/payments/bookings/${bookingId}/refund`)
       .set(adminHeaders)
@@ -203,7 +201,7 @@ describe('Phase 5: Payments & Invoices (BR-34 s/d BR-43)', () => {
     expect(Number(refundRes.body.booking.refund_nominal)).toBe(invoiceFinal.refund_amount);
   });
 
-  test('BR-42: Mengirim invoice secara otomatis ke WhatsApp customer', async () => {
+  test('Mengirim invoice secara otomatis ke WhatsApp customer', async () => {
     const res = await request(app)
       .post(`/api/v1/payments/bookings/${bookingId}/send-whatsapp`)
       .set(adminHeaders)
@@ -219,7 +217,7 @@ describe('Phase 5: Payments & Invoices (BR-34 s/d BR-43)', () => {
     expect(res.body.log.tautan_invoice).toMatch(/narateknindotama\.com|nara-ac\.com/);
   });
 
-  test('BR-43: Jika pengiriman WhatsApp gagal, sistem mencatat status gagal dan mendukung pengiriman ulang otomatis', async () => {
+  test('Jika pengiriman WhatsApp gagal, sistem mencatat status gagal dan mendukung pengiriman ulang otomatis', async () => {
     // 1. Simulasikan kegagalan jaringan pengiriman WhatsApp
     const failRes = await request(app)
       .post(`/api/v1/payments/bookings/${bookingId}/send-whatsapp`)

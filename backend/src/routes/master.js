@@ -197,9 +197,9 @@ const svcPatch = Joi.object({
 router.get('/service-catalog', validate(Joi.object({
   aktif: Joi.boolean(),
   page: Joi.number().integer().min(1),
-  limit: Joi.number().integer().min(1).max(200),
+  limit: Joi.number().integer().min(1).max(200).default(200),
 }), 'query'), wrap(async (req, res) => {
-  const { aktif, page = 1, limit = 50 } = req.valid.query;
+  const { aktif, page = 1, limit = 200 } = req.valid.query;
   const { limit: safeLimit, offset: safeOffset } = sanitizeLimitOffset(limit, (page - 1) * limit);
   const params = [];
   const where = [];

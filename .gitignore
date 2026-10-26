@@ -85,3 +85,14 @@ test.md
 # Local seed files (may contain demo data)
 backend/src/db/seedDummy.js
 
+# Promo Video / Remotion (Local only)
+promo-video/
+remotion/
+
+# Video Demo Workspace
+demo-workspace/node_modules/
+demo-workspace/.build/
+demo-workspace/demo-out/
+
+
+

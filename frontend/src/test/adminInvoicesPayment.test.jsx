@@ -20,7 +20,7 @@ vi.spyOn(toastModule, 'useToast').mockReturnValue({
   toast: vi.fn(),
 });
 
-describe('Admin Invoices Payment Status Persistence (UX-003)', () => {
+describe('Admin Invoices Payment Status Persistence', () => {
   const mockBookings = [
     {
       id: 101,

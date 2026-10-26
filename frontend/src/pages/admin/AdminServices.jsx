@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import api from '../../api';
 import { Button } from '../../components/ui/button';
@@ -18,6 +18,8 @@ import {
   Loader2,
   Calendar,
   AlertCircle,
+  Search,
+  Filter,
 } from 'lucide-react';
 
 const CATEGORY_OPTIONS = [
@@ -202,6 +204,10 @@ export default function AdminServices() {
   const [createApiError, setCreateApiError] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedKategori, setSelectedKategori] = useState('all');
+  const [selectedUkuran, setSelectedUkuran] = useState('all');
+
   const enrichService = useCallback((dbSvc) => {
     const sName = (dbSvc.nama_layanan || dbSvc.nama || '').toLowerCase();
     const def = DEFAULT_SERVICES_META.find(
@@ -262,6 +268,49 @@ export default function AdminServices() {
   useEffect(() => {
     fetchCatalog();
   }, [fetchCatalog]);
+
+  const categoryCounts = useMemo(() => {
+    const counts = { all: services.length, cuci: 0, perbaikan: 0, instalasi: 0, lainnya: 0 };
+    services.forEach((s) => {
+      const cat = mapCategoryValue(s.kategori);
+      if (counts[cat] !== undefined) counts[cat] += 1;
+      else counts.lainnya += 1;
+    });
+    return counts;
+  }, [services]);
+
+  const filteredServices = useMemo(() => {
+    return services.filter((svc) => {
+      if (selectedKategori !== 'all' && mapCategoryValue(svc.kategori) !== selectedKategori) {
+        return false;
+      }
+
+      const sName = (svc.nama_layanan || svc.nama || '').toLowerCase();
+      const sKode = (svc.kode || '').toLowerCase();
+
+      if (selectedUkuran === '0.5-1') {
+        const is051 = sName.includes('0.5pk') || sName.includes('1pk') || sKode.includes('051') || sKode.includes('05-1');
+        if (!is051) return false;
+      } else if (selectedUkuran === '1.5-2') {
+        const is152 = sName.includes('1.5pk') || sName.includes('2pk') || sKode.includes('152') || sKode.includes('15-2');
+        if (!is152) return false;
+      } else if (selectedUkuran === 'khusus') {
+        const hasPK = sName.includes('pk') || sKode.includes('051') || sKode.includes('152');
+        if (hasPK) return false;
+      }
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchName = sName.includes(q);
+        const matchKode = sKode.includes(q);
+        const matchDesc = (svc.deskripsi || '').toLowerCase().includes(q);
+        const matchHarga = String(svc.harga || '').includes(q);
+        if (!matchName && !matchKode && !matchDesc && !matchHarga) return false;
+      }
+
+      return true;
+    });
+  }, [services, selectedKategori, selectedUkuran, searchQuery]);
 
   useEffect(() => {
     if (!isEditModalOpen && !isCreateModalOpen) return undefined;
@@ -462,13 +511,126 @@ export default function AdminServices() {
         </div>
       </div>
 
+      {/* Filter and Search Bar */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-xs space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          {/* Category Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+            {[
+              { id: 'all', label: 'Semua Layanan', count: categoryCounts.all },
+              { id: 'cuci', label: 'Cuci & Perawatan', count: categoryCounts.cuci },
+              { id: 'perbaikan', label: 'Perbaikan & Freon', count: categoryCounts.perbaikan },
+              { id: 'instalasi', label: 'Bongkar & Pasang', count: categoryCounts.instalasi },
+              { id: 'lainnya', label: 'Layanan Lainnya', count: categoryCounts.lainnya },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setSelectedKategori(tab.id)}
+                className={cn(
+                  'px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-2 cursor-pointer',
+                  selectedKategori === tab.id
+                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/20'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900'
+                )}
+              >
+                <span>{tab.label}</span>
+                <span
+                  className={cn(
+                    'px-1.5 py-0.5 rounded-full text-[10px] font-black',
+                    selectedKategori === tab.id ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                  )}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Search Box */}
+          <div className="relative w-full lg:w-72 shrink-0">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Input
+              type="text"
+              placeholder="Cari layanan, kode, harga..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-8 text-xs rounded-xl h-10 border-slate-200 bg-slate-50 focus:bg-white"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Sub-filter Ukuran AC & Tempat */}
+        <div className="flex items-center gap-2 flex-wrap pt-3 border-t border-slate-100 text-xs">
+          <span className="text-slate-400 font-bold flex items-center gap-1 text-[11px] uppercase tracking-wider mr-1">
+            <Filter className="w-3 h-3 text-blue-600" />
+            Filter Segmen:
+          </span>
+          {[
+            { id: 'all', label: 'Semua Kapasitas & Segmen' },
+            { id: '0.5-1', label: 'AC 0.5 PK – 1 PK' },
+            { id: '1.5-2', label: 'AC 1.5 PK – 2 PK' },
+            { id: 'khusus', label: 'Sparepart & Layanan Khusus' },
+          ].map((sub) => (
+            <button
+              key={sub.id}
+              type="button"
+              onClick={() => setSelectedUkuran(sub.id)}
+              className={cn(
+                'px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer border',
+                selectedUkuran === sub.id
+                  ? 'bg-blue-50 border-blue-300 text-blue-700 font-bold'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              )}
+            >
+              {sub.label}
+            </button>
+          ))}
+
+          <span className="ml-auto text-xs font-semibold text-slate-500">
+            Menampilkan <strong className="text-slate-800">{filteredServices.length}</strong> dari {services.length} layanan
+          </span>
+        </div>
+      </div>
+
       {loading ? (
         <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-sm text-slate-500">
           Memuat katalog layanan...
         </div>
+      ) : filteredServices.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center space-y-3">
+          <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
+            <Search className="w-6 h-6" />
+          </div>
+          <h3 className="font-bold text-slate-800 text-base">Tidak ada layanan yang sesuai</h3>
+          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            Tidak ditemukan paket servis dengan kata kunci &quot;{searchQuery}&quot; atau filter yang aktif.
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setSearchQuery('');
+              setSelectedKategori('all');
+              setSelectedUkuran('all');
+            }}
+            className="rounded-xl text-xs font-bold"
+          >
+            Reset Semua Filter
+          </Button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {services.map((svc) => (
+          {filteredServices.map((svc) => (
             <div
               key={svc.id || svc.kode}
               className={cn(

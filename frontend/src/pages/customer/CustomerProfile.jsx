@@ -229,7 +229,7 @@ export default function CustomerProfile() {
           <Sparkles className="w-4 h-4 text-amber-500" />
           <div className="text-left">
             <p className="text-[10px] font-black uppercase text-blue-700 tracking-wider">Member Aktif</p>
-            <p className="text-xs font-bold text-slate-800">Diskon Jasa 10% Otomatis</p>
+            <p className="text-xs font-bold text-slate-800">Layanan Prioritas Member</p>
           </div>
         </div>
       </div>
@@ -761,12 +761,12 @@ export default function CustomerProfile() {
               <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
                 <Sparkles className="w-5 h-5 text-amber-300" />
               </div>
-              <h3 className="font-black text-base text-slate-900">Diskon Jasa 10% Otomatis</h3>
+              <h3 className="font-black text-base text-slate-900">Prioritas Layanan &amp; Riwayat Unit</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Khusus akun member, setiap pemesanan layanan mendapatkan potongan langsung 10% dari biaya jasa servis (tidak termasuk suku cadang).
+                Khusus akun member resmi, Anda mendapatkan prioritas alokasi teknisi, histori digital servis unit AC, dan klaim garansi online terintegrasi.
               </p>
               <div className="pt-2">
-                <Badge variant="success" className="font-bold text-[10px]">TERAPLIKASI OTOMATIS</Badge>
+                <Badge variant="success" className="font-bold text-[10px]">MEMBER RESMI AKTIF</Badge>
               </div>
             </div>
 

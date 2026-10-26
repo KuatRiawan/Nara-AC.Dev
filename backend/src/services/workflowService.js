@@ -365,6 +365,9 @@ async function jobDetail(id, user) {
   const b = (await query(
     `SELECT b.id, b.kode_booking, b.jadwal_mulai, b.jadwal_selesai, b.status, b.alamat, b.keluhan, b.teknisi_id, b.alasan_tunda, b.alasan_batal,
             b.mulai_aktual, b.selesai_aktual, b.customer_id, b.ac_unit_id,
+            b.total_dibayar, b.status_pembayaran, b.status_verifikasi_pembayaran,
+            b.biaya_tambahan_jasa, b.catatan_biaya_tambahan_jasa, b.status_persetujuan_biaya,
+            b.persetujuan_biaya_pelanggan, b.persetujuan_biaya_admin,
             c.nama AS nama_customer, c.kontak AS kontak_customer,
             s.nama_layanan, s.durasi_menit, s.kategori, t.nama AS nama_teknisi,
             u.brand, u.model, u.tipe, u.kapasitas_pk, u.lokasi, u.catatan AS catatan_unit, u.tanggal_pasang
@@ -372,7 +375,7 @@ async function jobDetail(id, user) {
      LEFT JOIN technicians t ON t.id=b.teknisi_id LEFT JOIN ac_units u ON u.id=b.ac_unit_id WHERE b.id=$1`, [id])).rows[0];
   if (!b) throw E.notFound('Pekerjaan tidak ditemukan.');
   assertOwnJob(b, user);
-  const [wo, cl, ph, mt, notes, sh, hist, rep] = await Promise.all([
+  const [wo, cl, ph, mt, notes, sh, hist, rep, itemsRes] = await Promise.all([
     query('SELECT diagnosis, rekomendasi, catatan FROM work_orders WHERE booking_id=$1', [id]),
     query('SELECT id, task, status, wajib, alasan_skip FROM work_order_checklists WHERE booking_id=$1 ORDER BY id', [id]),
     query('SELECT id, tipe, url_foto, catatan, waktu FROM work_order_photos WHERE booking_id=$1 ORDER BY waktu DESC', [id]),
@@ -385,12 +388,29 @@ async function jobDetail(id, user) {
       `SELECT b2.kode_booking, b2.jadwal_mulai, b2.status, s2.nama_layanan FROM bookings b2 JOIN service_catalog s2 ON s2.id=b2.layanan_id
        WHERE b2.ac_unit_id=$1 AND b2.id<>$2 ORDER BY b2.jadwal_mulai DESC LIMIT 5`, [b.ac_unit_id, id]) : { rows: [] },
     query('SELECT data, dibuat_pada FROM service_reports WHERE booking_id=$1', [id]),
+    query(
+      `SELECT bi.id, bi.layanan_id, COALESCE(bi.nama_item, s.nama_layanan) AS nama_layanan,
+              COALESCE(bi.jenis, s.kategori, 'jasa') AS jenis, s.kategori,
+              bi.jumlah_unit, bi.harga_satuan, bi.subtotal, bi.catatan, bi.nama_item, bi.created_at
+       FROM booking_items bi
+       LEFT JOIN service_catalog s ON s.id = bi.layanan_id
+       WHERE bi.booking_id = $1 ORDER BY bi.id`, [id]
+    ),
   ]);
   const wajibPending = cl.rows.filter((c) => c.wajib && c.status === 'pending').length;
+  const items = itemsRes.rows;
+  const invoice = bs.calculateInvoice({
+    ...b,
+    items,
+    pemakaian_inventory: mt.rows,
+  });
+
   return {
     ...b,
     work_order: wo.rows[0] || { diagnosis: null, rekomendasi: null, catatan: null },
     checklists: cl.rows, photos: ph.rows, materials: mt.rows, notes: notes.rows,
+    items,
+    invoice,
     riwayat_jadwal: sh.rows, riwayat_unit: hist.rows,
     laporan: rep.rows[0] || null,
     aksi: {
@@ -417,7 +437,7 @@ async function autoConfirmOverdueCompletions() {
     try {
       await query(
         `INSERT INTO status_log (booking_id, status_lama, status_baru, diubah_oleh, catatan)
-         VALUES ($1, 'done', 'done', 'system', 'Otomatis dikonfirmasi selesai setelah 48 jam tanpa komplain pelanggan (BR-14)')`,
+         VALUES ($1, 'done', 'done', 'system', 'Otomatis dikonfirmasi selesai setelah 48 jam tanpa komplain pelanggan')`,
         [row.id]
       );
     } catch (_) {}

@@ -124,7 +124,7 @@ export default function RegisterPage() {
                 <span className="text-blue-600">Perawatan AC Prioritas.</span>
               </h1>
               <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-xl font-normal">
-                Kelola seluruh unit AC hunian dan perkantoran Anda dalam satu portal terpadu <strong>CV. Nara Teknindotama</strong>. Dapatkan diskon 10% eksklusif member untuk semua servis, pantau riwayat perawatan, dan klaim garansi online tanpa cemas nota fisik hilang.
+                Kelola seluruh unit AC hunian dan perkantoran Anda dalam satu portal terpadu <strong>CV. Nara Teknindotama</strong>. Nikmati kemudahan booking servis, pantau riwayat perawatan, dan klaim garansi online tanpa cemas nota fisik hilang.
               </p>
             </div>
 
@@ -134,9 +134,9 @@ export default function RegisterPage() {
                 <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2.5">
                   <Award className="w-4 h-4" />
                 </div>
-                <h2 className="text-xs font-black text-slate-800 mb-1">Diskon Eksklusif Member</h2>
+                <h2 className="text-xs font-black text-slate-800 mb-1">Prioritas Layanan Member</h2>
                 <p className="text-xs text-slate-500 leading-normal">
-                  Diskon 10% setiap pemesanan jasa servis AC langsung dari unit pertama.
+                  Prioritas penjadwalan teknisi dan histori servis unit AC langsung dari unit pertama.
                 </p>
               </div>
 
@@ -340,10 +340,7 @@ export default function RegisterPage() {
                         <span>Mendaftarkan Akun Member...</span>
                       </>
                     ) : (
-                      <>
-                        <span>Daftar Akun Member Sekarang</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </>
+                      <span>Daftar</span>
                     )}
                   </Button>
                 </div>

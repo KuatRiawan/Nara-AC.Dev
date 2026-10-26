@@ -76,7 +76,7 @@ export default function TermsConditionsPage() {
                   <strong>Pendaftaran Akun Member:</strong> Pelanggan lama maupun baru wajib membuat dan mengaktifkan akun pada portal NARA AC untuk memperoleh status keanggotaan (Membership).
                 </li>
                 <li>
-                  <strong>Diskon Member 10% Khusus Biaya Jasa:</strong> Anggota terdaftar berhak memperoleh potongan harga sebesar <strong>10% yang berlaku khusus untuk biaya jasa layanan</strong>. Biaya penggantian suku cadang (spare part) dan material tambahan <strong>tidak termasuk</strong> dalam potongan diskon membership.
+                  <strong>Layanan Terpadu &amp; Riwayat Digital:</strong> Anggota terdaftar berhak atas layanan prioritas penjadwalan, histori invoice resmi digital, dan klaim garansi online terpadu tanpa memerlukan nota kertas fisik.
                 </li>
                 <li>
                   <strong>Perubahan Biaya Jasa Wajib Persetujuan Ganda:</strong> Apabila kondisi aktual di lapangan membutuhkan penyesuaian biaya jasa di luar estimasi awal, perubahan biaya jasa tersebut wajib mendapatkan persetujuan dari <strong>Pelanggan dan Admin NARA AC</strong> sebelum ditagihkan pada invoice final.

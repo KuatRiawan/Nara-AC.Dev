@@ -635,7 +635,7 @@ export default function AdminSettings() {
                       type="email"
                       value={profileForm.email}
                       onChange={(e) => setProfileForm(prev => ({ ...prev, email: e.target.value }))}
-                      placeholder="admin@nara-ac.local"
+                      placeholder="admin@narateknindotama.com"
                       className="pl-10 h-11 rounded-xl border-slate-200 text-xs focus:ring-blue-500"
                       required
                     />

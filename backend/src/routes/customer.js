@@ -391,7 +391,7 @@ router.post('/bookings/:id/review', validate(idParam, 'params'), validate(Joi.ob
   if (!b) throw E.notFound('Pekerjaan tidak ditemukan atau bukan milik akun Anda.');
   if (b.status !== 'done') throw E.business('Review hanya dapat diberikan untuk pekerjaan yang telah selesai.');
   if (!b.konfirmasi_pelanggan) {
-    throw E.business('Silakan konfirmasi penyelesaian pekerjaan terlebih dahulu sebelum memberikan review (BR-22).');
+    throw E.business('Silakan konfirmasi penyelesaian pekerjaan terlebih dahulu sebelum memberikan review.');
   }
   const out = await bookingService.submitFeedback(bookingId, {
     kode_booking: b.kode_booking,

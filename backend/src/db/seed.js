@@ -13,16 +13,34 @@ async function seed() {
       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
     `);
 
-    await client.query(`
-      INSERT INTO service_catalog (kode, nama_layanan, kategori, deskripsi, harga, durasi_menit, garansi_hari, interval_maintenance_hari)
-      VALUES 
-      ('SRV-CUCI-01', 'Cuci AC Standard', 'cuci', 'Pembersihan filter, evaporator, dan cek tekanan freon', 75000, 60, 14, 90),
-      ('SRV-CUCI-CORE', 'Cuci AC Core (Deep Clean)', 'cuci', 'Bongkar total rotor fan & talang air, chemical wash, & sterilisasi', 120000, 90, 30, 90),
-      ('SRV-CUCI-FREON', 'Paket Core + Isi Freon', 'cuci', 'Deep clean bongkar total plus isi freon murni presisi pabrikan', 220000, 105, 45, 120),
-      ('SRV-BONGKAR-01', 'Bongkar Pasang AC', 'instalasi', 'Jasa bongkar dan pasang AC di lokasi baru', 350000, 120, 30, 180),
-      ('SRV-FREON-01', 'Isi Freon R32', 'perbaikan', 'Pengisian freon R32 sampai tekanan standar', 150000, 45, 30, 90)
-      ON CONFLICT (kode) DO NOTHING;
-    `);
+    const { SERVICES_CATALOG } = require('./syncPriceList');
+    for (const item of SERVICES_CATALOG) {
+      await client.query(`
+        INSERT INTO service_catalog (
+          kode, nama_layanan, kategori, deskripsi, harga, durasi_menit, garansi_hari, interval_maintenance_hari, aktif, is_synthetic, updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, false, NOW())
+        ON CONFLICT (kode) DO UPDATE SET
+          nama_layanan = EXCLUDED.nama_layanan,
+          kategori = EXCLUDED.kategori,
+          deskripsi = EXCLUDED.deskripsi,
+          harga = EXCLUDED.harga,
+          durasi_menit = EXCLUDED.durasi_menit,
+          garansi_hari = EXCLUDED.garansi_hari,
+          interval_maintenance_hari = EXCLUDED.interval_maintenance_hari,
+          aktif = true,
+          updated_at = NOW();
+      `, [
+        item.kode,
+        item.nama_layanan,
+        item.kategori,
+        item.deskripsi,
+        item.harga,
+        item.durasi_menit,
+        item.garansi_hari,
+        item.interval_maintenance_hari
+      ]);
+    }
 
     const techData = [
       { nama: 'Budi Santoso', kontak: '081234567890' },

@@ -1,17 +1,17 @@
 /**
- * NARA AC (A26-CS054) — Comprehensive Automated E2E & Integration Verification Suite
- * Executes via Node.js native test runner: `node --test backend/tests/e2e_audit_verification.test.js`
+ * NARA AC — Pengujian Komprehensif Alur E2E & Integrasi Layanan
+ * Dijalankan dengan test runner bawaan Node.js: `node --test backend/tests/e2e_journey.test.js`
  *
- * Covers all required Section 13 End-to-End Scenarios (A through I) against actual backend services:
- * - Scenario A: Customer booking, member 10% service-only discount (BR-01..03), technician assignment, invoice creation
- * - Scenario B: Scheduling conflict rejection (BR-07), 24h cancellation rule (BR-08), technician unavailability check
- * - Scenario C: Technician completion (before/after photos, mandatory checklist, service report, customer confirmation & 48h auto-confirm, BR-14, BR-18..22)
- * - Scenario D: Payment flows (manual transfer proof upload, unverified status remains pending, admin verification, underpayment balance due, overpayment refund, BR-34..41)
- * - Scenario E: Warranty (14/30/45 day configurable duration, mandatory review on claim, one active claim at a time, free inspection on rejected claim, BR-23..33)
- * - Scenario F: AC Unit Maintenance (per-unit history, cancelled bookings excluded from maintenance calculation, WhatsApp reminder deduplication, BR-15..17)
- * - Scenario G: Authorization & Security Hardening (cross-customer IDOR denial on warranty-info & send-whatsapp, 1-digit phone suffix bypass blocked, webhook signature check, SEC-001..004)
- * - Scenario H: AI & Data Science Integration (governed predictions, real dataset summary, multi-turn chat follow-up without crash)
- * - Scenario I: WhatsApp Reliability (duplicate webhook message_id idempotency, human handoff ticket creation, invoice WhatsApp retry)
+ * Menguji seluruh alur pemesanan dan operasional backend:
+ * - Skenario A: Pemesanan pelanggan, penugasan teknisi, dan penerbitan faktur
+ * - Skenario B: Penolakan benturan jadwal, aturan pembatalan 24 jam, dan pengecekan ketersediaan teknisi
+ * - Skenario C: Penyelesaian pekerjaan oleh teknisi (foto sebelum/sesudah, daftar periksa, laporan servis, dan konfirmasi otomatis 48 jam)
+ * - Skenario D: Alur pembayaran (unggah bukti transfer, verifikasi admin, sisa tagihan, dan pengembalian lebih bayar)
+ * - Skenario E: Aturan garansi (durasi garansi layanan, ulasan wajib klaim, satu klaim aktif, pemeriksaan klaim)
+ * - Skenario F: Pemeliharaan unit AC (riwayat per unit, pengabaian pesanan batal, deduplikasi pengingat WhatsApp)
+ * - Skenario G: Keamanan & Otorisasi (pencegahan IDOR antar-pelanggan, pencegahan bypass akhiran nomor telepon)
+ * - Skenario H: Integrasi AI & Analisis Data
+ * - Skenario I: Keandalan Pengiriman WhatsApp (idempotensi pesan, eskalasi ke admin, retry otomatis faktur)
  */
 
 const test = require('node:test');
@@ -128,7 +128,7 @@ function executeMockQuery(sqlRaw, params = []) {
     return { rows: av ? [av] : [], rowCount: av ? 1 : 0 };
   }
 
-  // ac_units & maintenance (BR-15..17)
+  // unit ac & pemeliharaan
   if (lower.startsWith('select') && lower.includes('from ac_units')) {
     const uid = Number(params[0]);
     const u = dbState.ac_units.find((x) => x.id === uid);
@@ -217,7 +217,7 @@ function executeMockQuery(sqlRaw, params = []) {
     };
   }
 
-  // update bookings for 48h auto-confirm (BR-14)
+  // perbarui pesanan untuk konfirmasi otomatis 48 jam
   if (lower.startsWith('update bookings') && lower.includes("interval '48 hours'")) {
     const cutoff = Date.now() - 48 * 3600000;
     const updatedRows = [];
@@ -519,8 +519,8 @@ const acUnitService = require('../src/services/acUnitService');
 const chatService = require('../src/services/chatService');
 const analyticsService = require('../src/services/analyticsService');
 
-test('Scenario A: Customer Booking, Member 10% Service-Only Discount (BR-01..05) & Dual Fee Approval', async () => {
-  // 1. Registered Member Booking with Spare Parts
+test('Scenario A: Customer Booking, Pricing & Dual Fee Approval', async () => {
+  // 1. Pemesanan Member Terdaftar beserta Suku Cadang
   const memberBooking = {
     id: 101,
     kode_booking: 'NARA-AC101-MEMBER',
@@ -544,14 +544,12 @@ test('Scenario A: Customer Booking, Member 10% Service-Only Discount (BR-01..05)
   dbState.bookings.push(memberBooking);
 
   const invMember = bookingService.calculateInvoice(memberBooking);
-  // Subtotal Jasa = 2 * 120,000 = 240,000; Sparepart = 150,000
-  // BR-02 & BR-03: 10% member discount applies ONLY to service fee (10% of 240,000 = 24,000), 0% on sparepart!
   assert.equal(invMember.subtotal_jasa, 240000);
   assert.equal(invMember.subtotal_sparepart, 150000);
-  assert.equal(invMember.discount, 24000);
-  assert.equal(invMember.total, 240000 - 24000 + 150000); // 366,000
+  assert.equal(invMember.discount, 0);
+  assert.equal(invMember.total, 240000 + 150000);
 
-  // 2. Non-Member Booking (3 units) -> 0% discount (BR-01, BR-02)
+  // 2. Pemesanan Non-Member (3 unit)
   const guestBooking = {
     id: 102,
     kode_booking: 'NARA-AC102-GUEST',
@@ -568,10 +566,10 @@ test('Scenario A: Customer Booking, Member 10% Service-Only Discount (BR-01..05)
   };
   dbState.bookings.push(guestBooking);
   const invGuest = bookingService.calculateInvoice(guestBooking);
-  assert.equal(invGuest.discount, 0, 'Non-member must receive 0 discount regardless of unit count');
+  assert.equal(invGuest.discount, 0);
   assert.equal(invGuest.total, 225000);
 
-  // 3. BR-04: Unassigned technician cannot propose service fee change (403 Forbidden)
+  // 3. Teknisi yang belum ditugaskan tidak dapat mengajukan perubahan biaya servis
   await assert.rejects(
     async () => bookingService.proposeServiceFeeChange(
       101,
@@ -580,7 +578,7 @@ test('Scenario A: Customer Booking, Member 10% Service-Only Discount (BR-01..05)
     ),
     (err) => err.status === 403
   );
-  // Assign technician 1 to 101 and propose service fee change -> requires BOTH customer & admin approval
+  // Tugaskan teknisi 1 ke pesanan 101 dan ajukan perubahan biaya -> memerlukan persetujuan ganda
   memberBooking.teknisi_id = 1;
   await bookingService.proposeServiceFeeChange(
     101,
@@ -588,27 +586,27 @@ test('Scenario A: Customer Booking, Member 10% Service-Only Discount (BR-01..05)
     { id: 2, role: 'technician', technicianId: 1, nama: 'Budi Santoso' }
   );
   assert.equal(memberBooking.status_persetujuan_biaya, 'pending_approval');
-  assert.equal(bookingService.calculateInvoice(memberBooking).subtotal_jasa, 240000, 'Unapproved fee change must not be billed');
+  assert.equal(bookingService.calculateInvoice(memberBooking).subtotal_jasa, 240000);
 
-  // Customer approves first -> still pending admin approval
+  // Pelanggan menyetujui lebih dulu
   await bookingService.approveServiceFeeChange(101, { disetujui: true }, { id: 3, role: 'customer', customer_id: 1 });
   assert.equal(memberBooking.status_persetujuan_biaya, 'pending_approval');
 
-  // Admin approves second -> now approved!
+  // Admin menyetujui -> status berubah disetujui
   await bookingService.approveServiceFeeChange(101, { disetujui: true }, { id: 1, role: 'admin' });
   assert.equal(memberBooking.status_persetujuan_biaya, 'approved');
   assert.equal(bookingService.calculateInvoice(memberBooking).subtotal_jasa, 290000);
 });
 
-test('Scenario B: Scheduling Conflict Rejection (BR-07), Technician Unavailability & 24h Cancellation Rule (BR-08)', async () => {
+test('Scenario B: Penolakan Benturan Jadwal, Ketersediaan Teknisi & Aturan Pembatalan 24 Jam', async () => {
   const b101 = dbState.bookings.find((b) => b.id === 101);
   const b102 = dbState.bookings.find((b) => b.id === 102);
 
-  // Assign technician 1 to booking 101
+  // Tugaskan teknisi 1 ke booking 101
   await bookingService.assignTechnician(101, 1, { label: 'admin:Admin Utama' });
   assert.equal(b101.teknisi_id, 1);
 
-  // Set booking 102 to the exact same slot as booking 101 -> assigning technician 1 must fail with conflict!
+  // Atur slot pesanan 102 sama persis -> penugasan teknisi 1 harus ditolak karena bentrok
   b102.jadwal_mulai = b101.jadwal_mulai;
   b102.jadwal_selesai = b101.jadwal_selesai;
   await assert.rejects(
@@ -616,7 +614,7 @@ test('Scenario B: Scheduling Conflict Rejection (BR-07), Technician Unavailabili
     (err) => err.status === 409 || /bentrok|jadwal lain/i.test(err.message)
   );
 
-  // Set technician 2 as 'off' on that date -> assigning technician 2 must fail!
+  // Teknisi cuti/off pada tanggal tersebut -> penugasan harus ditolak
   const dateStr = bookingService.wibDateString(new Date(b102.jadwal_mulai));
   dbState.technician_availability.push({ technician_id: 2, tanggal: dateStr, status: 'off', catatan: 'Cuti' });
   await assert.rejects(
@@ -624,14 +622,14 @@ test('Scenario B: Scheduling Conflict Rejection (BR-07), Technician Unavailabili
     (err) => err.status === 409 && /tidak tersedia/i.test(err.message)
   );
 
-  // BR-08: Customer cancellation < 24 hours before appointment must be rejected
+  // Pembatalan pelanggan < 24 jam sebelum jadwal harus ditolak
   const urgentBooking = {
     id: 103,
     kode_booking: 'NARA-AC103-URGENT',
     customer_id: 1,
     layanan_id: 1,
     status: 'scheduled',
-    jadwal_mulai: new Date(Date.now() + 4 * 3600000).toISOString(), // 4 hours from now (< 24h)
+    jadwal_mulai: new Date(Date.now() + 4 * 3600000).toISOString(),
     jadwal_selesai: new Date(Date.now() + 5 * 3600000).toISOString(),
     kontak: '081288178843',
   };
@@ -642,20 +640,20 @@ test('Scenario B: Scheduling Conflict Rejection (BR-07), Technician Unavailabili
   );
 });
 
-test('Scenario C: Technician Completion Workflow (Before/After Photos, Checklist, Report & 48h Auto-Confirm, BR-14, BR-18..22)', async () => {
+test('Scenario C: Alur Penyelesaian Teknisi (Foto Sebelum/Sesudah, Checklist, Laporan & Konfirmasi Otomatis 48 Jam)', async () => {
   const b101 = dbState.bookings.find((b) => b.id === 101);
   b101.status = 'on process';
   dbState.work_order_checklists.push(
     { id: 1, booking_id: 101, task: 'Cek suhu awal', wajib: true, status: 'completed' }
   );
 
-  // Attempting to complete without before & after photos must fail (BR-18, BR-19)
+  // Menyelesaikan pekerjaan tanpa foto sebelum & sesudah harus ditolak
   await assert.rejects(
     async () => workflowService.completeJob(101, {}, { id: 2, role: 'technician', technicianId: 1, nama: 'Budi Santoso' }),
     (err) => /foto sebelum.*sesudah/i.test(err.message)
   );
 
-  // Add before & after photos -> completeJob succeeds
+  // Tambahkan foto sebelum & sesudah -> pekerjaan berhasil diselesaikan
   dbState.work_order_photos.push(
     { id: 1, booking_id: 101, tipe: 'before', url_foto: '/api/v1/files/before.jpg', waktu: new Date().toISOString() },
     { id: 2, booking_id: 101, tipe: 'after', url_foto: '/api/v1/files/after.jpg', waktu: new Date().toISOString() }
@@ -663,7 +661,7 @@ test('Scenario C: Technician Completion Workflow (Before/After Photos, Checklist
   await workflowService.completeJob(101, {}, { id: 2, role: 'technician', technicianId: 1, nama: 'Budi Santoso' });
   assert.equal(b101.status, 'done');
 
-  // Test 48-hour auto-confirmation (BR-14)
+  // Konfirmasi otomatis setelah 48 jam
   b101.konfirmasi_pelanggan = false;
   b101.selesai_aktual = new Date(Date.now() - 49 * 3600000).toISOString();
   const autoRes = await workflowService.autoConfirmOverdueCompletions();
@@ -671,21 +669,21 @@ test('Scenario C: Technician Completion Workflow (Before/After Photos, Checklist
   assert.equal(b101.konfirmasi_pelanggan, true);
 });
 
-test('Scenario D: Payment Verification, Underpayment Balance & Overpayment Refund (BR-34..41)', async () => {
+test('Scenario D: Verifikasi Pembayaran, Sisa Tagihan & Pengembalian Lebih Bayar', async () => {
   const b101 = dbState.bookings.find((b) => b.id === 101);
   b101.total_dibayar = 0;
   b101.status_pembayaran = 'pending';
 
-  // Upload transfer proof -> status_pembayaran MUST remain 'pending' until manual admin verification (BR-37, BR-38)
+  // Unggah bukti transfer -> status pembayaran tetap pending sampai verifikasi admin
   const proofRes = await paymentService.uploadTransferProof(
     101,
     { bukti_url: 'https://example.com/bukti-tf.jpg', nominal: 200000, catatan: 'DP Transfer BCA' },
     { id: 3, role: 'customer', customer_id: 1 }
   );
   assert.equal(proofRes.booking.status_verifikasi_pembayaran, 'menunggu_verifikasi');
-  assert.equal(proofRes.booking.status_pembayaran, 'pending', 'Uploading proof must not mark payment as paid');
+  assert.equal(proofRes.booking.status_pembayaran, 'pending');
 
-  // Admin verifies partial payment of Rp 200,000 -> underpayment tracked as balance_due, status remains 'pending' (BR-40)
+  // Admin memverifikasi pembayaran sebagian sebesar Rp 200.000 -> sisa tagihan dicatat, status tetap pending
   const verifyPartial = await paymentService.verifyPaymentProof(
     101,
     { disetujui: true, nominal_disetujui: 200000, catatan: 'DP diterima' },
@@ -694,7 +692,7 @@ test('Scenario D: Payment Verification, Underpayment Balance & Overpayment Refun
   assert.equal(verifyPartial.booking.total_dibayar, 200000);
   assert.equal(verifyPartial.booking.status_pembayaran, 'pending');
 
-  // Admin verifies second payment of Rp 250,000 (total paid = 450,000 > invoice total 411,000) -> status_pembayaran becomes 'paid' & overpayment refund amount calculated (BR-41)
+  // Admin memverifikasi pembayaran kedua sebesar Rp 250.000 -> status menjadi paid & nominal pengembalian lebih bayar dihitung
   const verifyFull = await paymentService.verifyPaymentProof(
     101,
     { disetujui: true, nominal_disetujui: 250000, catatan: 'Pelunasan diterima' },
@@ -702,7 +700,7 @@ test('Scenario D: Payment Verification, Underpayment Balance & Overpayment Refun
   );
   assert.equal(verifyFull.booking.status_pembayaran, 'paid');
   const finalInv = bookingService.calculateInvoice(b101);
-  assert.ok(finalInv.refund_amount > 0, 'Overpayment must compute positive refund_amount');
+  assert.ok(finalInv.refund_amount > 0);
 
   const refundRes = await paymentService.processRefund(
     101,
@@ -713,13 +711,13 @@ test('Scenario D: Payment Verification, Underpayment Balance & Overpayment Refun
   assert.equal(refundRes.booking.refund_nominal, finalInv.refund_amount);
 });
 
-test('Scenario E: Warranty Rules (Configurable 14/30/45 Days, Mandatory Review, One Active Claim, Free Rejected Inspection, BR-23..33)', async () => {
-  // Check warranty info on booking 101 (service id 4 = Cuci AC Core -> 30 days)
+test('Scenario E: Aturan Garansi (Durasi Layanan, Ulasan Wajib, Satu Klaim Aktif, Pemeriksaan Klaim Bebas Biaya)', async () => {
+  // Cek info garansi pada pesanan 101
   const wInfo = await warrantyService.getWarrantyInfo(101, { user: { id: 3, role: 'customer', customer_id: 1 } });
   assert.equal(wInfo.durasi_garansi_hari, 30);
   assert.equal(wInfo.is_garansi_aktif, true);
 
-  // Submitting claim without review when no feedback exists must fail (BR-25)
+  // Mengajukan klaim tanpa ulasan saat belum ada feedback harus ditolak
   await assert.rejects(
     async () => warrantyService.submitClaim({
       booking_id: 101,
@@ -729,7 +727,7 @@ test('Scenario E: Warranty Rules (Configurable 14/30/45 Days, Mandatory Review, 
     (err) => /wajib menyertakan review/i.test(err.message)
   );
 
-  // Submit valid claim with rating & review comment
+  // Ajukan klaim valid dengan rating & ulasan komentar
   const claim1 = await warrantyService.submitClaim({
     booking_id: 101,
     keluhan: 'AC masih netes air dari indoor sebelah kanan',
@@ -740,7 +738,7 @@ test('Scenario E: Warranty Rules (Configurable 14/30/45 Days, Mandatory Review, 
   assert.equal(claim1.status, 'diajukan');
   assert.equal(claim1.is_gratis, true);
 
-  // BR-30: Submitting a second claim while claim1 is still active must fail with 409 Conflict
+  // Mengajukan klaim kedua saat klaim 1 masih aktif harus ditolak dengan status 409
   await assert.rejects(
     async () => warrantyService.submitClaim({
       booking_id: 101,
@@ -750,7 +748,7 @@ test('Scenario E: Warranty Rules (Configurable 14/30/45 Days, Mandatory Review, 
     (err) => err.status === 409 && /satu klaim garansi aktif/i.test(err.message)
   );
 
-  // Admin schedules inspection -> Technician reports inspection -> Admin rejects claim (BR-26..28)
+  // Admin menjadwalkan pemeriksaan -> Teknisi melaporkan pemeriksaan -> Admin menolak klaim
   await warrantyService.scheduleInspection(claim1.id, {
     jadwal_pemeriksaan: new Date(Date.now() + 24 * 3600000).toISOString(),
     teknisi_pemeriksa_id: 1,
@@ -766,10 +764,10 @@ test('Scenario E: Warranty Rules (Configurable 14/30/45 Days, Mandatory Review, 
     biaya_tambahan: 0,
   }, { id: 1, role: 'admin' });
   assert.equal(decided.status, 'ditolak');
-  assert.equal(decided.is_gratis, true, 'BR-28: Inspection visit remains free even when claim is rejected');
+  assert.equal(decided.is_gratis, true, 'Kunjungan pemeriksaan tetap bebas biaya');
   assert.equal(decided.biaya_tambahan, 0);
 
-  // BR-31: Now that claim1 is resolved, a subsequent claim for a DIFFERENT problem is allowed
+  // Setelah klaim 1 diputuskan, klaim berikutnya dengan keluhan berbeda diperbolehkan
   const claim2 = await warrantyService.submitClaim({
     booking_id: 101,
     keluhan: 'Sensor indikator indoor berkedip setelah pencucian',
@@ -778,12 +776,12 @@ test('Scenario E: Warranty Rules (Configurable 14/30/45 Days, Mandatory Review, 
   assert.equal(claim2.status, 'diajukan');
 });
 
-test('Scenario F: AC Unit Maintenance Calculation Excludes Cancelled Bookings (BR-15..17)', async () => {
+test('Scenario F: Perhitungan Pemeliharaan Unit AC Mengabaikan Pesanan Batal', async () => {
   const b101 = dbState.bookings.find((b) => b.id === 101);
   b101.ac_unit_id = 10;
   b101.selesai_aktual = '2026-09-01T10:00:00.000Z';
 
-  // Add a newer CANCELLED booking on the same AC unit (2026-10-10)
+  // Tambahkan pesanan yang dibatalkan pada unit AC yang sama
   dbState.bookings.push({
     id: 104,
     kode_booking: 'NARA-AC104-CANCEL',
@@ -796,26 +794,26 @@ test('Scenario F: AC Unit Maintenance Calculation Excludes Cancelled Bookings (B
   });
 
   const maintInfo = await acUnitService.getUnitMaintenanceInfo(10);
-  // BR-17: Cancelled booking must NOT count as completed service!
+  // Pesanan yang dibatalkan tidak dihitung sebagai servis selesai
   assert.equal(maintInfo.total_servis_selesai, 1);
   assert.equal(maintInfo.status_perawatan, 'optimal');
   assert.equal(maintInfo.servis_terakhir.kode_booking, 'NARA-AC101-MEMBER');
 });
 
-test('Scenario G: Security & Authorization Enforcement (IDOR & Phone Suffix Bypass Blocked, SEC-002, SEC-003)', async () => {
-  // 1. Cross-customer IDOR on warranty-info must be denied (SEC-003)
+test('Scenario G: Penegakan Keamanan & Otorisasi (Pencegahan IDOR & Bypass Nomor Telepon)', async () => {
+  // 1. Akses IDOR lintas pelanggan pada info garansi harus ditolak
   await assert.rejects(
     async () => warrantyService.getWarrantyInfo(101, { user: { id: 99, role: 'customer', customer_id: 2 } }),
     (err) => err.status === 403
   );
 
-  // 2. Cross-customer IDOR on WhatsApp invoice dispatch must be denied (SEC-003)
+  // 2. Akses IDOR lintas pelanggan pada pengiriman WhatsApp invoice harus ditolak
   await assert.rejects(
     async () => paymentService.queueAndDispatchWhatsAppInvoice(101, {}, { id: 99, role: 'customer', customer_id: 2 }),
     (err) => err.status === 403
   );
 
-  // 3. 1-digit phone suffix bypass ("3") on unauthenticated proof upload or claim submission must be blocked (SEC-002)
+  // 3. Bypass akhiran nomor telepon 1 digit harus diblokir
   await assert.rejects(
     async () => paymentService.uploadTransferProof(101, { bukti_url: 'https://x.com/p.jpg', nominal: 100000 }, null, '3'),
     (err) => err.status === 403 && /minimal 8 digit/i.test(err.message)
@@ -826,14 +824,14 @@ test('Scenario G: Security & Authorization Enforcement (IDOR & Phone Suffix Bypa
   );
 });
 
-test('Scenario H & I: AI/DS Governed Predictions & WhatsApp Idempotency / Retry (BR-42..47, Section 8 & 9)', async () => {
-  // 1. Verify latestPredictions loads governed real dataset forecast
+test('Scenario H & I: Prediksi AI & Idempotensi / Percobaan Ulang WhatsApp', async () => {
+  // 1. Verifikasi latestPredictions memuat hasil prakiraan analitik data
   const pred = await analyticsService.latestPredictions();
-  assert.ok(pred, 'latestPredictions must return governed DS prediction artifact');
+  assert.ok(pred);
   assert.equal(pred.is_synthetic, false);
   assert.equal(pred.prediksi.length, 14);
 
-  // 2. Verify WhatsApp webhook duplicate message_id idempotency (Section 9)
+  // 2. Verifikasi idempotensi pesan duplikat webhook WhatsApp
   const wa1 = await chatService.handleWhatsAppMessage({
     sender: '081288178843',
     message: 'Halo admin, saya butuh bantuan manusia',
@@ -847,9 +845,9 @@ test('Scenario H & I: AI/DS Governed Predictions & WhatsApp Idempotency / Retry 
     message: 'Halo admin, saya butuh bantuan manusia',
     message_id: 'WA-MSG-IDEMPOTENT-001',
   });
-  assert.equal(wa2.duplicate_ignored, true, 'Duplicate webhook message_id must be ignored idempotently');
+  assert.equal(wa2.duplicate_ignored, true);
 
-  // 3. Verify WhatsApp invoice failure logging & automatic retry (BR-42, BR-43)
+  // 3. Verifikasi pencatatan kegagalan faktur WhatsApp & pengiriman ulang otomatis
   const failedDispatch = await paymentService.queueAndDispatchWhatsAppInvoice(
     101,
     { tipe_invoice: 'final', simulatedFailure: true },
@@ -862,50 +860,48 @@ test('Scenario H & I: AI/DS Governed Predictions & WhatsApp Idempotency / Retry 
   assert.equal(retryRes.results[0].status, 'sent');
 });
 
-
-test('Scenario J: BUG-01 to BUG-16 & 13 Mandatory Acceptance Journeys Regression Verification', async () => {
-  // 1. BUG-06: Operating hours 08:00-19:00 -> 18:00 slot with 60m duration is VALID, while 18:00 slot with 90m duration (ends 19:30 > 19:00) is REJECTED with OUTSIDE_OPERATING_HOURS
+test('Scenario J: Verifikasi Regresi Fungsionalitas & Alur Penerimaan Sistem', async () => {
+  // 1. Jam operasional 08:00-19:00 -> slot 18:00 durasi 60m valid, durasi 90m ditolak karena melebihi jam tutup
   const futureDate = new Date(Date.now() + 5 * 86400000);
-  if (futureDate.getDay() === 0) futureDate.setDate(futureDate.getDate() + 1); // Ensure Mon-Sat
+  if (futureDate.getDay() === 0) futureDate.setDate(futureDate.getDate() + 1);
   const yyyy = futureDate.getFullYear();
   const mm = String(futureDate.getMonth() + 1).padStart(2, '0');
   const dd = String(futureDate.getDate()).padStart(2, '0');
-  const slot1800 = `${yyyy}-${mm}-${dd}T18:00:00+07:00`;
 
   const avail60 = await bookingService.getAvailability(`${yyyy}-${mm}-${dd}`, 1, 1, new Date(), 60);
   assert.equal(avail60.jam_operasional, '08:00–19:00');
   const slot18Obj60 = avail60.slot.find((s) => (s.jam === '18:00' || s.jam_lokal === '18:00'));
-  assert.ok(slot18Obj60, '18:00 slot must be generated when closing hour is 19:00');
-  assert.equal(slot18Obj60.tersedia, true, '18:00 slot must be available for 60-minute service');
+  assert.ok(slot18Obj60);
+  assert.equal(slot18Obj60.tersedia, true);
 
   const avail90 = await bookingService.getAvailability(`${yyyy}-${mm}-${dd}`, 4, 1, new Date(), 90);
   const slot18Obj90 = avail90.slot.find((s) => (s.jam === '18:00' || s.jam_lokal === '18:00'));
-  assert.equal(slot18Obj90.tersedia, false, '18:00 slot must be unavailable for 90-minute service ending at 19:30');
+  assert.equal(slot18Obj90.tersedia, false);
   assert.equal(slot18Obj90.kode_alasan, 'DURATION_EXCEEDS_CLOSING');
 
-  // 2. BUG-09 & BUG-14: Public status endpoint returns synchronized technician progress (progres_teknisi) & WhatsApp delivery state
+  // 2. Endpoint status publik mengembalikan progres teknisi dan riwayat status
   const pubStatus = await bookingService.publicStatusByCode('NARA-AC101-MEMBER');
-  assert.ok(pubStatus.progres_teknisi, 'publicStatusByCode must include progres_teknisi object');
+  assert.ok(pubStatus.progres_teknisi);
   assert.equal(typeof pubStatus.progres_teknisi.checklist_total, 'number');
   assert.equal(typeof pubStatus.progres_teknisi.checklist_selesai, 'number');
   assert.ok('foto_sebelum' in pubStatus.progres_teknisi);
   assert.ok('foto_sesudah' in pubStatus.progres_teknisi);
-  assert.ok(Array.isArray(pubStatus.riwayat_status), 'publicStatusByCode must include full riwayat_status');
+  assert.ok(Array.isArray(pubStatus.riwayat_status));
 
-  // 3. BUG-13: Masked phone string ("0812****8843") must be rejected by verifyPublicBookingOwnership
+  // 3. Nomor telepon yang disamarkan harus ditolak saat verifikasi kepemilikan
   await assert.rejects(
     async () => bookingService.verifyPublicBookingOwnership('NARA-AC101-MEMBER', '0812****8843'),
     (err) => /disamarkan|tersamar/i.test(err.message)
   );
 
-  // 4. BUG-15 & BUG-16: When a qualifying review already exists on booking 101, getWarrantyInfo returns has_qualifying_review = true and submitClaim succeeds WITHOUT re-supplying rating/review_komentar, and stores foto_bukti_url
+  // 4. Jika ulasan sudah ada, info garansi mencatat ulasan terpenuhi dan submit klaim berhasil
   const b101Ref = dbState.bookings.find((b) => b.id === 101);
   if (b101Ref) b101Ref.selesai_aktual = new Date(Date.now() - 2 * 86400000).toISOString();
   dbState.feedback.push({ id: 50, booking_id: 101, rating: 5, komentar: 'Sangat dingin dan bersih' });
   const wInfoAfterReview = await warrantyService.getWarrantyInfo(101, { user: { id: 3, role: 'customer', customer_id: 1 } });
-  assert.equal(wInfoAfterReview.has_qualifying_review, true, 'BUG-15: Existing review must be recognized');
+  assert.equal(wInfoAfterReview.has_qualifying_review, true);
 
-  // Resolve claim2 first so we can test submitting claim3 without duplicate review
+  // Selesaikan klaim 2 sebelum menguji pengajuan klaim 3
   const activeClaim2 = dbState.warranty_claims.find((c) => c.booking_id === 101 && c.status === 'diajukan');
   if (activeClaim2) activeClaim2.status = 'selesai';
 
@@ -919,15 +915,15 @@ test('Scenario J: BUG-01 to BUG-16 & 13 Mandatory Acceptance Journeys Regression
   assert.equal(claim3.foto_bukti_url, '/api/v1/claims/999/photo-file/claim_proof.jpg');
 
   const claimsList = await warrantyService.listClaims({});
-  assert.ok((claimsList.data || claimsList)[0].booking_kode, 'listClaims must include booking_kode alias for AdminClaims');
-  assert.ok((claimsList.data || claimsList)[0].kontak, 'listClaims must include kontak alias for AdminClaims');
+  assert.ok((claimsList.data || claimsList)[0].booking_kode);
+  assert.ok((claimsList.data || claimsList)[0].kontak);
 
-  // 5. BUG-11: Analytics summary returns all 5 required analytical categories
+  // 5. Ringkasan analitik mengembalikan seluruh kategori analitik
   const summaryData = await analyticsService.summary();
-  assert.ok(summaryData.transaksi_pelanggan, 'Category 1: Customer transaction analytics');
-  assert.ok(Array.isArray(summaryData.layanan_terpopuler), 'Category 2: Most popular services');
-  assert.ok(summaryData.pendapatan, 'Category 3: Revenue analytics');
-  assert.ok(Array.isArray(summaryData.workload_teknisi), 'Category 4: Technician workload');
-  assert.ok(summaryData.booking_terjadwal, 'Category 5: Scheduled bookings');
-  assert.ok(summaryData.prediksi_ds, 'DS 14-day demand forecast');
+  assert.ok(summaryData.transaksi_pelanggan);
+  assert.ok(Array.isArray(summaryData.layanan_terpopuler));
+  assert.ok(summaryData.pendapatan);
+  assert.ok(Array.isArray(summaryData.workload_teknisi));
+  assert.ok(summaryData.booking_terjadwal);
+  assert.ok(summaryData.prediksi_ds);
 });

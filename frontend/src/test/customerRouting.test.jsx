@@ -40,7 +40,7 @@ const mockUnauthAuth = {
   isLoggingOut: false,
 };
 
-describe('Customer Routing (UX-001)', () => {
+describe('Customer Routing', () => {
   it('redirects unauthenticated user to /login', () => {
     render(
       <AuthContext.Provider value={mockUnauthAuth}>

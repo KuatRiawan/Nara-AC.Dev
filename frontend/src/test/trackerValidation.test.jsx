@@ -13,7 +13,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-describe('Tracker Booking Validation & Microcopy (UX-002)', () => {
+describe('Tracker Booking Validation & Microcopy', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

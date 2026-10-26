@@ -89,13 +89,14 @@ export default function LandingPage() {
   }, []);
 
   const [liveServices, setLiveServices] = useState([]);
+  const [activeCatalogTab, setActiveCatalogTab] = useState('cuci'); // 'cuci' | 'pasang_bongkar' | 'diagnosa'
 
   useEffect(() => {
     let active = true;
     api.get('/services')
       .then(res => {
         if (!active) return;
-        const raw = res?.data?.data || res?.data;
+        const raw = res?.data?.data || res?.data || (Array.isArray(res) ? res : []);
         if (Array.isArray(raw) && raw.length > 0) {
           setLiveServices(raw);
         }
@@ -105,75 +106,222 @@ export default function LandingPage() {
     return () => { active = false; };
   }, []);
 
-  const servicePackages = useMemo(() => {
+  const catalogPackages = useMemo(() => {
     const list = Array.isArray(liveServices) ? liveServices : [];
-    const std = list.find(s => s.kode === 'SRV-CUCI-01' || (s.nama_layanan || '').toLowerCase().includes('standard') || s.id === 1);
-    const cr = list.find(s => s.kode === 'SRV-CUCI-CORE' || ((s.nama_layanan || '').toLowerCase().includes('core') && !(s.nama_layanan || '').toLowerCase().includes('freon')) || s.id === 4);
-    const cf = list.find(s => s.kode === 'SRV-CUCI-FREON' || ((s.nama_layanan || '').toLowerCase().includes('freon') && (s.nama_layanan || '').toLowerCase().includes('core')) || s.id === 5);
 
-    return [
-      {
-        id: std?.id || 1,
-        tier: 'standard',
-        nama_layanan: 'Cuci Standar',
-        subtitle: 'PERAWATAN RUTIN',
-        badge: 'Rutin',
-        isPopular: false,
-        deskripsi: 'Pembersihan filter dan evaporator untuk unit yang masih dingin normal dan rutin diservis 2-3 bulan sekali.',
-        harga: std?.harga !== undefined ? Number(std.harga) : 75000,
-        durasi_menit: std?.durasi_menit !== undefined ? Number(std.durasi_menit) : 60,
-        garansi: 'Garansi 14 Hari',
-        highlights: [
-          'Cuci filter & casing cover',
-          'Cuci permukaan evaporator',
-          'Semprot kondensor outdoor',
-          'Cek suhu & arus listrik'
-        ],
-        ctaText: 'Pilih Standar',
-        bookingUrl: `/booking?layanan=${std?.id || 1}&paket=standard`
-      },
-      {
-        id: cr?.id || 4,
-        tier: 'core',
-        nama_layanan: 'Cuci Core (Deep Clean)',
-        subtitle: 'OVERHAUL LENGKAP',
-        badge: 'PALING DIREKOMENDASIKAN',
-        isPopular: true,
-        deskripsi: 'Bongkar total rotor blower & talang air. Solusi mutlak untuk AC bocor, bau apek, dan hembusan angin lemah.',
-        harga: cr?.harga !== undefined ? Number(cr.harga) : 120000,
-        durasi_menit: cr?.durasi_menit !== undefined ? Number(cr.durasi_menit) : 90,
-        garansi: 'Garansi Nyata 30 Hari',
-        highlights: [
-          'SEMUA cakupan Paket Standar',
-          'Bongkar total rotor fan & talang',
-          'Chemical treatment anti-bakteri',
-          'Vakum sedot pipa drainase lendir',
-          'Cek tekanan freon & kompresor'
-        ],
-        ctaText: 'Pilih Core (Pro)',
-        bookingUrl: `/booking?layanan=${cr?.id || 4}&paket=core`
-      },
-      {
-        id: cf?.id || 5,
-        tier: 'core_freon',
-        nama_layanan: 'Core + Isi Freon',
-        subtitle: 'RESTORASI KOMPLIT',
-        badge: 'Komplit',
-        isPopular: false,
-        deskripsi: 'Kombinasi cuci bongkar total ditambah pengisian ulang freon murni presisi tinggi agar kembali menggigil.',
-        harga: cf?.harga !== undefined ? Number(cf.harga) : 220000,
-        durasi_menit: cf?.durasi_menit !== undefined ? Number(cf.durasi_menit) : 105,
-        garansi: 'Garansi Dingin 45 Hari',
-        highlights: [
-          'SEMUA cakupan Paket Core lengkap',
-          'Isi freon R32 / R410A murni',
-          'Deteksi kebocoran flaring pipa',
-          'Kalibrasi thermostat suhu'
-        ],
-        ctaText: 'Pilih Core + Freon',
-        bookingUrl: `/booking?layanan=${cf?.id || 5}&paket=core_freon`
-      }
-    ];
+    // Cuci services
+    const std = list.find(s => s.kode === 'SRV-CUCI-01' || (s.nama_layanan || '').toLowerCase().includes('standard') || s.id === 1);
+    const foam = list.find(s => s.kode === 'SRV-CUCI-051-RMH-FOAM' || (s.nama_layanan || '').toLowerCase().includes('foam') || s.id === 44);
+    const semioh = list.find(s => s.kode === 'SRV-CUCI-CORE' || ((s.nama_layanan || '').toLowerCase().includes('semi') && (s.nama_layanan || '').toLowerCase().includes('overhaul')) || s.id === 4);
+    const overhaul = list.find(s => s.kode === 'SRV-CUCI-FREON' || ((s.nama_layanan || '').toLowerCase().includes('overhaul') && !(s.nama_layanan || '').toLowerCase().includes('semi')) || s.id === 5);
+
+    // Pasang & Bongkar
+    const pasang = list.find(s => s.kode === 'SRV-INST-051-RMH-PASANG' || (s.nama_layanan || '').toLowerCase().includes('pasang') || s.id === 62);
+    const bongkar = list.find(s => s.kode === 'SRV-BONGKAR-01' || (s.nama_layanan || '').toLowerCase().includes('bongkar') || s.id === 2);
+
+    // Diagnosa & Freon
+    const cekRingan = list.find(s => s.kode === 'SRV-LAIN-CEK-RINGAN' || s.id === 109);
+    const cekBerat = list.find(s => s.kode === 'SRV-LAIN-CEK-BERAT' || s.id === 110);
+    const freon10 = list.find(s => s.kode === 'SRV-FREON-051-R32-10PSI' || s.id === 57);
+
+    return {
+      cuci: [
+        {
+          id: std?.id || 1,
+          tier: 'biasa',
+          kategori: 'cuci',
+          nama_layanan: 'Cuci AC Standard',
+          subtitle: 'PERAWATAN RUTIN',
+          badge: 'Rutin 2–3 Bulan',
+          isPopular: false,
+          deskripsi: 'Pembersihan filter dan kisi evaporator untuk unit yang masih dingin normal dan rutin diservis berkala.',
+          harga: std?.harga !== undefined ? Number(std.harga) : 75000,
+          durasi_menit: std?.durasi_menit !== undefined ? Number(std.durasi_menit) : 60,
+          garansi: 'Garansi 14 Hari',
+          highlights: [
+            'Cuci cover casing & filter',
+            'Cuci kisi permukaan evaporator',
+            'Semprot kondensor unit outdoor',
+            'Cek tekanan freon & arus listrik',
+          ],
+          ctaText: 'Pilih Standard',
+          bookingUrl: `/booking?kategori=cuci&tier=biasa&layanan=${std?.id || 1}`,
+        },
+        {
+          id: foam?.id || 44,
+          tier: 'foam',
+          kategori: 'cuci',
+          nama_layanan: 'Cuci Foam / Sabun',
+          subtitle: 'KERAK & JAMUR BANDEL',
+          badge: 'Chemical Foam',
+          isPopular: false,
+          deskripsi: 'Pencucian intensif menggunakan chemical foam agent perontok kerak minyak, jamur & lendir evaporator.',
+          harga: foam?.harga !== undefined ? Number(foam.harga) : 115000,
+          durasi_menit: foam?.durasi_menit !== undefined ? Number(foam.durasi_menit) : 75,
+          garansi: 'Garansi 14 Hari',
+          highlights: [
+            'SEMUA cakupan Cuci Standard',
+            'Chemical foaming agent anti-kerak',
+            'Rontokkan lendir & jamur bandel',
+            'Sterilisasi evaporator higienis',
+          ],
+          ctaText: 'Pilih Cuci Foam',
+          bookingUrl: `/booking?kategori=cuci&tier=foam&layanan=${foam?.id || 44}`,
+        },
+        {
+          id: semioh?.id || 4,
+          tier: 'semioh',
+          kategori: 'cuci',
+          nama_layanan: 'Cuci Semi Overhaul',
+          subtitle: 'TUNTAS BOCOR AIR',
+          badge: 'PALING DIMINATI',
+          isPopular: true,
+          deskripsi: 'Bongkar talang air & rotor fan blower. Solusi mutlak untuk AC bocor air, bau apek, dan hembusan angin lemah.',
+          harga: semioh?.harga !== undefined ? Number(semioh.harga) : 200000,
+          durasi_menit: semioh?.durasi_menit !== undefined ? Number(semioh.durasi_menit) : 90,
+          garansi: 'Garansi Nyata 30 Hari',
+          highlights: [
+            'SEMUA cakupan Cuci Foam',
+            'Bongkar total rotor fan & talang air',
+            'Vakum sedot pipa pembuangan lendir',
+            'Tuntas tetesan air & bau apek tuntas',
+            'Cek kompresor & kalibrasi suhu',
+          ],
+          ctaText: 'Pilih Semi Overhaul',
+          bookingUrl: `/booking?kategori=cuci&tier=semioh&layanan=${semioh?.id || 4}`,
+        },
+        {
+          id: overhaul?.id || 5,
+          tier: 'overhaul',
+          kategori: 'cuci',
+          nama_layanan: 'Cuci Overhaul Total',
+          subtitle: 'DEEP CLEAN MAKSIMAL',
+          badge: 'Restorasi Total',
+          isPopular: false,
+          deskripsi: 'Bongkar total seluruh unit indoor dan perendaman chemical wash evaporator untuk performa dingin maksimal seperti baru.',
+          harga: overhaul?.harga !== undefined ? Number(overhaul.harga) : 350000,
+          durasi_menit: overhaul?.durasi_menit !== undefined ? Number(overhaul.durasi_menit) : 120,
+          garansi: 'Garansi Dingin 45 Hari',
+          highlights: [
+            'Bongkar total seluruh unit indoor turun ke bawah',
+            'Perendaman chemical soak evaporator tuntas',
+            'Pembersihan menyeluruh tanpa sisa kerak',
+            'Hembusan angin maksimal layaknya AC baru',
+          ],
+          ctaText: 'Pilih Overhaul Total',
+          bookingUrl: `/booking?kategori=cuci&tier=overhaul&layanan=${overhaul?.id || 5}`,
+        },
+      ],
+      pasang_bongkar: [
+        {
+          id: pasang?.id || 62,
+          tier: 'pasang',
+          kategori: 'pasang_bongkar',
+          nama_layanan: 'Pasang Unit AC',
+          subtitle: 'INSTALASI BARU / PINDAHAN',
+          badge: 'Vakum Standar Pabrik',
+          isPopular: true,
+          deskripsi: 'Pemasangan unit indoor & outdoor waterpass rapi, proses vakum pipa standar pabrikan & uji performa pendinginan.',
+          harga: pasang?.harga !== undefined ? Number(pasang.harga) : 300000,
+          durasi_menit: pasang?.durasi_menit !== undefined ? Number(pasang.durasi_menit) : 120,
+          garansi: 'Garansi Instalasi 30 Hari',
+          highlights: [
+            'Bracket indoor & outdoor waterpass presisi',
+            'Vakum pipa standar instalasi pabrikan',
+            'Uji kebocoran sambungan neppel & flaring',
+            'Testing ampere & kestabilan pendinginan',
+          ],
+          ctaText: 'Pesan Pasang AC',
+          bookingUrl: `/booking?kategori=pasang_bongkar&tier=pasang&layanan=${pasang?.id || 62}`,
+        },
+        {
+          id: bongkar?.id || 2,
+          tier: 'bongkar',
+          kategori: 'pasang_bongkar',
+          nama_layanan: 'Bongkar Unit AC',
+          subtitle: 'PELEPASAN UNIT AMAN',
+          badge: 'Pump Down System',
+          isPopular: false,
+          deskripsi: 'Pelepasan unit dengan pump-down penguncian freon aman di kompresor tanpa risiko terbuang sia-sia.',
+          harga: bongkar?.harga !== undefined ? Number(bongkar.harga) : 150000,
+          durasi_menit: bongkar?.durasi_menit !== undefined ? Number(bongkar.durasi_menit) : 60,
+          garansi: 'Garansi Bebas Bocor Freon',
+          highlights: [
+            'Penguncian freon aman di kompresor (Pump-Down)',
+            'Freon aman tanpa terbuang ke udara',
+            'Pelepasan rapi pipa, bracket, dan kelistrikan',
+            'Unit dirapikan siap untuk dipindahkan',
+          ],
+          ctaText: 'Pesan Bongkar AC',
+          bookingUrl: `/booking?kategori=pasang_bongkar&tier=bongkar&layanan=${bongkar?.id || 2}`,
+        },
+      ],
+      diagnosa: [
+        {
+          id: cekRingan?.id || 109,
+          tier: 'diagnosa_ringan',
+          kategori: 'diagnosa',
+          nama_layanan: 'Pengecekan AC Ringan',
+          subtitle: 'DIAGNOSA KENDALA AWAL',
+          badge: 'Cek Cepat',
+          isPopular: false,
+          deskripsi: 'Pengecekan fungsi remote, arus listrik (Ampere), hembusan angin, dan diagnosa awal kendala AC.',
+          harga: cekRingan?.harga !== undefined ? Number(cekRingan.harga) : 50000,
+          durasi_menit: cekRingan?.durasi_menit !== undefined ? Number(cekRingan.durasi_menit) : 45,
+          garansi: 'Bebas Biaya jika Lanjut Servis',
+          highlights: [
+            'Cek arus listrik kompresor (Ampere)',
+            'Pengukuran tekanan freon manifold gauge',
+            'Cek sensor suhu & hembusan dingin',
+            'Bebas biaya pengecekan jika lanjut perbaikan',
+          ],
+          ctaText: 'Pesan Pengecekan',
+          bookingUrl: `/booking?kategori=diagnosa&tier=diagnosa_ringan&layanan=${cekRingan?.id || 109}`,
+        },
+        {
+          id: cekBerat?.id || 110,
+          tier: 'diagnosa_berat',
+          kategori: 'diagnosa',
+          nama_layanan: 'Pengecekan Kerusakan Berat',
+          subtitle: 'ANALISA KOMPONEN & KELISTRIKAN',
+          badge: 'Diagnosa Mendalam',
+          isPopular: true,
+          deskripsi: 'Analisa mendalam kompresor mati, korsleting modul PCB inverter, atau kebocoran freon tersembunyi.',
+          harga: cekBerat?.harga !== undefined ? Number(cekBerat.harga) : 100000,
+          durasi_menit: cekBerat?.durasi_menit !== undefined ? Number(cekBerat.durasi_menit) : 60,
+          garansi: 'Diagnosa Akurat Bergaransi',
+          highlights: [
+            'Analisa mendalam kompresor mati atau bising',
+            'Cek modul PCB inverter & sensor kelistrikan',
+            'Deteksi kebocoran freon pipa tanam / evaporator',
+            'Estimasi rincian biaya transparan sebelum dikerjakan',
+          ],
+          ctaText: 'Pesan Pengecekan Berat',
+          bookingUrl: `/booking?kategori=diagnosa&tier=diagnosa_berat&layanan=${cekBerat?.id || 110}`,
+        },
+        {
+          id: freon10?.id || 57,
+          tier: 'biasa',
+          kategori: 'cuci',
+          nama_layanan: 'Tambah Freon (Mulai 10 PSI)',
+          subtitle: 'FREON RESMI ORIGINAL',
+          badge: 'Freon Murni 100%',
+          isPopular: false,
+          deskripsi: 'Pengisian freon murni presisi sesuai standar pabrikan untuk mengembalikan suhu sejuk menggigil.',
+          harga: freon10?.harga !== undefined ? Number(freon10.harga) : 45000,
+          durasi_menit: 30,
+          garansi: 'Garansi Dingin',
+          highlights: [
+            'Freon murni 100% tanpa oplosan',
+            'Tersedia tipe R32, R410A, dan R22',
+            'Pengecekan titik flare sambungan pipa',
+            'Tekanan terukur presisi manifold gauge',
+          ],
+          ctaText: 'Pesan Servis + Freon',
+          bookingUrl: `/booking?kategori=cuci&tier=biasa`,
+        },
+      ],
+    };
   }, [liveServices]);
 
   return (
@@ -409,41 +557,91 @@ export default function LandingPage() {
         <section id="layanan" className="py-24 bg-white relative">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-            <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="text-center max-w-3xl mx-auto mb-10">
               <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-widest border border-blue-200 mb-3">
-                BANDINGKAN MODEL
+                KATALOG RESMI & TARIF
               </span>
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight mb-4">
                 Pilih paket yang tepat untuk Anda.
               </h2>
               <p className="text-slate-600 text-base sm:text-lg leading-relaxed">
-                Transparan tanpa biaya tersembunyi. Termasuk garansi resmi purna-servis.
+                Transparan tanpa biaya tersembunyi. Tersinkronisasi penuh dengan sistem booking resmi NARA AC.
               </p>
             </div>
 
+            {/* Kategori Tab Filter */}
+            <div className="flex justify-center mb-12">
+              <div className="inline-flex p-1.5 bg-sky-50/80 rounded-2xl border border-sky-100 gap-1.5 shadow-xs flex-wrap justify-center">
+                <button
+                  type="button"
+                  onClick={() => setActiveCatalogTab('cuci')}
+                  className={`px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                    activeCatalogTab === 'cuci'
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                  }`}
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Paket Cuci AC (4 Pilihan)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveCatalogTab('pasang_bongkar')}
+                  className={`px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                    activeCatalogTab === 'pasang_bongkar'
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                  }`}
+                >
+                  <Wrench className="w-4 h-4" />
+                  <span>Pasang & Bongkar (2 Layanan)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveCatalogTab('diagnosa')}
+                  className={`px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                    activeCatalogTab === 'diagnosa'
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                  }`}
+                >
+                  <HelpCircle className="w-4 h-4" />
+                  <span>Perbaikan & Freon (3 Layanan)</span>
+                </button>
+              </div>
+            </div>
+
             <motion.div
+              key={activeCatalogTab}
               variants={staggerContainer}
               initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: '-40px' }}
-              className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch mb-12"
+              animate="visible"
+              className={`grid gap-6 items-stretch mb-12 ${
+                activeCatalogTab === 'cuci'
+                  ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
+                  : activeCatalogTab === 'pasang_bongkar'
+                  ? 'grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto'
+                  : 'grid-cols-1 md:grid-cols-3 max-w-5xl mx-auto'
+              }`}
             >
-              {servicePackages.map((pkg) => {
+              {(catalogPackages[activeCatalogTab] || []).map((pkg) => {
                 const isCore = pkg.isPopular;
 
                 return (
                   <motion.div
-                    key={pkg.id}
+                    key={pkg.id || pkg.nama_layanan}
                     variants={fadeInUpVariant}
                     whileHover={{ y: -8, scale: 1.015, transition: { duration: 0.25, ease: easeOutCubic } }}
-                    className={`rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 relative group ${isCore
+                    className={`rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 relative group ${isCore
                       ? 'bg-gradient-to-b from-blue-50/70 via-white to-white border-2 border-blue-500 shadow-xl shadow-blue-500/10 lg:-translate-y-2'
                       : 'bg-white border-2 border-sky-100 hover:border-sky-300 shadow-md hover:shadow-xl shadow-sky-900/5'
                       }`}
                   >
                     {isCore && (
                       <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[11px] font-extrabold uppercase tracking-widest px-4 py-1 rounded-full shadow-md whitespace-nowrap">
-                        PALING DIREKOMENDASIKAN
+                        {pkg.badge || 'PALING DIREKOMENDASIKAN'}
                       </div>
                     )}
 
@@ -452,31 +650,38 @@ export default function LandingPage() {
                         {pkg.subtitle}
                       </span>
 
-                      <h3 className="text-2xl font-black text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
+                      <h3 className="text-xl font-black text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
                         {pkg.nama_layanan}
                       </h3>
 
-                      <p className="text-slate-600 text-xs sm:text-sm leading-relaxed mb-6 min-h-[44px]">
+                      <p className="text-slate-600 text-xs leading-relaxed mb-6 min-h-[44px]">
                         {pkg.deskripsi}
                       </p>
 
                       <div className="mb-6 pb-6 border-b border-sky-100">
                         <div className="flex items-baseline gap-1.5">
-                          <span className="text-3xl sm:text-4xl font-black text-slate-900">
+                          <span className="text-2xl sm:text-3xl font-black text-slate-900">
                             Rp {pkg.harga.toLocaleString('id-ID')}
                           </span>
                           <span className="text-xs text-slate-500 font-semibold">/ unit</span>
                         </div>
-                        <p className={`text-xs font-bold mt-1.5 ${isCore ? 'text-emerald-600' : 'text-blue-600'}`}>
-                          {pkg.garansi}
-                        </p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <span className={`text-xs font-bold ${isCore ? 'text-emerald-600' : 'text-blue-600'}`}>
+                            {pkg.garansi}
+                          </span>
+                          <span className="text-slate-300">•</span>
+                          <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            ± {pkg.durasi_menit}m
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="space-y-3 mb-6">
+                      <div className="space-y-2.5 mb-6">
                         {(pkg.highlights || []).map((task, tIdx) => (
-                          <div key={`hl-${tIdx}`} className="flex items-center gap-2.5 text-xs sm:text-sm text-slate-700">
-                            <Check className={`w-4 h-4 shrink-0 stroke-[2.5] ${isCore ? 'text-blue-600' : 'text-slate-700'}`} />
-                            <span className={isCore && (tIdx === 0 || tIdx === 1 || tIdx === 4) ? 'font-bold text-slate-900' : ''}>
+                          <div key={`hl-${tIdx}`} className="flex items-center gap-2 text-xs text-slate-700">
+                            <Check className={`w-3.5 h-3.5 shrink-0 stroke-[2.5] ${isCore ? 'text-blue-600' : 'text-slate-700'}`} />
+                            <span className={isCore && (tIdx === 0 || tIdx === 1) ? 'font-bold text-slate-900' : ''}>
                               {task}
                             </span>
                           </div>

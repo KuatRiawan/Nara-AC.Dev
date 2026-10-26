@@ -191,7 +191,7 @@ async function submitClaim({ booking_id, keluhan, alasan, rating, review_komenta
 
     if (activeClaim) {
       throw E.conflict(
-        `Hanya satu klaim garansi aktif yang diperbolehkan (BR-30). Klaim ${activeClaim.kode_klaim} saat ini berstatus ${activeClaim.status}.`
+        `Hanya satu klaim garansi aktif yang diperbolehkan. Klaim ${activeClaim.kode_klaim} saat ini berstatus ${activeClaim.status}.`
       );
     }
 
@@ -202,7 +202,7 @@ async function submitClaim({ booking_id, keluhan, alasan, rating, review_komenta
     const normalizedNew = String(keluhan).trim().toLowerCase();
     if (prevClaims.some((c) => String(c.keluhan || '').trim().toLowerCase() === normalizedNew)) {
       throw E.badRequest(
-        'Klaim berikutnya wajib untuk masalah / keluhan yang berbeda dari klaim sebelumnya (BR-31).'
+        'Klaim berikutnya wajib untuk masalah / keluhan yang berbeda dari klaim sebelumnya.'
       );
     }
 
@@ -212,7 +212,7 @@ async function submitClaim({ booking_id, keluhan, alasan, rating, review_komenta
     if (!feedback) {
       if (rating === undefined || rating === null || !review_komentar) {
         throw E.badRequest(
-          'Klaim garansi wajib menyertakan review berupa rating (1-5) dan komentar pengalaman servis untuk layanan ini terlebih dahulu (BR-25).'
+          'Klaim garansi wajib menyertakan review berupa rating (1-5) dan komentar pengalaman servis untuk layanan ini terlebih dahulu.'
         );
       }
       const numRating = Number(rating);
@@ -289,10 +289,10 @@ async function submitClaim({ booking_id, keluhan, alasan, rating, review_komenta
 
 async function scheduleInspection(claimId, { jadwal_pemeriksaan, teknisi_pemeriksa_id }, _adminUser) {
   if (!jadwal_pemeriksaan) {
-    throw E.badRequest('Jadwal pemeriksaan wajib ditentukan oleh admin (BR-27).');
+    throw E.badRequest('Jadwal pemeriksaan wajib ditentukan oleh admin.');
   }
   if (!teknisi_pemeriksa_id) {
-    throw E.badRequest('Teknisi pemeriksa wajib ditunjuk (BR-26).');
+    throw E.badRequest('Teknisi pemeriksa wajib ditunjuk.');
   }
 
   const claim = (await query('SELECT * FROM warranty_claims WHERE id = $1', [claimId])).rows[0];
@@ -367,7 +367,7 @@ async function decideClaim(claimId, { keputusan, alasan_penolakan, biaya_tambaha
   }
 
   if (keputusan === 'ditolak' && (!alasan_penolakan || alasan_penolakan.trim().length < 5)) {
-    throw E.badRequest('Alasan penolakan klaim wajib dijelaskan minimal 5 karakter (BR-33).');
+    throw E.badRequest('Alasan penolakan klaim wajib dijelaskan minimal 5 karakter.');
   }
 
   const effectiveBiayaTambahan = keputusan === 'ditolak' ? 0 : (Number(biaya_tambahan) || 0);
@@ -385,7 +385,7 @@ async function decideClaim(claimId, { keputusan, alasan_penolakan, biaya_tambaha
       judul: `Klaim Garansi ${keputusan.toUpperCase()}`,
       pesan: keputusan === 'disetujui'
         ? `Klaim garansi Anda (${claim.kode_klaim}) telah disetujui. Teknisi kami akan segera menangani unit AC Anda.`
-        : `Klaim garansi Anda (${claim.kode_klaim}) ditolak: "${alasan_penolakan}". Tidak ada biaya tambahan otomatis yang ditagihkan. Anda dapat mengajukan perbaikan berbayar jika diinginkan (BR-32).`,
+        : `Klaim garansi Anda (${claim.kode_klaim}) ditolak: "${alasan_penolakan}". Tidak ada biaya tambahan otomatis yang ditagihkan. Anda dapat mengajukan perbaikan berbayar jika diinginkan.`,
       tipe: 'booking',
       booking_id: claim.booking_id,
       tautan: `/customer/history`,
@@ -402,7 +402,7 @@ async function convertToPaidBooking(claimId, { layanan_id, jadwal_mulai }, _user
     if (!claim) throw E.notFound('Klaim tidak ditemukan.');
 
     if (claim.status !== 'ditolak') {
-      throw E.badRequest('Fitur ini hanya dapat digunakan untuk klaim yang berstatus ditolak (BR-32).');
+      throw E.badRequest('Fitur ini hanya dapat digunakan untuk klaim yang berstatus ditolak.');
     }
 
     if (claim.booking_berbayar_id) {
@@ -439,7 +439,7 @@ async function convertToPaidBooking(claimId, { layanan_id, jadwal_mulai }, _user
     ]);
 
     return {
-      message: 'Booking servis berbayar berhasil dibuat dari klaim yang ditolak (BR-32).',
+      message: 'Booking servis berbayar berhasil dibuat dari klaim yang ditolak.',
       booking_baru: newBooking,
     };
   });

@@ -16,6 +16,7 @@ const jobParam = Joi.object({
   id: Joi.number().integer().positive().required(),
   cid: Joi.number().integer().positive(),
   pid: Joi.number().integer().positive(),
+  itemId: Joi.number().integer().positive(),
 });
 const TECH = requireAuth(['technician']);
 const TECH_OR_ADMIN = requireAuth(['technician', 'admin']);
@@ -191,6 +192,46 @@ router.post('/jobs/:id/materials', TECH_OR_ADMIN, validate(idParam, 'params'), v
   catatan: Joi.string().trim().max(300).allow(''),
 })), wrap(async (req, res) => {
   res.status(201).json(await bs.addInventoryUsage(Number(req.params.id), req.body, req.user));
+}));
+
+router.get('/services', TECH_OR_ADMIN, wrap(async (_req, res) => {
+  const r = await query(
+    `SELECT id, kode, nama_layanan, kategori, harga, durasi_menit, garansi_hari
+     FROM service_catalog
+     WHERE aktif = true
+     ORDER BY CASE WHEN kategori = 'perbaikan' THEN 1 WHEN kategori = 'instalasi' THEN 2 ELSE 3 END, harga ASC`
+  );
+  res.json({ data: r.rows });
+}));
+
+router.get('/jobs/:id/items', TECH_OR_ADMIN, validate(idParam, 'params'), wrap(async (req, res) => {
+  const jobId = Number(req.params.id);
+  const items = (await query(
+    `SELECT bi.id, bi.layanan_id, COALESCE(bi.nama_item, s.nama_layanan) AS nama_layanan,
+            COALESCE(bi.jenis, s.kategori, 'jasa') AS jenis, s.kategori,
+            bi.jumlah_unit, bi.harga_satuan, bi.subtotal, bi.catatan, bi.nama_item, bi.created_at
+     FROM booking_items bi
+     LEFT JOIN service_catalog s ON s.id = bi.layanan_id
+     WHERE bi.booking_id = $1 ORDER BY bi.id`, [jobId]
+  )).rows;
+  res.json({ data: items });
+}));
+
+router.post('/jobs/:id/items', TECH_OR_ADMIN, validate(idParam, 'params'), validate(Joi.object({
+  layanan_id: Joi.number().integer().positive().allow(null),
+  nama_item: Joi.string().trim().max(150).allow(''),
+  jumlah_unit: Joi.number().integer().positive().max(100).default(1),
+  harga_satuan: Joi.number().integer().min(0).max(50000000).allow(null),
+  catatan: Joi.string().trim().max(300).allow(''),
+  jenis: Joi.string().valid('jasa', 'sparepart').default('jasa'),
+  inventory_item_id: Joi.number().integer().positive().allow(null),
+  inventory_qty: Joi.number().positive().max(1000).allow(null),
+})), wrap(async (req, res) => {
+  res.status(201).json(await bs.addBookingItem(Number(req.params.id), req.body, req.user));
+}));
+
+router.delete('/jobs/:id/items/:itemId', TECH_OR_ADMIN, validate(jobParam, 'params'), wrap(async (req, res) => {
+  res.json(await bs.removeBookingItem(Number(req.params.id), Number(req.params.itemId), req.user));
 }));
 
 router.post('/jobs/:id/notes', TECH_OR_ADMIN, validate(idParam, 'params'), validate(Joi.object({

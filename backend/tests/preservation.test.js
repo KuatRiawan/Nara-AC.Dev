@@ -54,7 +54,7 @@ function sign(payload, opts = {}) {
  * Observasi (pada unfixed code):
  *   login response { user: { role: 'admin' } } → LoginPage.jsx → navigate('/admin')
  *
- * Perilaku ini harus tetap ada setelah BUG-001 diperbaiki.
+ * Perilaku ini harus tetap dipertahankan.
  *
  * Validates: Requirements 3.1
  */
@@ -200,9 +200,8 @@ describe('PRESERVATION-3 — JWT tid selalu dipetakan ke req.user.technicianId',
  *   JWT payload { sub: 1, role: 'admin' } tanpa cid/tid →
  *   requireAuth → req.user.customerId === null, req.user.technicianId === null
  *
- * NOTE: Pada unfixed code, req.user.customer_id (snake_case) TIDAK ADA (bug BUG-003).
- *       Test ini hanya memverifikasi req.user.customerId (camelCase) yang MEMANG ADA
- *       dan bernilai null — perilaku yang harus tetap ada setelah fix.
+ * NOTE: Test ini memverifikasi req.user.customerId (camelCase)
+ *       dan bernilai null untuk admin tanpa link pelanggan/teknisi.
  *
  * Validates: Requirements 3.3 (req.user tetap berisi customerId)
  */
@@ -500,7 +499,7 @@ describe('PRESERVATION-7 — JWT invalid/expired → 401 dengan pesan spesifik',
  *   hanya satu INSERT yang berhasil (idempotent)
  *
  * CATATAN: Test ini memverifikasi bahwa SQL notify() mengandung ON CONFLICT DO NOTHING,
- *          memastikan idempotency tetap terjaga setelah fix BUG-006.
+ *          memastikan idempotensi pengiriman notifikasi tetap terjaga.
  *
  * Validates: Requirements 3.15
  */
@@ -610,8 +609,8 @@ describe('PRESERVATION-8 — notify() idempotency dengan dedup_key yang sama', (
  *   chatbot response dengan rute selain 'booking' atau 'status' → action === null
  *   (tidak ada CTA yang ditampilkan)
  *
- * Ini adalah perilaku yang BENAR untuk rute-rute lain seperti 'keluhan', 'tanya_layanan',
- * 'umum', dll. Perilaku ini harus tetap sama setelah BUG-005 diperbaiki.
+ * Ini adalah perilaku yang benar untuk rute-rute lain seperti 'keluhan', 'tanya_layanan',
+ * 'umum', dll. Perilaku ini harus tetap dipertahankan.
  *
  * Validates: Requirements 3.6, 3.7
  */
@@ -654,7 +653,7 @@ describe('PRESERVATION-9 — Chatbot rute bukan booking/status → action === nu
      * Property: ∀ rute ∉ {'booking', 'status'} → action === null
      *
      * Ini memverifikasi bahwa rute lainnya (keluhan, tanya_layanan, dll.)
-     * TIDAK akan tiba-tiba muncul CTA setelah fix BUG-005.
+     * tidak memunculkan CTA tautan secara keliru.
      */
     const nonCTARutes = fc.string({ minLength: 1, maxLength: 30 }).filter(
       (s) => s !== 'booking' && s !== 'status'
@@ -832,12 +831,11 @@ describe('PRESERVATION-11 — JWT valid tanpa role restriction → next() tanpa 
  * Test ini adalah dokumentasi penting: sebelum fix, '/customer/dashboard' tidak pernah
  * muncul sebagai navigate target. Ini memvalidasi baseline unfixed behavior.
  *
- * NOTE: Test ini akan BERUBAH setelah BUG-001 diperbaiki — customer AKAN diarahkan
- *       ke /customer/dashboard. Namun test ini memverifikasi bahwa admin dan technician
- *       tetap diarahkan dengan benar bahkan setelah fix.
+ * NOTE: Test ini memverifikasi bahwa admin dan technician
+ *       tetap diarahkan dengan benar sesuai perannya.
  */
 describe('PRESERVATION-12 — Admin dan Technician redirect tidak berubah (baseline)', () => {
-  // Versi unfixed dari getNavigateTarget
+  // Versi baseline dari getNavigateTarget
   function getNavigateTargetUnfixed(loginResult) {
     if (loginResult.user.role === 'technician') {
       return '/technician/dashboard';
@@ -858,7 +856,7 @@ describe('PRESERVATION-12 — Admin dan Technician redirect tidak berubah (basel
     /**
      * Validates: Requirements 3.1, 3.2
      * Baseline: admin → /admin, technician → /technician/dashboard
-     * Ini harus tetap berlaku SETELAH fix BUG-001 juga.
+     * Ini harus tetap berlaku konsisten.
      */
     fc.assert(
       fc.property(

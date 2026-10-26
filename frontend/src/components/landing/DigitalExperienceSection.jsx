@@ -459,7 +459,7 @@ export default function DigitalExperienceSection() {
                         <div>
                           <span className="font-bold text-slate-800 block text-sm">Paket Cuci Core (Deep Clean)</span>
                           <span className="text-slate-500">
-                            2 Unit AC • Total: <strong>Rp 216.000</strong> (Diskon Member 10%)
+                            2 Unit AC • Total: <strong>Rp 240.000</strong> (Sesuai Estimasi Resmi)
                           </span>
                           <span className="text-[11px] text-blue-600 font-semibold block mt-1">
                             Status Tiket: {currentStep.orderStatus}

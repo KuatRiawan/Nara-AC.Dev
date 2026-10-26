@@ -85,9 +85,9 @@ async function whatsappSend(phone, text) {
 }
 
 const defaultChannels = {
-  in_app: async () => { /* tersimpan di DB dan tampil di aplikasi */ },
+  in_app: async () => {},
   telegram: telegramSend,
-  whatsapp: whatsappSend, // BR-47: Kanal utama untuk pelanggan
+  whatsapp: whatsappSend, // Kanal utama untuk pelanggan
 };
 let channels = { ...defaultChannels };
 function setChannels(overrides) { channels = { ...defaultChannels, ...overrides }; }

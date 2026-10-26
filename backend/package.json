@@ -12,7 +12,7 @@
     "seed:dummy": "node src/db/seedDummy.js",
     "db:reset": "node src/db/migrate.js --reset && node src/db/seed.js",
     "test": "jest --runInBand --forceExit",
-
+    "test:e2e": "node --test tests/e2e_journey.test.js",
     "lint": "eslint ."
   },
   "dependencies": {
@@ -47,7 +47,8 @@
     ],
     "testTimeout": 30000,
     "testPathIgnorePatterns": [
-      "/node_modules/"
+      "/node_modules/",
+      "e2e_journey.test.js"
     ]
   }
 }

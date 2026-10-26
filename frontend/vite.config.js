@@ -30,7 +30,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       // Batasi host yang diizinkan — cegah DNS rebinding (AUD-018)
-      allowedHosts: ['localhost', '127.0.0.1'],
+      allowedHosts: ['localhost', '127.0.0.1', '.ngrok-free.dev', '.ngrok.app', '.ngrok.io'],
       headers: {
         'Access-Control-Allow-Origin': '*',
       },

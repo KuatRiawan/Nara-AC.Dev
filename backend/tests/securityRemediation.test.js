@@ -4,14 +4,14 @@ const { query } = require('../src/db/pool');
 const { generateCsrfToken, validateCsrfToken } = require('../src/middleware/csrf');
 const { generateBookingCode, generateFeedbackToken } = require('../src/utils/ids');
 
-describe('Security Remediation Suite (FIND-01 to FIND-18)', () => {
+describe('Suite Remediasi Keamanan', () => {
   let app;
 
   beforeAll(() => {
     app = createApp();
   });
 
-  describe('FIND-01 & FIND-02: Public Booking Status & Invoice PII Masking', () => {
+  describe('Penyamaran Data Sensitif Status Booking & Faktur Publik', () => {
     let testBooking;
 
     beforeAll(async () => {
@@ -75,7 +75,7 @@ describe('Security Remediation Suite (FIND-01 to FIND-18)', () => {
     });
   });
 
-  describe('FIND-03: Forgot & Reset Password Flow', () => {
+  describe('Alur Lupa & Reset Kata Sandi', () => {
     test('Forgot password returns generic message for non-existent email', async () => {
       const res = await request(app)
         .post('/api/v1/auth/forgot-password')
@@ -141,7 +141,7 @@ describe('Security Remediation Suite (FIND-01 to FIND-18)', () => {
     });
   });
 
-  describe('FIND-04: Secure Feedback Token & Invalidation', () => {
+  describe('Token Ulasan Aman & Pencegahan Penggunaan Ulang', () => {
     let completedBooking;
     let feedbackToken;
 
@@ -149,12 +149,14 @@ describe('Security Remediation Suite (FIND-01 to FIND-18)', () => {
       const uniquePhone = `0812${Math.floor(10000000 + Math.random() * 90000000)}`;
       feedbackToken = generateFeedbackToken();
       
+      const custRow = (await query(`SELECT id FROM customers ORDER BY id LIMIT 1`)).rows[0];
+      const custId = custRow?.id || 1;
       // Create done booking directly in DB with feedback token
       const client = await query(
         `INSERT INTO bookings (kode_booking, customer_id, layanan_id, jadwal_mulai, jadwal_selesai, alamat, keluhan, kontak, status, feedback_token)
-         VALUES ($1, 1, 1, NOW() - INTERVAL '2 hours', NOW() - INTERVAL '1 hour', 'Alamat Test', 'Keluhan test', $2, 'done', $3)
+         VALUES ($1, $2, 1, NOW() - INTERVAL '2 hours', NOW() - INTERVAL '1 hour', 'Alamat Test', 'Keluhan test', $3, 'done', $4)
          RETURNING id, kode_booking, feedback_token`,
-        [`NARA-AC-FB-${Date.now()}`, uniquePhone, feedbackToken]
+        [`NARA-AC-FB-${Date.now()}`, custId, uniquePhone, feedbackToken]
       );
       completedBooking = client.rows[0];
     });
@@ -199,26 +201,26 @@ describe('Security Remediation Suite (FIND-01 to FIND-18)', () => {
     });
   });
 
-  describe('FIND-09: Stateless HMAC CSRF Tokens', () => {
+  describe('Token CSRF HMAC Tanpa Status (Stateless)', () => {
     test('Generates and validates stateless HMAC token across mock restarts', () => {
       const userId = 42;
       const token = generateCsrfToken(userId);
       expect(typeof token).toBe('string');
       expect(token).toContain('.');
 
-      // Validates successfully
+      // Validasi berhasil
       expect(validateCsrfToken(userId, token)).toBe(true);
 
-      // Rejects if different userId
+      // Ditolak jika beda userId
       expect(validateCsrfToken(999, token)).toBe(false);
 
-      // Rejects tampered token
+      // Ditolak jika token dirusak
       const tampered = token.slice(0, -4) + '0000';
       expect(validateCsrfToken(userId, tampered)).toBe(false);
     });
   });
 
-  describe('FIND-10: Strict CORS Hostname Allowlist', () => {
+  describe('Daftar Izin Ketat Host CORS', () => {
     test('Rejects spoofed origin containing localhost substring', async () => {
       const res = await request(app)
         .get('/api/v1/availability?tanggal=2026-10-28&layanan_id=1')
@@ -236,7 +238,7 @@ describe('Security Remediation Suite (FIND-01 to FIND-18)', () => {
     });
   });
 
-  describe('FIND-18: Staging Noindex Header', () => {
+  describe('Header Noindex Lingkungan Staging', () => {
     test('Sets X-Robots-Tag when APP_ENV is staging', async () => {
       process.env.APP_ENV = 'staging';
       const stagingApp = createApp();
@@ -250,5 +252,7 @@ describe('Security Remediation Suite (FIND-01 to FIND-18)', () => {
     await query("DELETE FROM feedback WHERE booking_id IN (SELECT id FROM bookings WHERE kode_booking LIKE 'NARA-AC-FB-%')");
     await query("DELETE FROM bookings WHERE kode_booking LIKE 'NARA-AC-FB-%'");
     await query("DELETE FROM bookings WHERE customer_id IN (SELECT id FROM customers WHERE nama = 'Budi Raharjo')");
+    await query("DELETE FROM users WHERE email LIKE 'reset-user-%@example.com'");
+    await query("DELETE FROM customers WHERE nama IN ('Budi Raharjo', 'User Reset Test')");
   });
 });

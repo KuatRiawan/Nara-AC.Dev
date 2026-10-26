@@ -47,6 +47,17 @@ import {
   CreditCard,
   QrCode,
   Banknote,
+  Search,
+  Filter,
+  Tag,
+  Home,
+  Building2,
+  Building,
+  ChevronDown,
+  ChevronUp,
+  HelpCircle,
+  Info,
+  Zap,
 } from 'lucide-react';
 
 export default function BookingPage() {
@@ -58,6 +69,14 @@ export default function BookingPage() {
   const [customerUnits, setCustomerUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const [propertyType, setPropertyType] = useState('rumah'); // 'rumah' | 'kantor' | 'apartemen'
+  const [acCapacity, setAcCapacity] = useState('0.5-1'); // '0.5-1' | '1.5-2'
+  const [mainCategory, setMainCategory] = useState('cuci'); // 'cuci' | 'pasang_bongkar' | 'diagnosa'
+  const [selectedTier, setSelectedTier] = useState('biasa');
+  const [showAddons, setShowAddons] = useState(false);
+  const [isManualSearch, setIsManualSearch] = useState(false);
+  const [manualSearchQuery, setManualSearchQuery] = useState('');
 
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -245,9 +264,14 @@ export default function BookingPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const preselectedLayanan = params.get('layanan');
-    const preselectedPaket = params.get('paket') || params.get('service');
+    const preselectedPaket = params.get('paket') || params.get('service') || params.get('tier');
+    const preselectedKategori = params.get('kategori') || params.get('cat');
     const preselectedUnits = parseInt(params.get('units') || params.get('jumlah') || '1', 10);
     const preselectedAcUnitId = params.get('ac_unit_id');
+
+    if (preselectedKategori && ['cuci', 'pasang_bongkar', 'diagnosa'].includes(preselectedKategori)) {
+      setMainCategory(preselectedKategori);
+    }
 
     const defaultDate = isSunday(getLocalDateStr(1)) ? getLocalDateStr(2) : getLocalDateStr(1);
 
@@ -259,17 +283,63 @@ export default function BookingPage() {
         let matchedService = null;
         if (preselectedPaket) {
           const p = preselectedPaket.toLowerCase();
-          if (p.includes('core_freon') || p.includes('freon_core') || p === 'freon') {
+          if (p.includes('core_freon') || p.includes('freon_core') || p === 'overhaul') {
             matchedService = sList.find((s) => s.kode === 'SRV-CUCI-FREON' || (s.nama_layanan.toLowerCase().includes('freon') && s.nama_layanan.toLowerCase().includes('core')));
-          } else if (p.includes('core')) {
-            matchedService = sList.find((s) => s.kode === 'SRV-CUCI-CORE' || s.nama_layanan.toLowerCase().includes('core'));
-          } else if (p.includes('standard') || p.includes('standar')) {
+            setMainCategory('cuci');
+            setSelectedTier('overhaul');
+          } else if (p.includes('semioh') || p === 'core') {
+            matchedService = sList.find((s) => s.kode === 'SRV-CUCI-CORE' || s.nama_layanan.toLowerCase().includes('semi'));
+            setMainCategory('cuci');
+            setSelectedTier('semioh');
+          } else if (p.includes('foam')) {
+            matchedService = sList.find((s) => s.kode === 'SRV-CUCI-051-RMH-FOAM' || s.nama_layanan.toLowerCase().includes('foam'));
+            setMainCategory('cuci');
+            setSelectedTier('foam');
+          } else if (p.includes('standard') || p.includes('standar') || p === 'biasa') {
             matchedService = sList.find((s) => s.kode === 'SRV-CUCI-01' || s.nama_layanan.toLowerCase().includes('standard'));
+            setMainCategory('cuci');
+            setSelectedTier('biasa');
+          } else if (p.includes('pasang')) {
+            matchedService = sList.find((s) => s.kode === 'SRV-INST-051-RMH-PASANG' || s.nama_layanan.toLowerCase().includes('pasang'));
+            setMainCategory('pasang_bongkar');
+            setSelectedTier('pasang');
+          } else if (p.includes('bongkar')) {
+            matchedService = sList.find((s) => s.kode === 'SRV-BONGKAR-01' || s.nama_layanan.toLowerCase().includes('bongkar'));
+            setMainCategory('pasang_bongkar');
+            setSelectedTier('bongkar');
+          } else if (p.includes('berat')) {
+            matchedService = sList.find((s) => s.kode === 'SRV-LAIN-CEK-BERAT');
+            setMainCategory('diagnosa');
+            setSelectedTier('diagnosa_berat');
+          } else if (p.includes('diagnosa') || p.includes('cek')) {
+            matchedService = sList.find((s) => s.kode === 'SRV-LAIN-CEK-RINGAN');
+            setMainCategory('diagnosa');
+            setSelectedTier('diagnosa_ringan');
           }
         }
 
         if (!matchedService && preselectedLayanan) {
           matchedService = sList.find((s) => String(s.id) === String(preselectedLayanan) || s.kode === preselectedLayanan);
+          if (matchedService) {
+            if (matchedService.kategori === 'instalasi' || matchedService.kode?.includes('INST') || matchedService.kode?.includes('BONGKAR')) {
+              setMainCategory('pasang_bongkar');
+              setSelectedTier(matchedService.kode?.includes('BONGKAR') ? 'bongkar' : 'pasang');
+            } else if (matchedService.kategori === 'lainnya' || matchedService.kode?.includes('CEK')) {
+              setMainCategory('diagnosa');
+              setSelectedTier(matchedService.kode?.includes('BERAT') ? 'diagnosa_berat' : 'diagnosa_ringan');
+            } else {
+              setMainCategory('cuci');
+              if (matchedService.kode?.includes('FREON') || (matchedService.kode?.includes('OH') && !matchedService.kode?.includes('SEMIOH'))) {
+                setSelectedTier('overhaul');
+              } else if (matchedService.kode?.includes('CORE') || matchedService.kode?.includes('SEMIOH')) {
+                setSelectedTier('semioh');
+              } else if (matchedService.kode?.includes('FOAM')) {
+                setSelectedTier('foam');
+              } else {
+                setSelectedTier('biasa');
+              }
+            }
+          }
         }
 
         const defaultService = matchedService || sList.find((s) => s.kode === 'SRV-CUCI-01') || sList[0];
@@ -281,10 +351,10 @@ export default function BookingPage() {
           jumlah_unit: preselectedUnits > 0 ? preselectedUnits : 1,
           tanggal: prev.tanggal || defaultDate,
           jam: prev.jam || '',
-          keluhan: preselectedPaket === 'core'
-            ? 'Request Paket Cuci Core / Deep Clean'
-            : preselectedPaket === 'core_freon'
-              ? 'Request Paket Core + Pengisian Freon'
+          keluhan: preselectedPaket === 'semioh' || preselectedPaket === 'core'
+            ? 'Request Paket Cuci Semi Overhaul'
+            : preselectedPaket === 'overhaul' || preselectedPaket === 'core_freon'
+              ? 'Request Paket Cuci Overhaul Total'
               : prev.keluhan,
         }));
       })
@@ -295,6 +365,179 @@ export default function BookingPage() {
   const selectedService = useMemo(() => {
     return services.find((s) => String(s.id) === String(form.layanan_id)) || null;
   }, [services, form.layanan_id]);
+
+  // Dapatkan 4 paket Cuci / 2 paket Pasang-Bongkar / 2 Diagnosa sesuai Tempat & PK
+  const resolvedMainServices = useMemo(() => {
+    if (!services || services.length === 0) return [];
+
+    const mapCuci = {
+      rumah: {
+        '0.5-1': { biasa: 'SRV-CUCI-01', foam: 'SRV-CUCI-051-RMH-FOAM', semioh: 'SRV-CUCI-CORE', overhaul: 'SRV-CUCI-FREON' },
+        '1.5-2': { biasa: 'SRV-CUCI-152-RMH-BIASA', foam: 'SRV-CUCI-152-RMH-FOAM', semioh: 'SRV-CUCI-152-RMH-SEMIOH', overhaul: 'SRV-CUCI-152-RMH-OH' },
+      },
+      kantor: {
+        '0.5-1': { biasa: 'SRV-CUCI-051-KTR-BIASA', foam: 'SRV-CUCI-051-KTR-FOAM', semioh: 'SRV-CUCI-051-KTR-SEMIOH', overhaul: 'SRV-CUCI-051-KTR-OH' },
+        '1.5-2': { biasa: 'SRV-CUCI-152-KTR-BIASA', foam: 'SRV-CUCI-152-KTR-FOAM', semioh: 'SRV-CUCI-152-KTR-SEMIOH', overhaul: 'SRV-CUCI-152-KTR-OH' },
+      },
+      apartemen: {
+        '0.5-1': { biasa: 'SRV-CUCI-051-APT-BIASA', foam: 'SRV-CUCI-051-APT-FOAM', semioh: 'SRV-CUCI-051-APT-SEMIOH', overhaul: 'SRV-CUCI-051-APT-OH' },
+        '1.5-2': { biasa: 'SRV-CUCI-152-APT-BIASA', foam: 'SRV-CUCI-152-APT-FOAM', semioh: 'SRV-CUCI-152-APT-SEMIOH', overhaul: 'SRV-CUCI-152-APT-OH' },
+      },
+    };
+
+    const mapInstalasi = {
+      rumah: {
+        '0.5-1': { pasang: 'SRV-INST-051-RMH-PASANG', bongkar: 'SRV-BONGKAR-01' },
+        '1.5-2': { pasang: 'SRV-INST-152-RMH-PASANG', bongkar: 'SRV-INST-152-RMH-BONGKAR' },
+      },
+      kantor: {
+        '0.5-1': { pasang: 'SRV-INST-051-KTR-PASANG', bongkar: 'SRV-INST-051-KTR-BONGKAR' },
+        '1.5-2': { pasang: 'SRV-INST-152-KTR-PASANG', bongkar: 'SRV-INST-152-KTR-BONGKAR' },
+      },
+      apartemen: {
+        '0.5-1': { pasang: 'SRV-INST-051-APT-PASANG', bongkar: 'SRV-INST-051-APT-BONGKAR' },
+        '1.5-2': { pasang: 'SRV-INST-152-APT-PASANG', bongkar: 'SRV-INST-152-APT-BONGKAR' },
+      },
+    };
+
+    if (mainCategory === 'cuci') {
+      const p = mapCuci[propertyType] || mapCuci.rumah;
+      const codes = p[acCapacity] || p['0.5-1'];
+      const tierConfig = [
+        { key: 'biasa', label: 'Cuci AC Standard', badge: 'Perawatan Rutin 2–3 Bulan', desc: 'Pembersihan filter, cover indoor, kisi evaporator, kondensor outdoor, serta cek tekanan freon.' },
+        { key: 'foam', label: 'Cuci Foam / Sabun', badge: 'Kerak & Jamur Bandel', desc: 'Chemical foaming agent khusus untuk merontokkan kerak minyak, jamur & lendir evaporator.' },
+        { key: 'semioh', label: 'Cuci Semi Overhaul', badge: 'Paling Diminati · Tuntas Bocor Air', isPopular: true, desc: 'Pelepasan talang air drainase & rotor fan blower indoor untuk mengatasi bau apek & tetesan air.' },
+        { key: 'overhaul', label: 'Cuci Overhaul Total', badge: 'Deep Clean Komprehensif', desc: 'Bongkar total unit indoor untuk chemical soak evaporator. Performa dingin maksimal seperti AC baru.' },
+      ];
+      return tierConfig.map((t) => {
+        const targetKode = codes[t.key];
+        const svc = services.find((s) => s.kode === targetKode) || services.find((s) => s.nama_layanan?.toLowerCase().includes(t.key));
+        if (!svc) return null;
+        return {
+          ...svc,
+          tierKey: t.key,
+          customLabel: t.label,
+          badge: t.badge,
+          isPopular: t.isPopular,
+          cleanDesc: t.desc,
+        };
+      }).filter(Boolean);
+    }
+
+    if (mainCategory === 'pasang_bongkar') {
+      const p = mapInstalasi[propertyType] || mapInstalasi.rumah;
+      const codes = p[acCapacity] || p['0.5-1'];
+      const tierConfig = [
+        { key: 'pasang', label: 'Pasang Unit AC', badge: 'Vakum Standar Pabrik', desc: 'Pemasangan unit indoor & outdoor waterpass rapi, proses vakum pipa standar pabrikan & uji performa dingin.' },
+        { key: 'bongkar', label: 'Bongkar Unit AC', badge: 'Pump Down Aman', desc: 'Pelepasan unit dengan pump-down penguncian freon aman di kompresor tanpa risiko terbuang.' },
+      ];
+      return tierConfig.map((t) => {
+        const targetKode = codes[t.key];
+        const svc = services.find((s) => s.kode === targetKode) || services.find((s) => s.kategori === 'instalasi');
+        if (!svc) return null;
+        return {
+          ...svc,
+          tierKey: t.key,
+          customLabel: t.label,
+          badge: t.badge,
+          cleanDesc: t.desc,
+        };
+      }).filter(Boolean);
+    }
+
+    if (mainCategory === 'diagnosa') {
+      const diagnosaServices = [
+        { kode: 'SRV-LAIN-CEK-RINGAN', key: 'diagnosa_ringan', label: 'Pengecekan AC Ringan', badge: 'Diagnosa Awal & Cek Ampere', desc: 'Pengecekan fungsi remote, arus listrik (Ampere), hembusan dingin, dan diagnosa awal kendala AC.' },
+        { kode: 'SRV-LAIN-CEK-BERAT', key: 'diagnosa_berat', label: 'Pengecekan Kerusakan Berat', badge: 'Diagnosa Komponen Kelistrikan', desc: 'Analisa mendalam kompresor mati, korsleting modul PCB inverter, atau kebocoran freon tersembunyi.' },
+      ];
+      return diagnosaServices.map((d) => {
+        const svc = services.find((s) => s.kode === d.kode) || services.find((s) => s.kode === 'SRV-LAIN-CEK-RINGAN');
+        if (!svc) return null;
+        return {
+          ...svc,
+          tierKey: d.key,
+          customLabel: d.label,
+          badge: d.badge,
+          cleanDesc: d.desc,
+        };
+      }).filter(Boolean);
+    }
+
+    return [];
+  }, [services, propertyType, acCapacity, mainCategory]);
+
+  // Daftar Add-On Lapangan Terstruktur (Freon, Kapasitor, Flushing, dll)
+  const resolvedAddons = useMemo(() => {
+    if (!services || services.length === 0) return [];
+
+    const freonCodes = acCapacity === '1.5-2' ? [
+      { kode: 'SRV-FREON-152-R32-10PSI', label: 'Tambah Freon R32', unitLabel: 'per 10 PSI' },
+      { kode: 'SRV-FREON-152-R32-150PSI', label: 'Isi Ulang Penuh Freon R32', unitLabel: '150 PSI' },
+      { kode: 'SRV-FREON-152-R410-10PSI', label: 'Tambah Freon R410A', unitLabel: 'per 10 PSI' },
+      { kode: 'SRV-FREON-152-R410-150PSI', label: 'Isi Ulang Penuh Freon R410A', unitLabel: '150 PSI' },
+      { kode: 'SRV-FREON-152-R22-10PSI', label: 'Tambah Freon R22', unitLabel: 'per 10 PSI' },
+      { kode: 'SRV-FREON-152-R22-150PSI', label: 'Isi Ulang Penuh Freon R22', unitLabel: '150 PSI' },
+    ] : [
+      { kode: 'SRV-FREON-051-R32-10PSI', label: 'Tambah Freon R32', unitLabel: 'per 10 PSI' },
+      { kode: 'SRV-FREON-01', label: 'Isi Ulang Penuh Freon R32', unitLabel: '150 PSI' },
+      { kode: 'SRV-FREON-051-R410-10PSI', label: 'Tambah Freon R410A', unitLabel: 'per 10 PSI' },
+      { kode: 'SRV-FREON-051-R410-150PSI', label: 'Isi Ulang Penuh Freon R410A', unitLabel: '150 PSI' },
+      { kode: 'SRV-FREON-051-R22-10PSI', label: 'Tambah Freon R22', unitLabel: 'per 10 PSI' },
+      { kode: 'SRV-FREON-051-R22-150PSI', label: 'Isi Ulang Penuh Freon R22', unitLabel: '150 PSI' },
+    ];
+
+    const repairCodes = [
+      { kode: 'SRV-PERB-KAPASITOR', label: 'Ganti Kapasitor Baru', unitLabel: 'per unit' },
+      { kode: 'SRV-PERB-CEK-BOCOR-RINGAN', label: 'Cek Kebocoran Freon Ringan', unitLabel: 'nepel & flare' },
+      { kode: 'SRV-PERB-CEK-BOCOR-BERAT', label: 'Cek Kebocoran Freon Berat', unitLabel: 'pipa tanam / evap' },
+      { kode: 'SRV-CUCI-FLUSHING-INDOOR', label: 'Flushing Pipa Indoor', unitLabel: 'pembersih oli' },
+      { kode: 'SRV-CUCI-FLUSHING-TOTAL', label: 'Flushing Sirkulasi Total', unitLabel: 'indoor & outdoor' },
+      { kode: 'SRV-PERB-LAS-TITIK', label: 'Las Tembaga per Titik', unitLabel: 'per titik las' },
+      { kode: 'SRV-PERB-GANTI-UBEN', label: 'Ganti Uben Evaporator', unitLabel: 'per lekukan' },
+      { kode: 'SRV-INST-BOBOK-1M', label: 'Bobok Tembok Pipa', unitLabel: 'per 1 meter' },
+      { kode: 'SRV-INST-PLAFON-1M', label: 'Jalur Pipa Plafon', unitLabel: 'per 1 meter' },
+      { kode: 'SRV-LAIN-ANGKUT-5KM', label: 'Jasa Bawa Unit Workshop', unitLabel: 'radius 5 KM' },
+    ];
+
+    const list = [];
+    [...freonCodes, ...repairCodes].forEach((item) => {
+      const s = services.find((sv) => sv.kode === item.kode);
+      if (s) {
+        list.push({ ...s, addonLabel: item.label, addonUnit: item.unitLabel });
+      }
+    });
+    return list;
+  }, [services, acCapacity]);
+
+  // Sinkronisasi form.layanan_id otomatis saat tab/tempat/PK berubah
+  useEffect(() => {
+    if (isManualSearch) return;
+    if (resolvedMainServices.length > 0) {
+      const existing = resolvedMainServices.find((s) => String(s.id) === String(form.layanan_id));
+      if (existing) {
+        if (existing.tierKey && existing.tierKey !== selectedTier) {
+          setSelectedTier(existing.tierKey);
+        }
+        return;
+      }
+      const matched = resolvedMainServices.find((s) => s.tierKey === selectedTier) || resolvedMainServices[0];
+      if (matched && String(form.layanan_id) !== String(matched.id)) {
+        setForm((f) => ({ ...f, layanan_id: String(matched.id) }));
+      }
+    }
+  }, [resolvedMainServices, selectedTier, isManualSearch, form.layanan_id]);
+
+  // Mode manual search untuk pengguna yang ingin mencari dari seluruh 75 katalog
+  const manualFilteredServices = useMemo(() => {
+    if (!manualSearchQuery.trim()) return services;
+    const q = manualSearchQuery.toLowerCase().trim();
+    return services.filter((s) => {
+      const name = (s.nama_layanan || '').toLowerCase();
+      const code = (s.kode || '').toLowerCase();
+      const desc = (s.deskripsi || '').toLowerCase();
+      return name.includes(q) || code.includes(q) || desc.includes(q) || String(s.harga).includes(q);
+    });
+  }, [services, manualSearchQuery]);
 
   const calculation = useMemo(() => {
     if (!selectedService) {
@@ -336,14 +579,9 @@ export default function BookingPage() {
       }
     }
 
-    let discount = 0;
-    let discountLabel = '';
+    const discount = 0;
+    const discountLabel = '';
     const isMember = Boolean(user && user.role === 'customer');
-
-    if (isMember) {
-      discount = Math.round(subtotal * 0.1);
-      discountLabel = 'Diskon Membership (10% Biaya Jasa)';
-    }
 
     const total = subtotal - discount;
 
@@ -1059,95 +1297,399 @@ export default function BookingPage() {
                       </div>
                     )}
 
-                    {loading ? (
-                      <div className="space-y-3">
-                        {[1, 2, 3].map((i) => (
-                          <div key={i} className="h-24 bg-slate-100 animate-pulse rounded-2xl" />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {services.map((svc) => {
-                          const isSelected = String(form.layanan_id) === String(svc.id);
-                          const sName = (svc.nama_layanan || '').toLowerCase();
-                          const isPopular = sName.includes('core') && !sName.includes('freon');
-                          const isFreon = sName.includes('freon');
-                          const garansiHari = Number(svc.garansi_hari || (isFreon && isPopular ? 45 : (isPopular || isFreon) ? 30 : 14));
-
-                          return (
-                            <div
-                              key={svc.id}
-                              onClick={() => setForm({ ...form, layanan_id: String(svc.id) })}
-                              className={cn(
-                                'p-4 sm:p-5 rounded-2xl border-2 transition-all cursor-pointer relative group flex items-start justify-between gap-4',
-                                isSelected
-                                  ? 'border-blue-600 bg-blue-50/60 shadow-md shadow-blue-600/10 ring-1 ring-blue-500'
-                                  : 'border-slate-100 hover:border-sky-300 bg-white hover:bg-sky-50/30'
-                              )}
-                            >
-                              <div className="flex items-start gap-3.5 min-w-0">
-                                <div
+                    {/* Wizard Interaktif Ramah Pengguna */}
+                    <div className="space-y-4">
+                      {/* Langkah 1 & 2: Pilih Lokasi & Kapasitas AC */}
+                      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-4">
+                        {/* Baris 1: Tempat / Lokasi AC */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                              <Home className="w-3.5 h-3.5 text-blue-600" />
+                              1. Pilih Lokasi Pengerjaan:
+                            </label>
+                            <span className="text-[11px] font-semibold text-slate-400">Tarif transparan sesuai properti</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                            {[
+                              { id: 'rumah', label: 'Rumah Tinggal', sub: 'Hunian & Kontrakan', icon: Home },
+                              { id: 'kantor', label: 'Kantor / Usaha', sub: 'Ruko & Komersial', icon: Building2 },
+                              { id: 'apartemen', label: 'Apartemen', sub: 'Unit Bertingkat', icon: Building },
+                            ].map((item) => {
+                              const Icon = item.icon;
+                              const isActive = propertyType === item.id;
+                              return (
+                                <button
+                                  key={item.id}
+                                  type="button"
+                                  onClick={() => setPropertyType(item.id)}
                                   className={cn(
-                                    'w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-colors mt-0.5',
-                                    isSelected
-                                      ? 'bg-blue-600 text-white'
-                                      : 'bg-sky-100/70 text-blue-600 group-hover:bg-blue-600 group-hover:text-white'
+                                    'p-3 rounded-xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between',
+                                    isActive
+                                      ? 'border-blue-600 bg-blue-50/70 text-blue-900 shadow-xs'
+                                      : 'border-slate-200 hover:border-slate-300 bg-slate-50/50 text-slate-700 hover:bg-white'
                                   )}
                                 >
-                                  {isFreon ? <Wind className="w-5 h-5" /> : isPopular ? <Sparkles className="w-5 h-5" /> : <Wrench className="w-5 h-5" />}
-                                </div>
+                                  <div className="flex items-center justify-between mb-1.5">
+                                    <div
+                                      className={cn(
+                                        'w-7 h-7 rounded-lg flex items-center justify-center',
+                                        isActive ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'
+                                      )}
+                                    >
+                                      <Icon className="w-3.5 h-3.5" />
+                                    </div>
+                                    {isActive && <Check className="w-3.5 h-3.5 text-blue-600 stroke-[3]" />}
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-xs sm:text-sm leading-tight">{item.label}</p>
+                                    <p className="text-[10px] text-slate-500 mt-0.5 hidden sm:block">{item.sub}</p>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
 
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                                    <h3 className="font-extrabold text-slate-900 text-base leading-tight">
-                                      {svc.nama_layanan}
-                                    </h3>
-                                    {isPopular && (
-                                      <span className="text-xs font-bold uppercase tracking-wider bg-blue-600 text-white px-2 py-0.5 rounded-full">
-                                        Best Value
-                                      </span>
+                        {/* Baris 2: Ukuran / Kapasitas AC */}
+                        <div className="pt-3 border-t border-slate-100">
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                              <Wind className="w-3.5 h-3.5 text-blue-600" />
+                              2. Kapasitas / Ukuran AC:
+                            </label>
+                            <span className="text-[11px] text-slate-400">Lihat di stiker label unit AC</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                            {[
+                              { id: '0.5-1', label: '0.5 PK – 1 PK', sub: 'Standar Kamar Tidur & Ruang Keluarga Kecil' },
+                              { id: '1.5-2', label: '1.5 PK – 2 PK', sub: 'AC Kapasitas Besar / Ruang Tamu Luas' },
+                            ].map((cap) => {
+                              const isActive = acCapacity === cap.id;
+                              return (
+                                <button
+                                  key={cap.id}
+                                  type="button"
+                                  onClick={() => setAcCapacity(cap.id)}
+                                  className={cn(
+                                    'p-3 rounded-xl border-2 text-left transition-all cursor-pointer flex items-center justify-between gap-2',
+                                    isActive
+                                      ? 'border-blue-600 bg-blue-50/70 text-blue-900 shadow-xs'
+                                      : 'border-slate-200 hover:border-slate-300 bg-slate-50/50 text-slate-700 hover:bg-white'
+                                  )}
+                                >
+                                  <div>
+                                    <p className="font-bold text-xs sm:text-sm">{cap.label}</p>
+                                    <p className="text-[10px] text-slate-500 mt-0.5">{cap.sub}</p>
+                                  </div>
+                                  <div
+                                    className={cn(
+                                      'w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0',
+                                      isActive ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 bg-white'
                                     )}
+                                  >
+                                    {isActive && <Check className="w-3 h-3 stroke-[3]" />}
                                   </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
 
-                                  <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                                    {svc.deskripsi}
-                                  </p>
+                      {/* Langkah 3: Pilihan Kategori Kebutuhan Utama */}
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="inline-flex p-1 bg-slate-200/70 rounded-xl text-xs font-bold">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMainCategory('cuci');
+                              setIsManualSearch(false);
+                            }}
+                            className={cn(
+                              'px-3.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5',
+                              mainCategory === 'cuci' && !isManualSearch
+                                ? 'bg-white text-blue-700 shadow-xs'
+                                : 'text-slate-600 hover:text-slate-900'
+                            )}
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Paket Cuci AC</span>
+                          </button>
 
-                                  <div className="flex items-center gap-3 mt-2 text-xs font-semibold text-slate-500">
-                                    <span className="flex items-center gap-1 text-slate-600">
-                                      <Clock className="w-3.5 h-3.5 text-blue-500" />
-                                      ± {svc.durasi_menit} Menit / unit
-                                    </span>
-                                    <span>•</span>
-                                    <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-bold">
-                                      Garansi {garansiHari} Hari
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMainCategory('pasang_bongkar');
+                              setIsManualSearch(false);
+                            }}
+                            className={cn(
+                              'px-3.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5',
+                              mainCategory === 'pasang_bongkar' && !isManualSearch
+                                ? 'bg-white text-blue-700 shadow-xs'
+                                : 'text-slate-600 hover:text-slate-900'
+                            )}
+                          >
+                            <Wrench className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Pasang / Bongkar</span>
+                          </button>
 
-                              <div className="text-right shrink-0 flex flex-col items-end justify-between self-stretch">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMainCategory('diagnosa');
+                              setIsManualSearch(false);
+                            }}
+                            className={cn(
+                              'px-3.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5',
+                              mainCategory === 'diagnosa' && !isManualSearch
+                                ? 'bg-white text-blue-700 shadow-xs'
+                                : 'text-slate-600 hover:text-slate-900'
+                            )}
+                          >
+                            <HelpCircle className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Pengecekan / Diagnosa</span>
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setIsManualSearch(!isManualSearch)}
+                          className="text-xs font-semibold text-slate-500 hover:text-blue-600 flex items-center gap-1 cursor-pointer"
+                        >
+                          <Search className="w-3.5 h-3.5" />
+                          <span>{isManualSearch ? 'Kembali ke Pilihan Praktis' : 'Cari Manual di Semua Katalog'}</span>
+                        </button>
+                      </div>
+
+                      {/* Tampilan Kartu Layanan Terpilih (Bersih & Elegan) */}
+                      {loading ? (
+                        <div className="space-y-3">
+                          {[1, 2, 3].map((i) => (
+                            <div key={i} className="h-24 bg-slate-100 animate-pulse rounded-2xl" />
+                          ))}
+                        </div>
+                      ) : isManualSearch ? (
+                        /* Render Pencarian Manual jika diaktifkan */
+                        <div className="space-y-3">
+                          <div className="relative">
+                            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <Input
+                              type="text"
+                              placeholder="Ketik nama layanan, kode, kapasitas, atau harga..."
+                              value={manualSearchQuery}
+                              onChange={(e) => setManualSearchQuery(e.target.value)}
+                              className="pl-9 text-xs rounded-xl h-10 border-slate-200 bg-white"
+                            />
+                          </div>
+                          <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+                            {manualFilteredServices.map((svc) => {
+                              const isSelected = String(form.layanan_id) === String(svc.id);
+                              return (
                                 <div
+                                  key={svc.id}
+                                  onClick={() => setForm({ ...form, layanan_id: String(svc.id) })}
                                   className={cn(
-                                    'w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all',
-                                    isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 bg-white'
+                                    'p-3.5 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between gap-3',
+                                    isSelected
+                                      ? 'border-blue-600 bg-blue-50/70 shadow-xs'
+                                      : 'border-slate-200 bg-white hover:border-blue-300'
                                   )}
                                 >
-                                  {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="font-bold text-xs sm:text-sm text-slate-900">{svc.nama_layanan}</h4>
+                                      <span className="text-[10px] font-mono text-slate-400">{svc.kode}</span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">{svc.deskripsi}</p>
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    <span className="font-bold text-sm text-blue-700 font-mono">
+                                      Rp {(svc.harga || 0).toLocaleString('id-ID')}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 block">{svc.durasi_menit} mnt</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        /* Render Pilihan Utama Sesuai Tempat & Ukuran */
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                          {resolvedMainServices.map((svc) => {
+                            const isSelected = String(form.layanan_id) === String(svc.id);
+                            const garansiHari = Number(svc.garansi_hari || 14);
+
+                            return (
+                              <div
+                                key={svc.id}
+                                onClick={() => {
+                                  setSelectedTier(svc.tierKey);
+                                  setForm({ ...form, layanan_id: String(svc.id) });
+                                }}
+                                className={cn(
+                                  'p-4 sm:p-5 rounded-2xl border-2 transition-all cursor-pointer relative group flex flex-col justify-between gap-3',
+                                  isSelected
+                                    ? 'border-blue-600 bg-blue-50/60 shadow-md shadow-blue-600/10 ring-1 ring-blue-500'
+                                    : 'border-slate-200 hover:border-blue-300 bg-white hover:bg-blue-50/20'
+                                )}
+                              >
+                                <div>
+                                  <div className="flex items-center justify-between gap-2 mb-2">
+                                    <span
+                                      className={cn(
+                                        'px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider',
+                                        svc.isPopular
+                                          ? 'bg-blue-600 text-white'
+                                          : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                      )}
+                                    >
+                                      {svc.badge || svc.kategori}
+                                    </span>
+                                    <div
+                                      className={cn(
+                                        'w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors',
+                                        isSelected
+                                          ? 'border-blue-600 bg-blue-600 text-white'
+                                          : 'border-slate-300 bg-white group-hover:border-blue-400'
+                                      )}
+                                    >
+                                      {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                                    </div>
+                                  </div>
+
+                                  <h3 className="font-extrabold text-slate-900 text-base leading-tight">
+                                    {svc.customLabel || svc.nama_layanan}
+                                  </h3>
+
+                                  <p className="text-xs text-slate-600 mt-1.5 line-clamp-2 leading-relaxed">
+                                    {svc.cleanDesc || svc.deskripsi}
+                                  </p>
                                 </div>
 
-                                <div className="mt-4">
-                                  <span className="text-base sm:text-lg font-black text-blue-700 font-mono">
-                                    Rp {(svc.harga || 0).toLocaleString('id-ID')}
-                                  </span>
-                                  <span className="text-xs text-slate-500 block font-semibold">/ unit</span>
+                                <div className="pt-3 border-t border-slate-100 flex items-end justify-between">
+                                  <div>
+                                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Tarif Satuan</span>
+                                    <span className="text-lg font-black text-blue-700 font-mono">
+                                      Rp {(svc.harga || 0).toLocaleString('id-ID')}
+                                    </span>
+                                    <span className="text-xs text-slate-400"> / unit</span>
+                                  </div>
+                                  <div className="text-right text-[11px] font-semibold text-slate-500 space-y-0.5">
+                                    <div className="flex items-center gap-1 justify-end text-slate-600">
+                                      <Clock className="w-3 h-3 text-blue-500" />
+                                      <span>± {svc.durasi_menit} Menit</span>
+                                    </div>
+                                    <div className="text-emerald-700 font-bold">
+                                      Garansi {garansiHari} Hari
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Bagian Add-On Teknisi Lapangan (Accordion Ramah Pengguna) */}
+                      <div className="rounded-2xl border border-slate-200/90 bg-white overflow-hidden shadow-xs">
+                        <button
+                          type="button"
+                          onClick={() => setShowAddons(!showAddons)}
+                          className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-50/80 transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-sky-100/80 text-blue-700 flex items-center justify-center font-bold">
+                              <Plus className="w-4 h-4" />
                             </div>
-                          );
-                        })}
+                            <div>
+                              <h4 className="font-bold text-xs sm:text-sm text-slate-800 flex items-center gap-2">
+                                <span>Tambah Layanan Lapangan / Add-On (Opsional)</span>
+                                {form.extra_items && form.extra_items.length > 0 && (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-600 text-white">
+                                    {form.extra_items.length} dipilih
+                                  </span>
+                                )}
+                              </h4>
+                              <p className="text-[11px] text-slate-500">
+                                Tambah isi Freon, penggantian kapasitor, perbaikan pipa, flushing, atau las sambungan.
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-slate-400">
+                            {showAddons ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </div>
+                        </button>
+
+                        {showAddons && (
+                          <div className="p-4 pt-1 border-t border-slate-100 bg-slate-50/60 space-y-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              {resolvedAddons.map((addon) => {
+                                const currentItem = (form.extra_items || []).find((it) => Number(it.layanan_id) === Number(addon.id));
+                                const isChecked = Boolean(currentItem);
+
+                                const handleToggle = () => {
+                                  if (isChecked) {
+                                    setForm((f) => ({
+                                      ...f,
+                                      extra_items: (f.extra_items || []).filter((it) => Number(it.layanan_id) !== Number(addon.id)),
+                                    }));
+                                  } else {
+                                    setForm((f) => ({
+                                      ...f,
+                                      extra_items: [...(f.extra_items || []), { layanan_id: addon.id, jumlah_unit: 1, catatan: '' }],
+                                    }));
+                                  }
+                                };
+
+                                return (
+                                  <div
+                                    key={addon.id}
+                                    onClick={handleToggle}
+                                    className={cn(
+                                      'p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3',
+                                      isChecked
+                                        ? 'border-blue-600 bg-blue-50/80 shadow-xs'
+                                        : 'border-slate-200 bg-white hover:border-slate-300'
+                                    )}
+                                  >
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                      <div
+                                        className={cn(
+                                          'w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors',
+                                          isChecked ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 bg-white'
+                                        )}
+                                      >
+                                        {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                                      </div>
+                                      <div className="min-w-0">
+                                        <p className="font-bold text-xs text-slate-800 truncate">{addon.addonLabel}</p>
+                                        <p className="text-[10px] text-slate-500 font-medium">{addon.addonUnit}</p>
+                                      </div>
+                                    </div>
+
+                                    <div className="text-right shrink-0">
+                                      <span className="font-bold text-xs text-blue-700 font-mono">
+                                        +Rp {(addon.harga || 0).toLocaleString('id-ID')}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {/* Bantuan Catatan Teknisi */}
+                            <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200/80 flex items-start gap-2.5">
+                              <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                              <p className="text-xs text-amber-900 leading-relaxed">
+                                <strong>Catatan Teknisi:</strong> Jika Anda belum yakin apakah AC memerlukan tambah freon atau sparepart, biarkan kosong. Teknisi Nara AC akan melakukan cek tekanan manifold & arus kompresor secara transparan di tempat sebelum melakukan tindakan tambahan.
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
 
                     <div className="pt-6 border-t border-slate-100">
                       <div role="group" aria-labelledby="booking-unit-count-label" className="flex items-center justify-between mb-3">
@@ -1156,9 +1698,7 @@ export default function BookingPage() {
                             Jumlah Unit AC yang Diservis
                           </label>
                           <p className="text-xs text-slate-500">
-                            {Boolean(user && user.role === 'customer')
-                              ? 'Diskon 10% membership aktif otomatis untuk biaya jasa'
-                              : 'Member terdaftar mendapatkan diskon 10% khusus biaya jasa'}
+                            Pilih kuantiti unit AC yang akan dikerjakan oleh teknisi di lokasi
                           </p>
                         </div>
                         <span className="text-xs font-black text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg">
@@ -2064,25 +2604,15 @@ export default function BookingPage() {
                         </span>
                       </div>
 
-                      {calculation.discount > 0 ? (
+                      {calculation.discount > 0 && (
                         <div className="flex justify-between text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
                           <span className="font-bold flex items-center gap-1">
                             <Percent className="w-3.5 h-3.5" />
-                            {calculation.discountLabel || 'Diskon Membership (10%):'}
+                            {calculation.discountLabel || 'Diskon:'}
                           </span>
                           <span className="font-bold font-mono">
                             -Rp {calculation.discount.toLocaleString('id-ID')}
                           </span>
-                        </div>
-                      ) : (
-                        <div className="text-xs text-slate-500 flex items-center justify-between bg-blue-50/60 border border-blue-100 px-2.5 py-1.5 rounded-lg">
-                          <span className="flex items-center gap-1.5 text-blue-700 font-medium">
-                            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                            Hemat 10% Jasa dengan Akun Member
-                          </span>
-                          <Link to="/login" className="text-blue-700 underline font-bold hover:text-blue-800">
-                            Masuk
-                          </Link>
                         </div>
                       )}
 

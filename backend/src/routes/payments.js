@@ -20,7 +20,7 @@ router.put('/settings', requireAuth(['admin']), validate(Joi.object({
   const updated = await paymentService.updatePaymentSettings(req.body);
   res.json({
     success: true,
-    message: 'Pengaturan skema pembayaran berhasil diperbarui (BR-34).',
+    message: 'Pengaturan skema pembayaran berhasil diperbarui.',
     data: updated,
   });
 }));
@@ -121,7 +121,7 @@ router.post('/retry-whatsapp', requireAuth(['admin']), validate(Joi.object({
   const result = await paymentService.retryFailedWhatsAppInvoices(req.body.limit);
   res.json({
     success: true,
-    message: `${result.total_retried} pengiriman WhatsApp berhasil diproses ulang (BR-43).`,
+    message: `${result.total_retried} pengiriman WhatsApp berhasil diproses ulang.`,
     data: result,
   });
 }));

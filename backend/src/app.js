@@ -61,6 +61,9 @@ function createApp() {
           if (isLocalhost && devPorts.includes(parsed.port)) {
             return cb(null, true);
           }
+          if (parsed.hostname.endsWith('.ngrok-free.dev') || parsed.hostname.endsWith('.ngrok.app') || parsed.hostname.endsWith('.ngrok.io')) {
+            return cb(null, true);
+          }
         } catch {
           return cb(null, false);
         }

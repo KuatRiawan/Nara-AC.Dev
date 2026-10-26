@@ -6,7 +6,7 @@ const { generateCsrfToken } = require('../src/middleware/csrf');
 const warrantyService = require('../src/services/warrantyService');
 const acUnitService = require('../src/services/acUnitService');
 
-describe('Phase 4: Warranty Claims & AC Unit Maintenance (BR-15 s/d BR-33)', () => {
+describe('Phase 4: Klaim Garansi & Pemeliharaan Unit AC', () => {
   let app;
   let adminToken;
   let techToken;
@@ -54,7 +54,7 @@ describe('Phase 4: Warranty Claims & AC Unit Maintenance (BR-15 s/d BR-33)', () 
     customerToken = signToken(custUserRes.rows[0]);
     customerHeaders = { Authorization: `Bearer ${customerToken}`, 'X-CSRF-Token': generateCsrfToken(custUserRes.rows[0].id) };
 
-    // Buat AC Unit (BR-15)
+    // Buat unit AC
     const unitRes = await query(`
       INSERT INTO ac_units (customer_id, brand, model, lokasi, kapasitas_pk, tanggal_pasang)
       VALUES ($1, 'Daikin', 'Inverter FTKQ', 'Kamar Utama', 1.0, '2026-01-15')
@@ -97,14 +97,14 @@ describe('Phase 4: Warranty Claims & AC Unit Maintenance (BR-15 s/d BR-33)', () 
     await query('DELETE FROM customers WHERE id = $1', [customerId]);
   });
 
-  test('BR-23: Menghitung durasi garansi sesuai jenis layanan secara akurat', () => {
+  test('Menghitung durasi garansi sesuai jenis layanan secara akurat', () => {
     expect(warrantyService.getWarrantyDurationDays('Cuci AC Standard')).toBe(14);
     expect(warrantyService.getWarrantyDurationDays('Cuci AC Core (Deep Clean)')).toBe(30);
     expect(warrantyService.getWarrantyDurationDays('Paket Core + Isi Freon')).toBe(45);
     expect(warrantyService.getWarrantyDurationDays('Bongkar Pasang AC')).toBe(30);
   });
 
-  test('BR-23 & BR-24: Endpoint warranty-info menampilkan durasi, masa berlaku, dan sisa hari', async () => {
+  test('Endpoint warranty-info menampilkan durasi, masa berlaku, dan sisa hari', async () => {
     const res = await request(app).get(`/api/v1/claims/warranty-info/${doneBookingId}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -113,7 +113,7 @@ describe('Phase 4: Warranty Claims & AC Unit Maintenance (BR-15 s/d BR-33)', () 
     expect(res.body.data.sisa_hari_garansi).toBeGreaterThan(20);
   });
 
-  test('BR-24: Menolak klaim jika masa garansi sudah berakhir', async () => {
+  test('Menolak klaim jika masa garansi sudah berakhir', async () => {
     const res = await request(app)
       .post('/api/v1/claims')
       .set(customerHeaders)
@@ -128,14 +128,13 @@ describe('Phase 4: Warranty Claims & AC Unit Maintenance (BR-15 s/d BR-33)', () 
     expect(res.body.error.message).toMatch(/Masa garansi.*telah berakhir/i);
   });
 
-  test('BR-25: Klaim wajib menyertakan review berupa rating dan komentar', async () => {
+  test('Klaim wajib menyertakan review berupa rating dan komentar', async () => {
     const res = await request(app)
       .post('/api/v1/claims')
       .set(customerHeaders)
       .send({
         booking_id: doneBookingId,
         keluhan: 'AC kembali kurang dingin setelah 3 hari',
-        // Tidak menyertakan rating dan review_komentar
       });
 
     expect(res.status).toBe(400);
@@ -145,7 +144,7 @@ describe('Phase 4: Warranty Claims & AC Unit Maintenance (BR-15 s/d BR-33)', () 
   let createdClaimId;
   let claimKode;
 
-  test('BR-25 & BR-28: Pengajuan klaim berhasil dan otomatis diset bebas biaya (is_gratis = true)', async () => {
+  test('Pengajuan klaim berhasil dan otomatis diset bebas biaya (is_gratis = true)', async () => {
     const res = await request(app)
       .post('/api/v1/claims')
       .set(customerHeaders)
@@ -165,14 +164,14 @@ describe('Phase 4: Warranty Claims & AC Unit Maintenance (BR-15 s/d BR-33)', () 
     createdClaimId = res.body.data.id;
     claimKode = res.body.data.kode_klaim;
 
-    // Verifikasi review tersimpan di feedback (BR-25)
+    // Verifikasi review tersimpan di feedback
     const fb = (await query('SELECT * FROM feedback WHERE booking_id = $1', [doneBookingId])).rows[0];
     expect(fb).toBeDefined();
     expect(fb.rating).toBe(4);
     expect(fb.komentar).toMatch(/bunyi getar/);
   });
 
-  test('BR-30: Menolak pengajuan klaim kedua jika masih ada klaim aktif untuk booking yang sama', async () => {
+  test('Menolak pengajuan klaim kedua jika masih ada klaim aktif untuk booking yang sama', async () => {
     const res = await request(app)
       .post('/api/v1/claims')
       .set(customerHeaders)
@@ -184,10 +183,10 @@ describe('Phase 4: Warranty Claims & AC Unit Maintenance (BR-15 s/d BR-33)', () 
       });
 
     expect(res.status).toBe(409);
-    expect(res.body.error.message).toMatch(/Hanya satu klaim garansi aktif yang diperbolehkan \(BR-30\)/i);
+    expect(res.body.error.message).toMatch(/Hanya satu klaim garansi aktif yang diperbolehkan/i);
   });
 
-  test('BR-26 & BR-27: Admin menjadwalkan pemeriksaan dan menunjuk teknisi pemeriksa', async () => {
+  test('Admin menjadwalkan pemeriksaan dan menunjuk teknisi pemeriksa', async () => {
     const res = await request(app)
       .patch(`/api/v1/claims/${createdClaimId}/schedule`)
       .set(adminHeaders)
@@ -202,7 +201,7 @@ describe('Phase 4: Warranty Claims & AC Unit Maintenance (BR-15 s/d BR-33)', () 
     expect(res.body.data.teknisi_pemeriksa_id).toBe(testTechId);
   });
 
-  test('BR-26: Teknisi mengisi laporan hasil pemeriksaan klaim', async () => {
+  test('Teknisi mengisi laporan hasil pemeriksaan klaim', async () => {
     const res = await request(app)
       .post(`/api/v1/claims/${createdClaimId}/inspect`)
       .set(techHeaders)
@@ -216,7 +215,7 @@ describe('Phase 4: Warranty Claims & AC Unit Maintenance (BR-15 s/d BR-33)', () 
     expect(res.body.data.catatan_pemeriksaan).toMatch(/Baut bracket/);
   });
 
-  test('BR-26, BR-28, BR-33: Admin memutuskan kelayakan klaim (disetujui/ditolak)', async () => {
+  test('Admin memutuskan kelayakan klaim (disetujui/ditolak)', async () => {
     const res = await request(app)
       .patch(`/api/v1/claims/${createdClaimId}/decide`)
       .set(adminHeaders)
@@ -228,14 +227,14 @@ describe('Phase 4: Warranty Claims & AC Unit Maintenance (BR-15 s/d BR-33)', () 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.status).toBe('disetujui');
-    expect(res.body.data.is_gratis).toBe(true); // BR-28
+    expect(res.body.data.is_gratis).toBe(true);
   });
 
-  test('BR-32: Tindak lanjut klaim ditolak dengan booking servis berbayar', async () => {
-    // Buat klaim baru lalu tolak (BR-33: segel rusak)
+  test('Tindak lanjut klaim ditolak dengan booking servis berbayar', async () => {
+    // Buat klaim baru lalu tolak
     const claimDitolakRes = await query(`
       INSERT INTO warranty_claims (kode_klaim, booking_id, customer_id, ac_unit_id, keluhan, status, is_gratis, alasan_penolakan)
-      VALUES ('CLM-TEST-REJECT', $1, $2, $3, 'Freon habis', 'ditolak', true, 'Segel outdoor rusak akibat dibongkar teknisi luar (BR-33)')
+      VALUES ('CLM-TEST-REJECT', $1, $2, $3, 'Freon habis', 'ditolak', true, 'Segel outdoor rusak akibat dibongkar teknisi luar')
       RETURNING id
     `, [doneBookingId, customerId, unitId]);
     const rejClaimId = claimDitolakRes.rows[0].id;
@@ -251,14 +250,14 @@ describe('Phase 4: Warranty Claims & AC Unit Maintenance (BR-15 s/d BR-33)', () 
     expect(res.status).toBe(201);
     expect(res.body.booking_baru).toBeDefined();
     expect(res.body.booking_baru.status).toBe('scheduled');
-    expect(res.body.booking_baru.status_pembayaran).toBe('pending'); // Berbayar
+    expect(res.body.booking_baru.status_pembayaran).toBe('pending');
 
-    // Cleanup klaim dummy
+    // Bersihkan klaim dummy
     await query('DELETE FROM bookings WHERE id = $1', [res.body.booking_baru.id]);
     await query('DELETE FROM warranty_claims WHERE id = $1', [rejClaimId]);
   });
 
-  test('BR-15, BR-16, BR-17: Perhitungan riwayat servis unit AC mengabaikan booking yang dibatalkan', async () => {
+  test('Perhitungan riwayat servis unit AC mengabaikan booking yang dibatalkan', async () => {
     // Tambah booking dibatalkan untuk unit ini
     const bBatal = await query(`
       INSERT INTO bookings (
@@ -272,14 +271,14 @@ describe('Phase 4: Warranty Claims & AC Unit Maintenance (BR-15 s/d BR-33)', () 
 
     const maint = await acUnitService.getUnitMaintenanceInfo(unitId);
 
-    // BR-17: Booking yang dibatalkan TIDAK dihitung sebagai servis selesai
-    expect(maint.total_servis_selesai).toBe(2); // Hanya doneBookingId dan expiredBookingId, TIDAK termasuk bBatal
+    // Booking yang dibatalkan tidak dihitung sebagai servis selesai
+    expect(maint.total_servis_selesai).toBe(2);
     expect(maint.riwayat_servis.every(b => b.status === 'done')).toBe(true);
 
-    // BR-16: Sistem menghitung jadwal perawatan berikutnya
+    // Sistem menghitung jadwal perawatan berikutnya
     expect(maint.jadwal_perawatan_berikutnya).toBeDefined();
 
-    // Cleanup booking batal
+    // Bersihkan data booking batal
     await query('DELETE FROM bookings WHERE id = $1', [bBatal.rows[0].id]);
   });
 });

@@ -215,7 +215,7 @@ export default function CustomerDashboard({ onOpenNotif }) {
               </span>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/25 text-emerald-100 border border-emerald-300/30">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-300" />
-                Diskon Jasa 10% Aktif
+                Member Resmi NARA AC
               </span>
             </div>
 
@@ -224,7 +224,7 @@ export default function CustomerDashboard({ onOpenNotif }) {
             </h1>
 
             <p className="text-sm sm:text-base text-blue-50 leading-relaxed">
-              Selamat datang di portal servis resmi CV. Nara Teknindotama. Nikmati <strong className="text-white font-bold">diskon member 10% untuk seluruh biaya jasa</strong>, jaminan <strong className="text-white font-bold">garansi pengerjaan 14/30/45 hari</strong>, serta pemantauan unit AC berkala Anda.
+              Selamat datang di portal servis resmi CV. Nara Teknindotama. Nikmati layanan teknisi tersertifikasi, jaminan <strong className="text-white font-bold">garansi pengerjaan 14/30/45 hari</strong>, serta pemantauan histori unit AC Anda.
             </p>
 
             <div className="flex flex-wrap items-center gap-4 text-xs text-sky-100 pt-1">
@@ -240,7 +240,7 @@ export default function CustomerDashboard({ onOpenNotif }) {
               className="bg-white hover:bg-sky-50 text-blue-700 font-black rounded-2xl h-12 px-6 shadow-lg cursor-pointer flex items-center justify-center gap-2 text-sm transition-all"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
-              <span>Booking Service (Diskon 10%)</span>
+              <span>Booking Service Sekarang</span>
             </Button>
             <Button
               onClick={() => navigate('/customer/ac-units')}
@@ -317,9 +317,9 @@ export default function CustomerDashboard({ onOpenNotif }) {
             </div>
           </div>
           <div className="mt-2">
-            <p className="text-3xl font-black text-blue-900">10% OFF</p>
+            <p className="text-2xl font-black text-blue-900">Garansi</p>
             <p className="text-xs text-blue-700 font-medium mt-0.5 flex items-center gap-1">
-              <span>Diskon jasa otomatis</span>
+              <span>Hingga 45 hari resmi</span>
               <ChevronRight className="w-3.5 h-3.5 text-blue-400" />
             </p>
           </div>
@@ -458,7 +458,7 @@ export default function CustomerDashboard({ onOpenNotif }) {
                 </div>
                 <h3 className="text-base font-black text-slate-900">Belum Ada Jadwal Servis Aktif</h3>
                 <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto mt-1 mb-5">
-                  AC Anda sudah mulai kurang dingin atau berdebu? Jadwalkan perawatan rutin sekarang dan nikmati potongan diskon member 10%.
+                  AC Anda sudah mulai kurang dingin atau berdebu? Jadwalkan perawatan rutin sekarang dengan jaminan garansi resmi.
                 </p>
                 <Button
                   onClick={() => navigate('/booking')}

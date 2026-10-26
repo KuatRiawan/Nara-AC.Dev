@@ -29,7 +29,7 @@ describe('Auth Middleware & Token Tests', () => {
     expect(next).toHaveBeenCalledWith();
     expect(req.user).toBeDefined();
     expect(req.user.id).toBe(10);
-    expect(req.user.customer_id).toBe(5); // BUG-003 regression guard
+    expect(req.user.customer_id).toBe(5);
     expect(req.user.customerId).toBe(5);
   });
 

@@ -7,10 +7,11 @@ import { Badge } from '../../components/ui/badge';
 import { cn } from '../../lib/utils';
 import { useToast } from '../../components/ui/toast';
 import OfficialInvoicePaper from '../../components/OfficialInvoicePaper';
+import OfficialRekapInvoiceSheet from '../../components/OfficialRekapInvoiceSheet';
 import { 
   Receipt, Search, Printer, CheckCircle2, Clock, CreditCard, Building2, X, Check, Edit3, 
   Plus, Trash2, Loader2, RefreshCw, Upload, Send, DollarSign, ShieldAlert, AlertTriangle, Eye, ExternalLink,
-  XCircle, Maximize2, ZoomIn
+  XCircle, Maximize2, ZoomIn, Calendar
 } from 'lucide-react';
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL && !import.meta.env.VITE_API_URL.startsWith('/')) 
@@ -29,14 +30,16 @@ const getFileUrl = (url) => {
 
 export default function AdminInvoices({ bookings: propBookings, onBookingUpdated }) {
   const { error: showError, success: showSuccess } = useToast();
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [bookings, setBookings] = useState(() => (Array.isArray(propBookings) && propBookings.length > 0) ? propBookings : []);
+  const [loading, setLoading] = useState(() => !(Array.isArray(propBookings) && propBookings.length > 0));
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // all | lunas | pending | verify
+  const [periodFilter, setPeriodFilter] = useState('this_month'); // this_month | last_month | all
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isRekapModalOpen, setIsRekapModalOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.location) return;
@@ -101,6 +104,7 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
           setIsFullscreenProofOpen(false);
           return;
         }
+        if (isRekapModalOpen) setIsRekapModalOpen(false);
         if (isModalOpen) setIsModalOpen(false);
         if (isVerifyModalOpen) setIsVerifyModalOpen(false);
         if (isRefundModalOpen) setIsRefundModalOpen(false);
@@ -109,7 +113,7 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFullscreenProofOpen, isModalOpen, isVerifyModalOpen, isRefundModalOpen]);
+  }, [isFullscreenProofOpen, isRekapModalOpen, isModalOpen, isVerifyModalOpen, isRefundModalOpen]);
 
   const [paymentSettings, setPaymentSettings] = useState(() => {
     try {
@@ -147,10 +151,44 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
     fetchPaymentSettings();
   }, []);
 
-  const fetchInvoices = useCallback(async (searchQuery = '') => {
+  const getPeriodParams = useCallback((period) => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const pad = (n) => String(n).padStart(2, '0');
+
+    if (period === 'this_month') {
+      const end = new Date(y, m + 1, 0);
+      return {
+        dari: `${y}-${pad(m + 1)}-01`,
+        sampai: `${y}-${pad(m + 1)}-${pad(end.getDate())}`,
+        label: new Date(y, m, 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+      };
+    }
+    if (period === 'last_month') {
+      const start = new Date(y, m - 1, 1);
+      const end = new Date(y, m, 0);
+      const ly = start.getFullYear();
+      const lm = start.getMonth();
+      return {
+        dari: `${ly}-${pad(lm + 1)}-01`,
+        sampai: `${ly}-${pad(lm + 1)}-${pad(end.getDate())}`,
+        label: start.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+      };
+    }
+    return { dari: null, sampai: null, label: 'Semua Periode' };
+  }, []);
+
+  const currentPeriodInfo = useMemo(() => getPeriodParams(periodFilter), [getPeriodParams, periodFilter]);
+
+  const fetchInvoices = useCallback(async (searchQuery = '', period = periodFilter) => {
     setLoading(true);
     try {
-      const params = { limit: 200, urut: 'terbaru' };
+      const params = { limit: 1000, urut: 'terbaru' };
+      const periodRange = getPeriodParams(period);
+      if (periodRange.dari) params.dari = periodRange.dari;
+      if (periodRange.sampai) params.sampai = periodRange.sampai;
+
       if (searchQuery && searchQuery.trim()) {
         params.q = searchQuery.trim();
       }
@@ -173,27 +211,11 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
     } finally {
       setLoading(false);
     }
-  }, [showError]);
+  }, [getPeriodParams, periodFilter, showError]);
 
   useEffect(() => {
-    fetchInvoices();
-  }, [fetchInvoices]);
-
-  useEffect(() => {
-    if (propBookings && Array.isArray(propBookings) && propBookings.length > 0) {
-      setBookings(propBookings);
-      setPaidStatusMap(prev => {
-        const next = { ...prev };
-        propBookings.forEach(b => {
-          if (next[b.id] === undefined) {
-            next[b.id] = b.status_pembayaran === 'paid';
-          }
-        });
-        return next;
-      });
-      setLoading(false);
-    }
-  }, [propBookings]);
+    fetchInvoices(search, periodFilter);
+  }, [fetchInvoices, periodFilter]);
 
   const togglePaidStatus = async (bookingId) => {
     const currentStatus = paidStatusMap[bookingId] !== undefined ? paidStatusMap[bookingId] : false;
@@ -232,12 +254,7 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
       const subtotal = basePrice * unit;
       
       const isMember = Boolean(b.is_member || b.customer_is_member || b.customer?.has_account);
-      let discount = 0;
-      if (b.diskon !== undefined && b.diskon !== null) {
-        discount = Number(b.diskon);
-      } else {
-        discount = isMember ? Math.round(subtotal * 0.10) : 0;
-      }
+      const discount = (b.diskon !== undefined && b.diskon !== null) ? Number(b.diskon) : 0;
       
       const total = b.total_biaya !== undefined && b.total_biaya !== null 
         ? Number(b.total_biaya) 
@@ -339,6 +356,17 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
       document.body.classList.remove('invoice-modal-open');
     };
   }, [isModalOpen]);
+
+  useEffect(() => {
+    if (isRekapModalOpen) {
+      document.body.classList.add('rekap-modal-open');
+    } else {
+      document.body.classList.remove('rekap-modal-open');
+    }
+    return () => {
+      document.body.classList.remove('rekap-modal-open');
+    };
+  }, [isRekapModalOpen]);
 
   const openInvoiceModal = (inv) => {
     setSelectedInvoice(inv);
@@ -546,10 +574,54 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Period Selector Tabs */}
+          <div className="inline-flex items-center p-1 bg-white border border-slate-200/90 rounded-2xl shadow-2xs">
+            <span className="text-[11px] font-bold text-slate-500 px-2.5 flex items-center gap-1.5 hidden sm:inline-flex">
+              <Calendar className="w-3.5 h-3.5 text-blue-600" />
+              <span>Periode:</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setPeriodFilter('this_month')}
+              className={cn(
+                "px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer",
+                periodFilter === 'this_month'
+                  ? "bg-blue-600 text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/70"
+              )}
+            >
+              Bulan Ini
+            </button>
+            <button
+              type="button"
+              onClick={() => setPeriodFilter('last_month')}
+              className={cn(
+                "px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer",
+                periodFilter === 'last_month'
+                  ? "bg-blue-600 text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/70"
+              )}
+            >
+              Bulan Lalu
+            </button>
+            <button
+              type="button"
+              onClick={() => setPeriodFilter('all')}
+              className={cn(
+                "px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer",
+                periodFilter === 'all'
+                  ? "bg-blue-600 text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/70"
+              )}
+            >
+              Semua Waktu
+            </button>
+          </div>
+
           <Button
-            onClick={() => window.print()}
+            onClick={() => setIsRekapModalOpen(true)}
             variant="outline"
-            className="rounded-xl border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            className="rounded-xl border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-2xs h-9 sm:h-10"
           >
             <Printer className="w-4 h-4 text-slate-600" />
             <span>Cetak Rekap</span>
@@ -561,7 +633,12 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
         
         <div className="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Omzet Servis</span>
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Omzet Servis</span>
+              <span className="text-[11px] font-semibold text-blue-600 block mt-0.5">
+                {currentPeriodInfo.label}
+              </span>
+            </div>
             <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
               <CreditCard className="w-4 h-4" />
             </div>
@@ -571,14 +648,19 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
               Rp {kpis.totalOmzet.toLocaleString('id-ID')}
             </p>
             <p className="text-xs font-medium text-slate-500 mt-1">
-              Dari {kpis.totalCount} tiket faktur tercatat
+              Dari {kpis.totalCount} tiket faktur ({currentPeriodInfo.label})
             </p>
           </div>
         </div>
 
         <div className="p-5 rounded-3xl bg-white border border-emerald-100 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Pembayaran Lunas</span>
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Pembayaran Lunas</span>
+              <span className="text-[11px] font-semibold text-emerald-600/80 block mt-0.5">
+                {currentPeriodInfo.label}
+              </span>
+            </div>
             <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
               <CheckCircle2 className="w-4 h-4" />
             </div>
@@ -745,7 +827,7 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
                         <div className="text-right">
                           <span className="font-bold text-slate-900 text-sm">Rp {inv.total.toLocaleString('id-ID')}</span>
                           {inv.discount > 0 && (
-                            <span className="text-[10px] text-emerald-600 font-bold block">Hemat Rp {inv.discount.toLocaleString('id-ID')} (Member)</span>
+                            <span className="text-[10px] text-emerald-600 font-bold block">Hemat Rp {inv.discount.toLocaleString('id-ID')}</span>
                           )}
                         </div>
                       </div>
@@ -859,7 +941,7 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
                       </p>
                       {inv.discount > 0 && (
                         <p className="text-[11px] text-emerald-600 font-bold">
-                          Hemat Rp {inv.discount.toLocaleString('id-ID')} (Diskon Member)
+                          Hemat Rp {inv.discount.toLocaleString('id-ID')}
                         </p>
                       )}
                       {(Number(inv.refund_nominal || 0) > 0 || inv.refund_status === 'processed') && (
@@ -994,7 +1076,7 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
         @media print {
           @page {
             size: A4 portrait;
-            margin: 8mm 10mm 10mm 10mm;
+            margin: 10mm 10mm 10mm 10mm;
           }
           html, body {
             background: #ffffff !important;
@@ -1006,11 +1088,13 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
             overflow: visible !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
-            font-size: 11px !important;
+            font-size: 10px !important;
           }
 
           body.invoice-modal-open #root,
-          body:has(#invoice-print-portal) #root {
+          body.rekap-modal-open #root,
+          body:has(#invoice-print-portal) #root,
+          body:has(#rekap-print-portal) #root {
             display: none !important;
           }
 
@@ -1019,6 +1103,7 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
           }
 
           #invoice-print-portal,
+          #rekap-print-portal,
           .invoice-modal-backdrop {
             position: static !important;
             inset: auto !important;
@@ -1052,25 +1137,54 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
             transform: none !important;
           }
 
-          #printable-invoice {
+          #printable-invoice,
+          #printable-rekap-content {
             display: block !important;
             width: 100% !important;
             max-width: 100% !important;
             margin: 0 !important;
-            padding: 0 !important;
+            padding: 4mm 0 !important;
             border: none !important;
             box-shadow: none !important;
             background: #ffffff !important;
             overflow: visible !important;
             color: #0f172a !important;
+            box-sizing: border-box !important;
           }
 
-          .avoid-page-break {
+          #printable-rekap-content table {
+            width: 100% !important;
+            max-width: 100% !important;
+            table-layout: fixed !important;
+          }
+
+          #printable-rekap-content th,
+          #printable-rekap-content td {
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+          }
+
+          .avoid-page-break,
+          tr {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
           }
         }
       `}</style>
+
+      {isRekapModalOpen && typeof document !== 'undefined' && createPortal(
+        <div id="rekap-print-portal">
+          <OfficialRekapInvoiceSheet
+            isOpen={isRekapModalOpen}
+            onClose={() => setIsRekapModalOpen(false)}
+            invoices={filteredInvoices}
+            kpis={kpis}
+            periodLabel={currentPeriodInfo.label}
+            statusFilter={statusFilter}
+          />
+        </div>,
+        document.body
+      )}
 
       {isModalOpen && selectedInvoice && typeof document !== 'undefined' && createPortal(
         <div 

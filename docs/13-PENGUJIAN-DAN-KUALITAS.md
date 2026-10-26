@@ -49,7 +49,7 @@ Seluruh pengujian berikut telah dieksekusi secara nyata di lingkungan kerja loka
   - Artefak Keluaran: `dist/index.html`, berkas bundle JavaScript dan CSS terminifikasi secara optimal.
 
 ### 2.3 Pengujian Backend & Integrasi API (Node.js Native Test Runner)
-- **Perintah Eksekusi:** `node --test backend/tests/e2e_audit_verification.test.js`
+- **Perintah Eksekusi:** `node --test backend/tests/e2e_journey.test.js`
 - **Hasil Eksekusi:**
   - Total Skenario Teruji: **9 Skenario Terintegrasi**
   - Status: **9 PASSED, 0 FAILED** (100% Lulus)

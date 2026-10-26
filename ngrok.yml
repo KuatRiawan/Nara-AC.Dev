@@ -1,0 +1,7 @@
+version: "3"
+agent:
+  authtoken: 3662gQNmmF42tRLVOvriFflO8uQ_58TUMuDwR9uECrPRpY8ks
+tunnels:
+  nara_app:
+    proto: http
+    addr: 5173

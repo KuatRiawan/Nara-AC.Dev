@@ -7,7 +7,8 @@ import { useToast } from '../components/ui/toast';
 import { Badge } from '../components/ui/badge';
 import { 
   CheckCircle2, MapPin, Phone, Camera, Package, Save, ArrowLeft, ArrowRight, RefreshCw, User, Play, 
-  ListTodo, ClipboardEdit, AlertTriangle, Trash2, ZoomIn, UploadCloud, Check, X, Sparkles
+  ListTodo, ClipboardEdit, AlertTriangle, Trash2, ZoomIn, UploadCloud, Check, X, Sparkles,
+  Receipt, PlusCircle, Wrench, ShieldCheck, DollarSign
 } from 'lucide-react';
 
 const STANDARD_SOP = [
@@ -40,6 +41,19 @@ export default function TechnicianJobDetail() {
   const [materialQty, setMaterialQty] = useState('');
   const [workOrder, setWorkOrder] = useState({ catatan: '' });
   const [newTask, setNewTask] = useState('');
+
+  // Add-On & Sparepart Billing state
+  const [services, setServices] = useState([]);
+  const [selectedServiceId, setSelectedServiceId] = useState('');
+  const [customItemName, setCustomItemName] = useState('');
+  const [itemQty, setItemQty] = useState(1);
+  const [itemPrice, setItemPrice] = useState('');
+  const [itemNotes, setItemNotes] = useState('');
+  const [itemType, setItemType] = useState('sparepart');
+  const [submittingItem, setSubmittingItem] = useState(false);
+  const [isCustomMode, setIsCustomMode] = useState(false);
+  const [selectedInventoryId, setSelectedInventoryId] = useState('');
+  const [inventoryQty, setInventoryQty] = useState('');
 
   // Step state for in-process workflow: 'before_photo' | 'checklist' | 'after_photo'
   const [workStep, setWorkStep] = useState('before_photo');
@@ -108,6 +122,13 @@ export default function TechnicianJobDetail() {
     }
   }, [showError]);
 
+  const fetchServices = useCallback(async () => {
+    try {
+      const res = await api.get('/technician/services');
+      setServices(Array.isArray(res) ? res : (res?.data || []));
+    } catch (_) {}
+  }, []);
+
   useEffect(() => {
     if (authLoading) return;
     if (!user || user.role !== 'technician') {
@@ -116,7 +137,8 @@ export default function TechnicianJobDetail() {
     }
     fetchJob();
     fetchInventory();
-  }, [id, user, authLoading, navigate, fetchJob, fetchInventory]);
+    fetchServices();
+  }, [id, user, authLoading, navigate, fetchJob, fetchInventory, fetchServices]);
 
   // Real-time automatic background synchronization
   useEffect(() => {
@@ -326,6 +348,107 @@ export default function TechnicianJobDetail() {
       showSuccess('Material berhasil ditambahkan');
     } catch (err) {
       showError(err.response?.data?.error?.message || err.error?.message || 'Gagal menambah material');
+    }
+  };
+
+  const handleServiceSelect = (val) => {
+    setSelectedServiceId(val);
+    if (!val) {
+      setItemPrice('');
+      setSelectedInventoryId('');
+      return;
+    }
+    const found = services.find((s) => String(s.id) === String(val));
+    if (found) {
+      setItemPrice(found.harga || 0);
+      setCustomItemName('');
+      const isPart = (
+        found.kategori === 'perbaikan' ||
+        found.nama_layanan?.toLowerCase().includes('kapasitor') ||
+        found.nama_layanan?.toLowerCase().includes('sparepart') ||
+        found.nama_layanan?.toLowerCase().includes('freon')
+      );
+      setItemType(isPart ? 'sparepart' : 'jasa');
+
+      // Smart auto-match with admin inventory
+      const lower = (found.nama_layanan || '').toLowerCase();
+      let matched = null;
+      if (Array.isArray(inventory)) {
+        if (lower.includes('kapasitor') && lower.includes('35')) {
+          matched = inventory.find(i => i.nama.toLowerCase().includes('35uf'));
+        } else if (lower.includes('kapasitor') && lower.includes('25')) {
+          matched = inventory.find(i => i.nama.toLowerCase().includes('25uf'));
+        } else if (lower.includes('kapasitor')) {
+          matched = inventory.find(i => i.nama.toLowerCase().includes('kapasitor'));
+        } else if (lower.includes('freon') && lower.includes('r32')) {
+          matched = inventory.find(i => i.nama.toLowerCase().includes('r32'));
+        } else if (lower.includes('freon') && lower.includes('r410')) {
+          matched = inventory.find(i => i.nama.toLowerCase().includes('r410'));
+        } else if (lower.includes('freon') && lower.includes('r22')) {
+          matched = inventory.find(i => i.nama.toLowerCase().includes('r22'));
+        }
+      }
+      if (matched) {
+        setSelectedInventoryId(String(matched.id));
+        setInventoryQty(itemQty || 1);
+      } else {
+        setSelectedInventoryId('');
+      }
+    }
+  };
+
+  const handleAddItem = async (e) => {
+    e.preventDefault();
+    const finalName = isCustomMode
+      ? customItemName.trim()
+      : (services.find((s) => String(s.id) === String(selectedServiceId))?.nama_layanan || customItemName.trim());
+
+    if (!finalName) {
+      showError('Pilih layanan/sparepart dari katalog atau ketik nama item.');
+      return;
+    }
+    if (itemPrice === '' || isNaN(Number(itemPrice)) || Number(itemPrice) < 0) {
+      showError('Masukkan harga satuan yang valid (minimal Rp 0).');
+      return;
+    }
+
+    try {
+      setSubmittingItem(true);
+      await api.post(`/technician/jobs/${id}/items`, {
+        layanan_id: isCustomMode ? null : (selectedServiceId ? parseInt(selectedServiceId) : null),
+        nama_item: finalName,
+        jumlah_unit: parseInt(itemQty) || 1,
+        harga_satuan: parseInt(itemPrice),
+        catatan: itemNotes.trim() || undefined,
+        jenis: itemType,
+        inventory_item_id: selectedInventoryId ? parseInt(selectedInventoryId) : null,
+        inventory_qty: selectedInventoryId ? (parseFloat(inventoryQty) || parseInt(itemQty) || 1) : null,
+      });
+      setSelectedServiceId('');
+      setCustomItemName('');
+      setItemQty(1);
+      setItemPrice('');
+      setItemNotes('');
+      setSelectedInventoryId('');
+      setInventoryQty('');
+      setIsCustomMode(false);
+      await Promise.all([fetchJob(true), fetchInventory()]);
+      showSuccess(`Berhasil menambahkan "${finalName}" ke invoice tagihan & memperbarui stok gudang!`);
+    } catch (err) {
+      showError(err.response?.data?.error?.message || err.error?.message || err.message || 'Gagal menambahkan item.');
+    } finally {
+      setSubmittingItem(false);
+    }
+  };
+
+  const handleRemoveItem = async (itemId, nama) => {
+    if (!window.confirm(`Hapus "${nama || 'item'}" dari rincian invoice tagihan? (Stok gudang akan dikembalikan)`)) return;
+    try {
+      await api.delete(`/technician/jobs/${id}/items/${itemId}`);
+      await Promise.all([fetchJob(true), fetchInventory()]);
+      showSuccess('Item berhasil dibatalkan dari invoice & stok dikembalikan ke inventory.');
+    } catch (err) {
+      showError(err.response?.data?.error?.message || err.error?.message || err.message || 'Gagal menghapus item.');
     }
   };
 
@@ -665,35 +788,6 @@ export default function TechnicianJobDetail() {
             </div>
 
             <div className="p-5 space-y-4">
-              {/* Action Banner to Proceed to Checklist when at least 1 photo uploaded */}
-              {hasBefore && (
-                <div className="pb-1">
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-gradient-to-r from-blue-50/90 to-indigo-50/70 p-4 rounded-2xl border border-blue-200/90 shadow-xs">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                        <CheckCircle2 className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-slate-800">
-                          {beforePhotos.length} Foto Sebelum Tersimpan
-                        </p>
-                        <p className="text-[11px] text-slate-500">
-                          Kondisi awal telah didokumentasikan. Klik tombol untuk lanjut ke checklist SOP.
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setWorkStep('checklist')}
-                      className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs px-5 py-3 rounded-xl shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all shrink-0"
-                    >
-                      <span>Lanjut ke Halaman Berikutnya (Checklist)</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {/* Display existing uploaded before photos */}
               {hasBefore && (
                 <div>
@@ -924,61 +1018,274 @@ export default function TechnicianJobDetail() {
               </div>
             </section>
 
-            {/* Suku Cadang & Material */}
-            <section className="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden">
+            {/* Rincian Tagihan & Add-On Sparepart Berbayar */}
+            <section className="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden">
               <div className="p-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Package className="w-4 h-4 text-slate-600" />
-                  <h2 className="font-bold text-sm text-slate-800">Material &amp; Suku Cadang yang Dipakai</h2>
+                  <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                    <Receipt className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-sm text-slate-900">Pergantian Sparepart &amp; Add-On</h2>
+                    <p className="text-[11px] text-slate-500">Tersinkron langsung ke Invoice &amp; Surat Jalan Pelanggan</p>
+                  </div>
                 </div>
-                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  Kesepakatan di Lokasi
+                <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">
+                  Live Invoice
                 </span>
               </div>
-              <div className="p-4 sm:p-5">
-                <ul className="space-y-2.5 mb-4 text-sm">
-                  {job.materials?.map(m => (
-                    <li key={m.id} className="flex justify-between items-center p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                      <span className="font-bold text-slate-800 text-xs sm:text-sm">{m.nama}</span>
-                      <span className="text-slate-600 bg-white font-bold px-2.5 py-1 rounded-lg text-xs border border-slate-200">
-                        {m.jumlah} {m.satuan}
-                      </span>
-                    </li>
-                  ))}
-                  {(!job.materials || job.materials.length === 0) && (
-                    <p className="text-xs text-slate-500 italic p-3 bg-slate-50 rounded-xl text-center">Belum ada material/suku cadang tambahan.</p>
-                  )}
-                </ul>
 
-                <form onSubmit={addMaterial} className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-slate-100">
-                  <select 
-                    value={materialId} 
-                    onChange={e=>setMaterialId(e.target.value)} 
-                    className="flex-1 text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 p-2.5 bg-white"
-                  >
-                    <option value="">Pilih Suku Cadang / Freon...</option>
-                    {Array.isArray(inventory) && inventory.map(item => (
-                      <option key={item.id} value={item.id}>{item.nama} (Stok: {item.stok} {item.satuan})</option>
-                    ))}
-                  </select>
-                  <div className="flex gap-2">
-                    <input 
-                      type="number" 
-                      placeholder="Jumlah" 
-                      step="0.1" 
-                      value={materialQty} 
-                      onChange={e=>setMaterialQty(e.target.value)} 
-                      className="w-24 text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 p-2.5" 
-                    />
-                    <button 
-                      type="submit" 
-                      disabled={!materialId || !materialQty}
-                      className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold px-4 py-2.5 rounded-xl text-xs transition-colors disabled:opacity-50 cursor-pointer"
-                    >
-                      Tambah
-                    </button>
+              {/* Live Invoice Summary Snapshot - Consistent Project UI */}
+              <div className="p-4 sm:p-5 bg-slate-50/60 border-b border-slate-200/80">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="bg-white rounded-xl p-3 border border-slate-200/90 shadow-2xs">
+                    <span className="text-[10px] font-bold text-slate-500 block mb-0.5 uppercase tracking-wide">Total Tagihan</span>
+                    <span className="text-base sm:text-lg font-black font-mono text-slate-900">
+                      Rp {(job.invoice?.total || 0).toLocaleString('id-ID')}
+                    </span>
                   </div>
-                </form>
+                  <div className="bg-white rounded-xl p-3 border border-slate-200/90 shadow-2xs">
+                    <span className="text-[10px] font-bold text-slate-500 block mb-0.5 uppercase tracking-wide">Sudah Dibayar</span>
+                    <span className="text-base sm:text-lg font-black font-mono text-emerald-600">
+                      Rp {(job.invoice?.total_dibayar || 0).toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                  <div className={`col-span-2 sm:col-span-1 rounded-xl p-3 border shadow-2xs ${
+                    (job.invoice?.balance_due || 0) > 0 
+                      ? 'bg-amber-50/80 border-amber-200 text-amber-900' 
+                      : 'bg-emerald-50/80 border-emerald-200 text-emerald-900'
+                  }`}>
+                    <span className="text-[10px] font-bold block mb-0.5 uppercase tracking-wide opacity-80">
+                      {(job.invoice?.balance_due || 0) > 0 ? 'Sisa Kurang Bayar' : 'Status Tagihan'}
+                    </span>
+                    <span className={`text-base sm:text-lg font-black font-mono ${
+                      (job.invoice?.balance_due || 0) > 0 ? 'text-amber-700' : 'text-emerald-700'
+                    }`}>
+                      {(job.invoice?.balance_due || 0) > 0 
+                        ? `Rp ${job.invoice.balance_due.toLocaleString('id-ID')}` 
+                        : 'LUNAS'}
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-200/60 pt-2.5">
+                  <span className="flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Garansi Resmi: <strong className="text-slate-800">{job.invoice?.garansi || '14 Hari Kalender'}</strong></span>
+                  </span>
+                  <span className="text-slate-400">Tipe: {job.invoice?.invoice_type_label || 'Invoice Pelanggan'}</span>
+                </div>
+              </div>
+
+              <div className="p-4 sm:p-5 space-y-4">
+                {/* List of current items */}
+                <div>
+                  <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center justify-between">
+                    <span>Rincian Layanan &amp; Tindakan Terdaftar</span>
+                    <span className="text-slate-400 text-[11px] font-normal">{job.items?.length || 1} Item</span>
+                  </h3>
+                  <div className="space-y-2">
+                    {job.items?.map((item, idx) => {
+                      const isPrimary = idx === 0 && !item.nama_item;
+                      const isSparepart = item.jenis === 'sparepart' || item.kategori === 'komponen';
+                      return (
+                        <div 
+                          key={item.id || idx} 
+                          className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 transition-colors"
+                        >
+                          <div className="min-w-0 flex-1 pr-2">
+                            <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                              <span className="font-bold text-xs sm:text-sm text-slate-900 truncate">
+                                {item.nama_layanan || item.nama_item || 'Layanan Servis'}
+                              </span>
+                              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md ${
+                                isPrimary 
+                                  ? 'bg-slate-200 text-slate-700' 
+                                  : isSparepart
+                                    ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                    : 'bg-blue-100 text-blue-700 border border-blue-200'
+                              }`}>
+                                {isPrimary ? 'Layanan Utama' : isSparepart ? 'Sparepart / Part' : 'Add-On Jasa'}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-slate-500 flex items-center gap-2 flex-wrap">
+                              <span>{item.jumlah_unit || 1} Unit × Rp {Number(item.harga_satuan || 0).toLocaleString('id-ID')}</span>
+                              {item.catatan && (
+                                <span className="text-slate-600 italic">({item.catatan})</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span className="font-mono font-bold text-xs sm:text-sm text-slate-900">
+                              Rp {Number(item.subtotal || 0).toLocaleString('id-ID')}
+                            </span>
+                            {!isPrimary && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveItem(item.id, item.nama_layanan || item.nama_item)}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                title="Hapus dari tagihan"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Form Tambah Add-On Baru */}
+                <div className="bg-slate-50/80 rounded-xl p-4 border border-slate-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                      <PlusCircle className="w-4 h-4 text-blue-600" />
+                      <span>Tambah Tindakan / Sparepart Baru</span>
+                    </h4>
+                    <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-200 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => { setIsCustomMode(false); setSelectedServiceId(''); setItemPrice(''); }}
+                        className={`px-2.5 py-1 rounded-md font-bold transition-colors cursor-pointer ${
+                          !isCustomMode ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        Katalog Resmi
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setIsCustomMode(true); setSelectedServiceId(''); setItemPrice(''); }}
+                        className={`px-2.5 py-1 rounded-md font-bold transition-colors cursor-pointer ${
+                          isCustomMode ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        Item Kustom
+                      </button>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleAddItem} className="space-y-3">
+                    {!isCustomMode ? (
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Pilih Layanan / Sparepart dari Katalog
+                        </label>
+                        <select
+                          value={selectedServiceId}
+                          onChange={(e) => handleServiceSelect(e.target.value)}
+                          className="w-full text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 p-2.5 bg-white font-medium"
+                        >
+                          <option value="">-- Pilih Tindakan / Sparepart --</option>
+                          <optgroup label="Suku Cadang &amp; Perbaikan (Garansi 30 Hari)">
+                            {services.filter(s => s.kategori === 'perbaikan').map(s => (
+                              <option key={s.id} value={s.id}>
+                                {s.nama_layanan} — Rp {Number(s.harga).toLocaleString('id-ID')}
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="Instalasi &amp; Bongkar Pasang">
+                            {services.filter(s => s.kategori === 'instalasi').map(s => (
+                              <option key={s.id} value={s.id}>
+                                {s.nama_layanan} — Rp {Number(s.harga).toLocaleString('id-ID')}
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="Layanan Lainnya">
+                            {services.filter(s => s.kategori !== 'perbaikan' && s.kategori !== 'instalasi').map(s => (
+                              <option key={s.id} value={s.id}>
+                                {s.nama_layanan} — Rp {Number(s.harga).toLocaleString('id-ID')}
+                              </option>
+                            ))}
+                          </optgroup>
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                            Nama Sparepart / Tindakan Kustom
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Contoh: Thermistor Sensor Suhu LG / Motor Fan"
+                            value={customItemName}
+                            onChange={(e) => setCustomItemName(e.target.value)}
+                            className="w-full text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 p-2.5 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                            Kategori
+                          </label>
+                          <select
+                            value={itemType}
+                            onChange={(e) => setItemType(e.target.value)}
+                            className="w-full text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 p-2.5 bg-white font-medium"
+                          >
+                            <option value="sparepart">Suku Cadang / Part</option>
+                            <option value="jasa">Jasa / Tindakan</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">Jumlah (Qty)</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="50"
+                          value={itemQty}
+                          onChange={(e) => setItemQty(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-full text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 p-2.5 bg-white"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">Harga Satuan (Rp)</label>
+                        <input
+                          type="number"
+                          step="5000"
+                          min="0"
+                          placeholder="0"
+                          value={itemPrice}
+                          onChange={(e) => setItemPrice(e.target.value)}
+                          className="w-full text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 p-2.5 bg-white font-mono font-bold"
+                        />
+                      </div>
+                      <div className="col-span-2 sm:col-span-1 flex flex-col justify-end">
+                        <div className="text-[10px] text-slate-400 mb-1">Subtotal</div>
+                        <div className="text-xs sm:text-sm font-bold font-mono text-slate-900 bg-white border border-slate-200 rounded-xl p-2.5 text-right">
+                          Rp {((parseInt(itemQty) || 1) * (parseInt(itemPrice) || 0)).toLocaleString('id-ID')}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">Catatan / Alasan (Opsional)</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: Kapasitor bocor 15uF, diganti part original 35uF"
+                        value={itemNotes}
+                        onChange={(e) => setItemNotes(e.target.value)}
+                        className="w-full text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 p-2.5 bg-white"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={submittingItem || (!selectedServiceId && !customItemName.trim()) || itemPrice === ''}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                    >
+                      {submittingItem ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <PlusCircle className="w-4 h-4" />
+                      )}
+                      <span>Tambah ke Invoice Tagihan</span>
+                    </button>
+                  </form>
+                </div>
               </div>
             </section>
 

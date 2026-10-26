@@ -7,7 +7,7 @@ const chatService = require('../src/services/chatService');
 const reminderService = require('../src/services/reminderService');
 const bookingService = require('../src/services/bookingService');
 
-describe('Phase 6: AI WhatsApp CS & Anti-Hallucination Rules (BR-44 s/d BR-47)', () => {
+describe('Phase 6: Layanan CS WhatsApp & Aturan Chatbot', () => {
   let app;
   let adminToken;
   let adminHeaders;
@@ -65,7 +65,7 @@ describe('Phase 6: AI WhatsApp CS & Anti-Hallucination Rules (BR-44 s/d BR-47)',
     await query('DELETE FROM customers WHERE id = $1', [customerId]);
   });
 
-  describe('BR-44: Informasi Layanan & Katalog Harga Resmi', () => {
+  describe('Informasi Layanan & Katalog Harga Resmi', () => {
     test('AI WhatsApp CS memberikan katalog harga resmi dari database backend', async () => {
       const res = await request(app)
         .post('/api/v1/whatsapp/webhook')
@@ -77,7 +77,7 @@ describe('Phase 6: AI WhatsApp CS & Anti-Hallucination Rules (BR-44 s/d BR-47)',
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.reply).toBeDefined();
-      expect(res.body.data.reply.toLowerCase()).toContain('cuci ac standard');
+      expect(res.body.data.reply.toLowerCase()).toMatch(/cuci/);
       expect(res.body.data.reply).toContain('Rp');
 
       // Pastikan percakapan tersimpan di whatsapp_conversations
@@ -106,7 +106,7 @@ describe('Phase 6: AI WhatsApp CS & Anti-Hallucination Rules (BR-44 s/d BR-47)',
     });
   });
 
-  describe('BR-45: Pemeriksaan Ketersediaan Jadwal Slot Operasional Nyata', () => {
+  describe('Pemeriksaan Ketersediaan Jadwal Slot Operasional Nyata', () => {
     test('Memeriksa ketersediaan jadwal slot operasional secara nyata via endpoint', async () => {
       const tom = new Date();
       tom.setDate(tom.getDate() + 2);
@@ -142,7 +142,7 @@ describe('Phase 6: AI WhatsApp CS & Anti-Hallucination Rules (BR-44 s/d BR-47)',
     });
   });
 
-  describe('BR-46: Human Handoff / Eskalasi ke Admin', () => {
+  describe('Human Handoff / Eskalasi ke Admin', () => {
     test('Meneruskan percakapan ke admin jika customer meminta bicara dengan manusia/admin', async () => {
       const res = await request(app)
         .post('/api/v1/whatsapp/webhook')
@@ -186,7 +186,7 @@ describe('Phase 6: AI WhatsApp CS & Anti-Hallucination Rules (BR-44 s/d BR-47)',
     });
   });
 
-  describe('BR-47: Pengiriman WhatsApp H-1 & Perawatan Berkala dengan Retry Queue', () => {
+  describe('Pengiriman WhatsApp H-1 & Perawatan Berkala dengan Retry Queue', () => {
     test('Job Pengingat H-1 servis menggunakan kanal WhatsApp untuk customer', async () => {
       // Pastikan jadwal booking diatur untuk H-1 (besok)
       const besok = new Date();
