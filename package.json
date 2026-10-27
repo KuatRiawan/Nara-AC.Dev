@@ -1,0 +1,13 @@
+{
+  "name": "nara-ac",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NARA AC - 1-click launcher & scripts",
+  "scripts": {
+    "dev": "bash start.command",
+    "start": "bash start.command",
+    "stop": "bash stop.command",
+    "backend": "npm --prefix backend run dev",
+    "frontend": "npm --prefix frontend run dev"
+  }
+}

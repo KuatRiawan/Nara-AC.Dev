@@ -50,6 +50,7 @@ yarn-error.log*
 pnpm-debug.log*
 .DS_Store
 Thumbs.db
+*.app/
 
 # IDE & Editor Configurations
 .vscode/*
