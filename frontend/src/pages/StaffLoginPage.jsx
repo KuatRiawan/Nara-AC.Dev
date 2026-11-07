@@ -103,10 +103,10 @@ export default function StaffLoginPage() {
         </div>
       </header>
 
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex items-center">
+      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 flex items-center">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 w-full items-center">
           
-          <div className="lg:col-span-7 space-y-6">
+          <div className="lg:col-span-7 space-y-6 order-2 lg:order-1">
 
             <div className="space-y-3">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">
@@ -171,7 +171,7 @@ export default function StaffLoginPage() {
 
           </div>
 
-          <div className="lg:col-span-5">
+          <div className="lg:col-span-5 order-1 lg:order-2">
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}

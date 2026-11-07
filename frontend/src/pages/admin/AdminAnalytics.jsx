@@ -309,8 +309,8 @@ export default function AdminAnalytics() {
           </h1>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full lg:w-auto">
+          <div className="flex items-center justify-between sm:justify-start gap-1.5 bg-white p-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs w-full sm:w-auto">
             <Input
               type="date"
               value={dari}
@@ -320,9 +320,9 @@ export default function AdminAnalytics() {
                 if (val && sampai) fetchData(val, sampai);
               }}
               aria-label="Tanggal Mulai Analitik"
-              className="h-8 text-xs border-0 bg-transparent px-2 w-32 font-semibold"
+              className="h-8 text-xs border-0 bg-transparent px-2 flex-1 sm:w-32 font-semibold min-w-0"
             />
-            <span className="text-slate-400">s/d</span>
+            <span className="text-slate-400 shrink-0">s/d</span>
             <Input
               type="date"
               value={sampai}
@@ -332,45 +332,47 @@ export default function AdminAnalytics() {
                 if (dari && val) fetchData(dari, val);
               }}
               aria-label="Tanggal Akhir Analitik"
-              className="h-8 text-xs border-0 bg-transparent px-2 w-32 font-semibold"
+              className="h-8 text-xs border-0 bg-transparent px-2 flex-1 sm:w-32 font-semibold min-w-0"
             />
           </div>
 
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => applyPresetRange(7, 7)}
-              className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-blue-50 text-xs font-bold text-slate-600 cursor-pointer"
-            >
-              14 Hari
-            </button>
-            <button
-              type="button"
-              onClick={() => applyPresetRange(29, 14)}
-              className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-blue-50 text-xs font-bold text-slate-600 cursor-pointer"
-            >
-              30 Hari
-            </button>
-            <button
-              type="button"
-              onClick={() => applyPresetRange(89, 30)}
-              className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-blue-50 text-xs font-bold text-slate-600 cursor-pointer"
-            >
-              90 Hari
-            </button>
-          </div>
+          <div className="flex items-center gap-1.5 w-full sm:w-auto justify-between sm:justify-start">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => applyPresetRange(7, 7)}
+                className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-blue-50 text-xs font-bold text-slate-600 cursor-pointer"
+              >
+                14 Hari
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPresetRange(29, 14)}
+                className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-blue-50 text-xs font-bold text-slate-600 cursor-pointer"
+              >
+                30 Hari
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPresetRange(89, 30)}
+                className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-blue-50 text-xs font-bold text-slate-600 cursor-pointer"
+              >
+                90 Hari
+              </button>
+            </div>
 
-          <Button
-            onClick={() => {
-              setStreamlitError(false);
-              setShowStreamlitModal(true);
-            }}
-            variant="outline"
-            className="rounded-xl border-blue-200 bg-blue-50/60 text-blue-700 hover:bg-blue-100 font-bold text-xs flex items-center gap-1.5 cursor-pointer h-9"
-          >
-            <Terminal className="w-4 h-4 text-blue-600" />
-            <span>DS Lab</span>
-          </Button>
+            <Button
+              onClick={() => {
+                setStreamlitError(false);
+                setShowStreamlitModal(true);
+              }}
+              variant="outline"
+              className="rounded-xl border-blue-200 bg-blue-50/60 text-blue-700 hover:bg-blue-100 font-bold text-xs flex items-center gap-1.5 cursor-pointer h-9 shrink-0"
+            >
+              <Terminal className="w-4 h-4 text-blue-600" />
+              <span>DS Lab</span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -1129,25 +1131,25 @@ export default function AdminAnalytics() {
               onClick={(e) => {
                 if (e.target === e.currentTarget) setShowStreamlitModal(false);
               }}
-              className="fixed inset-0 z-[9999] overflow-y-auto bg-slate-950/70 backdrop-blur-xs flex justify-center items-center p-4"
+              className="fixed inset-0 z-[9999] overflow-y-auto bg-slate-950/70 backdrop-blur-xs flex justify-center items-center p-2 sm:p-4"
             >
-              <div className="bg-white rounded-3xl max-w-5xl w-full h-[85vh] shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
-                <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white/15 rounded-xl">
-                      <Terminal className="w-5 h-5" />
+              <div className="bg-white rounded-2xl sm:rounded-3xl max-w-5xl w-full h-[90dvh] sm:h-[85vh] shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+                <div className="p-3.5 sm:p-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white flex items-center justify-between shrink-0 gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="p-2 bg-white/15 rounded-xl shrink-0">
+                      <Terminal className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
-                    <div>
-                      <h3 className="font-bold text-sm text-white">Streamlit Data Science Explorer</h3>
-                      <p className="text-xs text-blue-100 font-mono">{streamlitUrl}</p>
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-xs sm:text-sm text-white truncate">Streamlit Data Science Explorer</h3>
+                      <p className="text-[11px] sm:text-xs text-blue-100 font-mono truncate max-w-[170px] sm:max-w-xs">{streamlitUrl}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <a
                       href={streamlitUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-2 rounded-xl text-blue-100 hover:text-white hover:bg-white/10 text-xs font-bold flex items-center gap-1"
+                      className="p-1.5 sm:p-2 rounded-xl text-blue-100 hover:text-white hover:bg-white/10 text-xs font-bold flex items-center gap-1 cursor-pointer"
                     >
                       <ExternalLink className="w-4 h-4" />
                       <span className="hidden sm:inline">Tab Baru</span>

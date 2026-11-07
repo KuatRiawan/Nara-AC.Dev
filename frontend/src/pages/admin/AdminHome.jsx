@@ -517,22 +517,22 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="grid grid-cols-2 sm:flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
           <Button
             onClick={() => setIsBookingModalOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm rounded-xl h-10 px-4 cursor-pointer shadow-sm shadow-blue-600/20 flex items-center gap-2 transition-all hover:shadow active:scale-95 whitespace-nowrap"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm rounded-xl h-10 px-3 sm:px-4 cursor-pointer shadow-sm shadow-blue-600/20 flex items-center justify-center gap-1.5 sm:gap-2 transition-all hover:shadow active:scale-95"
           >
-            <Plus className="w-4 h-4" />
-            <span>Buat Booking Baru</span>
+            <Plus className="w-4 h-4 shrink-0" />
+            <span className="truncate">Booking Baru</span>
           </Button>
 
           <Button
             onClick={() => navigate('/admin/invoices')}
             variant="outline"
-            className="bg-white hover:bg-slate-50 text-slate-700 border-slate-200 font-bold text-xs sm:text-sm rounded-xl h-10 px-4 cursor-pointer flex items-center gap-2 transition-all shadow-2xs whitespace-nowrap"
+            className="bg-white hover:bg-slate-50 text-slate-700 border-slate-200 font-bold text-xs sm:text-sm rounded-xl h-10 px-3 sm:px-4 cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2 transition-all shadow-2xs"
           >
-            <Receipt className="w-4 h-4 text-blue-600" />
-            <span>E-Invoice</span>
+            <Receipt className="w-4 h-4 text-blue-600 shrink-0" />
+            <span className="truncate">E-Invoice</span>
           </Button>
         </div>
       </div>

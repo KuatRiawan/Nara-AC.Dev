@@ -23,15 +23,40 @@ MAINT_MODEL_PATH = os.path.join(BASE_DIR, "..", "models", "best_maintenance_pred
 
 @st.cache_data
 def load_data():
-    df = pd.read_csv(DATA_PATH)
+    candidate_paths = [
+        DATA_PATH,
+        os.path.join(BASE_DIR, "data", "data_servis_ac_clean.csv"),
+        os.path.join(os.getcwd(), "data", "data_servis_ac_clean.csv"),
+        os.path.join(os.getcwd(), "data-science", "data", "data_servis_ac_clean.csv")
+    ]
+    target_path = None
+    for p in candidate_paths:
+        if os.path.exists(p):
+            target_path = p
+            break
+    if not target_path:
+        raise FileNotFoundError(f"Dataset clean tidak ditemukan di jalur: {candidate_paths}")
+    df = pd.read_csv(target_path)
     df['tanggal_order'] = pd.to_datetime(df['tanggal_order'])
     df['tanggal_rekomendasi_servis'] = pd.to_datetime(df['tanggal_rekomendasi_servis'])
     return df
 
 @st.cache_resource
 def load_models():
-    cost_model = joblib.load(COST_MODEL_PATH) if os.path.exists(COST_MODEL_PATH) else None
-    maint_model = joblib.load(MAINT_MODEL_PATH) if os.path.exists(MAINT_MODEL_PATH) else None
+    cost_candidates = [
+        COST_MODEL_PATH,
+        os.path.join(os.getcwd(), "models", "best_cost_estimator_model.joblib"),
+        os.path.join(os.getcwd(), "data-science", "models", "best_cost_estimator_model.joblib")
+    ]
+    maint_candidates = [
+        MAINT_MODEL_PATH,
+        os.path.join(os.getcwd(), "models", "best_maintenance_predictor_model.joblib"),
+        os.path.join(os.getcwd(), "data-science", "models", "best_maintenance_predictor_model.joblib")
+    ]
+    cost_p = next((p for p in cost_candidates if os.path.exists(p)), None)
+    maint_p = next((p for p in maint_candidates if os.path.exists(p)), None)
+    cost_model = joblib.load(cost_p) if cost_p else None
+    maint_model = joblib.load(maint_p) if maint_p else None
     return cost_model, maint_model
 
 df = load_data()
