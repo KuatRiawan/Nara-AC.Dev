@@ -103,7 +103,7 @@ async function importCleanDataScience() {
     await client.query('BEGIN');
 
     // 1. Sinkronkan Layanan Servis
-    console.log('⚙️  1/6 Menyinkronkan 5 Katalog Layanan Data Science...');
+    console.log('⚙️  1/7 Menyinkronkan 5 Katalog Layanan Data Science...');
     const serviceMap = {}; // nama_layanan -> id
     for (const s of SERVICE_DEFINITIONS) {
       const res = await client.query(`
@@ -122,7 +122,7 @@ async function importCleanDataScience() {
     }
 
     // 2. Pastikan 5 Teknisi Resmi & Akun Loginnya Tersedia
-    console.log('👷 2/6 Menyinkronkan 5 Teknisi Resmi...');
+    console.log('👷 2/7 Menyinkronkan 5 Teknisi Resmi...');
     const passwordHash = await bcrypt.hash(config.demoPassword || 'AdminNara2026!SangatKuat', 10);
 
     // Pastikan Admin Utama utuh
@@ -159,20 +159,20 @@ async function importCleanDataScience() {
     }
 
     // 3. Bersihkan transaksi lama untuk fresh import
-    console.log('🧹 3/6 Membersihkan tabel booking, ac_units, dan customers lama...');
+    console.log('🧹 3/7 Membersihkan tabel booking, ac_units, dan customers lama...');
     await client.query(`
-      TRUNCATE bookings, ac_units, feedback CASCADE;
+      TRUNCATE bookings, ac_units, feedback, booking_items, b2b_projects, prediction_output CASCADE;
       UPDATE users SET customer_id = NULL;
       DELETE FROM customers;
     `);
 
     // 4. Baca CSV Data Science
     const rows = parseCsv(csvPath);
-    console.log(`📊 4/6 Memproses ${rows.length} baris data dari CSV...`);
+    console.log(`📊 4/7 Memproses ${rows.length} baris data dari CSV...`);
 
     // Kumpulkan Pelanggan Unik & Unit AC
     const customerMap = {}; // custCode (e.g. CUST-0013) -> { id, phone, name, address, totalOrder, totalBelanja }
-    const customerAcMap = {}; // custCode -> [ac_unit_id]
+    const customerAcMap = {}; // custCode -> ac_unit_id
 
     let custSeq = 1;
     for (const r of rows) {
@@ -226,8 +226,9 @@ async function importCleanDataScience() {
     console.log(`✅ 341 Pelanggan dan Unit AC berhasil dibuat.`);
 
     // 5. Impor 1.350 Booking Transaksi & Feedback
-    console.log('📦 5/6 Menyimpan 1.350 data booking transaksi dan rating...');
+    console.log('📦 5/7 Menyimpan 1.350 data booking transaksi, rincian item, dan rating...');
     let successCount = 0;
+    let feedbackCount = 0;
 
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
@@ -262,13 +263,13 @@ async function importCleanDataScience() {
           kode_booking, customer_id, ac_unit_id, layanan_id, jumlah_unit,
           jadwal_mulai, jadwal_selesai, alamat, keluhan, kontak,
           status, teknisi_id, total_dibayar, status_pembayaran,
-          status_verifikasi_pembayaran, is_synthetic, created_by, created_at
+          status_verifikasi_pembayaran, is_synthetic, created_by, created_at, updated_at
         )
         VALUES (
           $1, $2, $3, $4, 1,
           $5, $6, $7, $8, $9,
           'done', $10, $11, 'paid',
-          'diverifikasi', false, 'customer', $5
+          'diverifikasi', false, 'customer', $5, $6
         )
         RETURNING id;
       `, [
@@ -287,33 +288,37 @@ async function importCleanDataScience() {
 
       const bookingId = bRes.rows[0].id;
 
+      // Catat di booking_items untuk akuntansi item yang akurat
       await client.query(`
         INSERT INTO booking_items (booking_id, layanan_id, jumlah_unit, harga_satuan, subtotal)
         VALUES ($1, $2, 1, $3, $3);
       `, [bookingId, svcId, Math.round(totalBiaya)]);
 
-      // Masukkan Feedback Rating
-      const rating = parseInt(r.rating_feedback, 10) || 5;
-      const sentiment = rating >= 4 ? 'positif' : (rating === 3 ? 'netral' : 'negatif');
-      const sampleComments = {
-        5: 'Pengerjaan sangat rapi, AC kembali dingin maksimal dan teknisi ramah.',
-        4: 'Servis memuaskan dan tepat waktu. Terima kasih Nara AC.',
-        3: 'Cukup baik, pendinginan normal kembali.',
-        2: 'Pengerjaan agak lama, tapi sekarang sudah berfungsi.',
-        1: 'Mohon lebih teliti lagi ke depannya saat pembersihan.'
-      };
+      // Masukkan Feedback Rating (HANYA JIKA RATING VALID 1 s/d 5)
+      const rawRating = parseInt(r.rating_feedback, 10);
+      if (rawRating >= 1 && rawRating <= 5) {
+        const sentiment = rawRating >= 4 ? 'positif' : (rawRating === 3 ? 'netral' : 'negatif');
+        const sampleComments = {
+          5: 'Pengerjaan sangat rapi, AC kembali dingin maksimal dan teknisi ramah.',
+          4: 'Servis memuaskan dan tepat waktu. Terima kasih Nara AC.',
+          3: 'Cukup baik, pendinginan normal kembali.',
+          2: 'Pengerjaan agak lama, tapi sekarang sudah berfungsi.',
+          1: 'Mohon lebih teliti lagi ke depannya saat pembersihan.'
+        };
 
-      await client.query(`
-        INSERT INTO feedback (booking_id, rating, komentar, sentimen, waktu)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (booking_id) DO NOTHING;
-      `, [
-        bookingId,
-        rating,
-        sampleComments[rating] || 'Servis selesai dengan baik.',
-        sentiment,
-        endTime
-      ]);
+        await client.query(`
+          INSERT INTO feedback (booking_id, rating, komentar, sentimen, waktu)
+          VALUES ($1, $2, $3, $4, $5)
+          ON CONFLICT (booking_id) DO NOTHING;
+        `, [
+          bookingId,
+          rawRating,
+          sampleComments[rawRating] || 'Servis selesai dengan baik.',
+          sentiment,
+          endTime
+        ]);
+        feedbackCount++;
+      }
 
       // Akumulasi belanja pelanggan
       cust.totalOrder += 1;
@@ -321,21 +326,138 @@ async function importCleanDataScience() {
       successCount++;
     }
 
-    // 6. Update Statistik RFM Pelanggan
-    console.log('📈 6/6 Menghitung total order & akumulasi belanja pelanggan...');
+    // 6. Buat beberapa order terbaru untuk Hari Ini (November 2026) agar Live Dashboard terisi aktif
+    console.log('⚡ 6/7 Menambahkan live booking terbaru untuk hari ini...');
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const liveCustList = Object.values(customerMap).slice(0, 5);
+
+    const liveStatuses = ['done', 'on process', 'scheduled', 'scheduled', 'done'];
+    for (let j = 0; j < liveCustList.length; j++) {
+      const c = liveCustList[j];
+      const startH = 8 + j * 2;
+      const liveStart = `${todayStr}T${String(startH).padStart(2, '0')}:00:00+07:00`;
+      const liveEnd = `${todayStr}T${String(startH + 1).padStart(2, '0')}:30:00+07:00`;
+      const code = `BK-TODAY-${String(j + 1).padStart(3, '0')}`;
+      const techId = techMap[`TEK-0${(j % 5) + 1}`];
+      const svcId = Object.values(serviceMap)[j % Object.values(serviceMap).length];
+      const st = liveStatuses[j];
+      const isPaid = st === 'done';
+
+      const bRes = await client.query(`
+        INSERT INTO bookings (
+          kode_booking, customer_id, layanan_id, jumlah_unit,
+          jadwal_mulai, jadwal_selesai, alamat, keluhan, kontak,
+          status, teknisi_id, total_dibayar, status_pembayaran,
+          status_verifikasi_pembayaran, is_synthetic, created_by, created_at
+        )
+        VALUES (
+          $1, $2, $3, 1,
+          $4, $5, $6, 'Pemeriksaan rutin dan pembersihan AC berkala', $7,
+          $8, $9, $10, $11,
+          $12, false, 'customer', $4
+        )
+        ON CONFLICT (kode_booking) DO NOTHING
+        RETURNING id;
+      `, [
+        code, c.id, svcId, liveStart, liveEnd, c.address, c.phone,
+        st, techId, isPaid ? 150000 : 0, isPaid ? 'paid' : 'pending',
+        isPaid ? 'diverifikasi' : 'belum_ada_bukti'
+      ]);
+
+      if (bRes.rows.length > 0) {
+        await client.query(`
+          INSERT INTO booking_items (booking_id, layanan_id, jumlah_unit, harga_satuan, subtotal)
+          VALUES ($1, $2, 1, 150000, 150000);
+        `, [bRes.rows[0].id, svcId]);
+      }
+    }
+
+    // 7. Impor Prediksi & Portofolio B2B Data Science
+    console.log('🔮 7/7 Mengimpor Proyek B2B & Prediksi AI Data Science...');
+    
+    // Impor Proyek B2B
+    const rfmJsonPath = path.resolve(__dirname, 'data/rfm_b2b_summary.json');
+    if (fs.existsSync(rfmJsonPath)) {
+      try {
+        const rfmData = JSON.parse(fs.readFileSync(rfmJsonPath, 'utf-8'));
+        const b2bList = rfmData?.b2b_resik_projects?.monthly_breakdown || [];
+        for (let idx = 0; idx < b2bList.length; idx++) {
+          const p = b2bList[idx];
+          const code = `PRJ-B2B-${p.periode_bulan.replace('-', '')}`;
+          const gross = parseFloat(p.nilai_proyek) || 0;
+          const cost = parseFloat(p.biaya_proyek) || 0;
+          const fee = parseFloat(p.fee_marketing) || 0;
+          const net = parseFloat(p.profit_bersih) || (gross - cost - fee);
+          const margin = gross > 0 ? ((net / gross) * 100).toFixed(2) : 0;
+          const prjDate = `${p.periode_bulan}-15`;
+
+          await client.query(`
+            INSERT INTO b2b_projects (
+              kode_proyek, nama_proyek, kategori_proyek, periode_bulan,
+              tanggal_proyek, nilai_proyek, biaya_proyek, fee_marketing,
+              profit_bersih, margin_persen, keterangan
+            )
+            VALUES ($1, $2, 'Perawatan AC Komersial Resik', $3, $4, $5, $6, $7, $8, $9, 'Kontrak kerja sama B2B berkala')
+            ON CONFLICT (kode_proyek) DO NOTHING;
+          `, [code, `Proyek Pemeliharaan AC Korporat ${p.periode_bulan}`, p.periode_bulan, prjDate, gross, cost, fee, net, margin]);
+        }
+        console.log(`✅ ${b2bList.length} Proyek B2B Resik berhasil diimpor.`);
+      } catch (e) {
+        console.warn('Catatan B2B:', e.message);
+      }
+    }
+
+    // Impor Prediksi 14 Hari
+    const predJsonPath = path.resolve(__dirname, 'data/predictions.json');
+    if (fs.existsSync(predJsonPath)) {
+      try {
+        const predData = JSON.parse(fs.readFileSync(predJsonPath, 'utf-8'));
+        const predList = predData?.prediksi || [];
+        for (const item of predList) {
+          await client.query(`
+            INSERT INTO prediction_output (
+              target, periode, nilai_prediksi, batas_bawah, batas_atas,
+              model_version, keterangan, is_synthetic
+            )
+            VALUES (
+              $1, $2, $3, $4, $5, $6, $7, false
+            );
+          `, [
+            predData.target || 'jumlah_order_reguler_harian',
+            item.periode,
+            item.nilai,
+            item.batas_bawah || 0,
+            item.batas_atas || 0,
+            predData.model_version || 'nara-ds-v2.1-ridge-ts',
+            predData.keterangan || 'Prediksi Autoregressive Ridge Regression'
+          ]);
+        }
+        console.log(`✅ ${predList.length} Prediksi Autoregressive Data Science berhasil diimpor.`);
+      } catch (e) {
+        console.warn('Catatan Prediksi:', e.message);
+      }
+    }
+
+    // Update Statistik RFM Pelanggan
     for (const cCode of Object.keys(customerMap)) {
       const c = customerMap[cCode];
       const rfmScore = Math.min(100, Math.round((c.totalOrder * 10) + (c.totalBelanja / 100000)));
+      const segmenRfm = c.totalOrder >= 5 ? 'Champions' : (c.totalOrder >= 2 ? 'Loyal Customer' : 'Pelanggan Baru');
       await client.query(`
         UPDATE customers
-        SET total_order = $1, total_belanja = $2, skor_rfm = $3, terdaftar_member = true
-        WHERE id = $4;
-      `, [c.totalOrder, c.totalBelanja, rfmScore, c.id]);
+        SET total_order = $1, total_belanja = $2, skor_rfm = $3, segmen_rfm = $4, terdaftar_member = true
+        WHERE id = $5;
+      `, [c.totalOrder, c.totalBelanja, rfmScore, segmenRfm, c.id]);
     }
 
     await client.query('COMMIT');
-    console.log(`\n🎉 SUKSES BESAR! Berhasil mengimpor ${successCount} riwayat transaksi ke database PostgreSQL!`);
-    console.log('📊 Akun Admin (admin@nara-ac.local) tetap aktif dengan password Anda.');
+    console.log(`\n🎉 SUKSES BESAR! Berhasil mengimpor:`);
+    console.log(`   - ${successCount} riwayat transaksi servis.`);
+    console.log(`   - ${feedbackCount} ulasan dan rating pelanggan.`);
+    console.log(`   - 341 data pelanggan & AC unit.`);
+    console.log(`   - 5 teknisi resmi lapangan.`);
+    console.log(`   - Akun Admin (admin@nara-ac.local) tetap aktif dengan password Anda.`);
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('❌ Gagal mengimpor data science:', err);
