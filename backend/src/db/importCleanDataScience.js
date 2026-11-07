@@ -304,7 +304,7 @@ async function importCleanDataScience() {
       };
 
       await client.query(`
-        INSERT INTO feedback (booking_id, rating, komentar, sentimen, created_at)
+        INSERT INTO feedback (booking_id, rating, komentar, sentimen, waktu)
         VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT (booking_id) DO NOTHING;
       `, [
