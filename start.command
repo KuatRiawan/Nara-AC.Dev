@@ -45,6 +45,12 @@ fi
 echo "🤖 Menjalankan AI Service (Port 8000)..."
 (cd ai-service && .venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8000) &
 
+# 3b. Jalankan Data Science Dashboard (Port 8501)
+if [ -d "data-science/.venv" ]; then
+    echo "📊 Menjalankan Data Science Dashboard (Port 8501)..."
+    (cd data-science && STREAMLIT_SERVER_HEADLESS=true STREAMLIT_BROWSER_GATHER_USAGE_STATS=false .venv/bin/streamlit run dashboard/app.py --server.port 8501 --server.address 127.0.0.1 >/dev/null 2>&1) &
+fi
+
 # 3. Jalankan Backend (Port 4000)
 echo "🚀 Menjalankan Backend API (Port 4000)..."
 (cd backend && npm run dev) &
@@ -66,6 +72,7 @@ echo "  🎉 Semua Server Sedang Berjalan!                        "
 echo "  - Frontend : http://localhost:5173                      "
 echo "  - Backend  : http://localhost:4000                      "
 echo "  - AI Service: http://localhost:8000/health              "
+echo "  - DS Dashboard: http://localhost:8501                   "
 echo "  - API Docs : http://localhost:4000/api/docs             "
 echo "=========================================================="
 echo "  💡 Tekan [Ctrl + C] di jendela ini untuk mematikan server."
