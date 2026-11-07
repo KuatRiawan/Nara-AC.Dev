@@ -10,8 +10,10 @@ export function getCsrfToken() {
   return csrfTokenValue;
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api/v1' : 'http://localhost:4000/api/v1');
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1',
+  baseURL: API_BASE_URL,
   timeout: 60000,
   withCredentials: true, // Enable credentials for cookies (HttpOnly)
 });
@@ -21,7 +23,7 @@ let refreshingCsrfPromise = null;
 async function refreshCsrfToken() {
   if (!refreshingCsrfPromise) {
     refreshingCsrfPromise = axios
-      .get((import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1') + '/auth/csrf-token', {
+      .get(API_BASE_URL + '/auth/csrf-token', {
         withCredentials: true,
       })
       .then((res) => {
@@ -122,7 +124,7 @@ api.interceptors.response.use(
 
 export function apiWithCsrf(csrfToken) {
   const apiCsrf = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1',
+    baseURL: API_BASE_URL,
     timeout: 60000,
     withCredentials: true,
   });
