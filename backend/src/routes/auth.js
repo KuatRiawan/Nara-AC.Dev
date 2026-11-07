@@ -12,6 +12,27 @@ const { E } = require('../errors');
 
 const router = express.Router();
 
+function getCookieOptions(req) {
+  const isHttps = Boolean(req.secure || req.headers['x-forwarded-proto'] === 'https');
+  return {
+    httpOnly: true,
+    secure: isHttps,
+    sameSite: isHttps ? 'strict' : 'lax',
+    maxAge: 8 * 60 * 60 * 1000,
+    path: '/',
+  };
+}
+
+function getClearCookieOptions(req) {
+  const isHttps = Boolean(req.secure || req.headers['x-forwarded-proto'] === 'https');
+  return {
+    httpOnly: true,
+    secure: isHttps,
+    sameSite: isHttps ? 'strict' : 'lax',
+    path: '/',
+  };
+}
+
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: process.env.NODE_ENV === 'production' ? 10 : 1000,
@@ -48,13 +69,7 @@ router.post('/login', loginLimiter, validate(loginSchema), wrap(async (req, res)
     customer_id: u.customer_id || null,
   };
 
-  res.cookie('nara_token', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 8 * 60 * 60 * 1000,
-    path: '/',
-  });
+  res.cookie('nara_token', token, getCookieOptions(req));
 
   res.json({ user });
 }));
@@ -80,13 +95,7 @@ router.post('/customer/login', loginLimiter, validate(loginSchema), wrap(async (
     customer_id: u.customer_id || null,
   };
 
-  res.cookie('nara_token', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 8 * 60 * 60 * 1000,
-    path: '/',
-  });
+  res.cookie('nara_token', token, getCookieOptions(req));
 
   res.json({
     user,
@@ -115,13 +124,7 @@ router.post('/staff/login', loginLimiter, validate(loginSchema), wrap(async (req
     customer_id: null,
   };
 
-  res.cookie('nara_token', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 8 * 60 * 60 * 1000,
-    path: '/',
-  });
+  res.cookie('nara_token', token, getCookieOptions(req));
 
   res.json({
     user,
@@ -288,13 +291,7 @@ router.post('/customer/verify-otp', validate(verifyOtpSchema), wrap(async (req, 
     customer_id: user.customer_id,
   };
 
-  res.cookie('nara_token', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 8 * 60 * 60 * 1000,
-    path: '/',
-  });
+  res.cookie('nara_token', token, getCookieOptions(req));
 
   res.json({
     user: userPayload,
@@ -342,13 +339,7 @@ router.post('/register', validate(registerSchema), wrap(async (req, res) => {
     customer_id: user.customer_id,
   };
 
-  res.cookie('nara_token', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 8 * 60 * 60 * 1000,
-    path: '/',
-  });
+  res.cookie('nara_token', token, getCookieOptions(req));
 
   res.status(201).json({ user: userResponse });
 }));
@@ -586,12 +577,7 @@ router.post('/reset-password', resetPasswordLimiter, validate(resetPasswordSchem
     );
   });
 
-  res.clearCookie('nara_token', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    path: '/',
-  });
+  res.clearCookie('nara_token', getClearCookieOptions(req));
 
   res.json({
     success: true,
@@ -601,12 +587,7 @@ router.post('/reset-password', resetPasswordLimiter, validate(resetPasswordSchem
 
 router.post('/logout', requireAuth(), wrap((req, res) => {
   clearCsrfTokens(req.user.id);
-  res.clearCookie('nara_token', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    path: '/',
-  });
+  res.clearCookie('nara_token', getClearCookieOptions(req));
   res.json({ success: true, message: 'Logout berhasil.' });
 }));
 
