@@ -116,6 +116,9 @@ if IS_PROD and not AI_API_KEY:
 
 @app.middleware("http")
 async def verify_api_key(request, call_next):
+    if request.url.path in ("/health", "/docs", "/openapi.json"):
+        return await call_next(request)
+
     if not AI_API_KEY:
         if IS_PROD:
             return JSONResponse(
