@@ -33,3 +33,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD curl -f http://127.0.0.1:8501/_stcore/health || exit 1
 
 CMD ["streamlit", "run", "dashboard/app.py"]
+
