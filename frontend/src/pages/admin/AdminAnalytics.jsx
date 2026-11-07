@@ -69,7 +69,13 @@ export default function AdminAnalytics() {
   const [b2bSearch, setB2bSearch] = useState('');
   const [showAllB2b, setShowAllB2b] = useState(false);
 
-  const streamlitUrl = import.meta.env.VITE_STREAMLIT_URL || 'http://localhost:8501';
+  const streamlitUrl = useMemo(() => {
+    if (import.meta.env.VITE_STREAMLIT_URL) return import.meta.env.VITE_STREAMLIT_URL;
+    if (typeof window !== 'undefined' && window.location) {
+      return `${window.location.protocol}//${window.location.hostname}:8501`;
+    }
+    return 'http://localhost:8501';
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
