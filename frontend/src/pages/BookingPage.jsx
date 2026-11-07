@@ -1327,7 +1327,7 @@ export default function BookingPage() {
                               1. Pilih Lokasi Pengerjaan:
                             </label>
                           </div>
-                          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                          <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
                             {[
                               { id: 'rumah', label: 'Rumah Tinggal', icon: Home },
                               { id: 'kantor', label: 'Kantor / Usaha', icon: Building2 },
@@ -1341,7 +1341,7 @@ export default function BookingPage() {
                                   type="button"
                                   onClick={() => setPropertyType(item.id)}
                                   className={cn(
-                                    'p-3 rounded-xl border-2 text-left transition-all cursor-pointer flex items-center gap-2.5',
+                                    'p-2 sm:p-3 rounded-xl border-2 transition-all cursor-pointer flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1 sm:gap-2.5 justify-center sm:justify-start',
                                     isActive
                                       ? 'border-blue-600 bg-blue-50/70 text-blue-900 shadow-xs'
                                       : 'border-slate-200 hover:border-slate-300 bg-slate-50/50 text-slate-700 hover:bg-white'
@@ -1355,7 +1355,7 @@ export default function BookingPage() {
                                   >
                                     <Icon className="w-3.5 h-3.5" />
                                   </div>
-                                  <p className="font-bold text-xs sm:text-sm leading-tight">{item.label}</p>
+                                  <p className="font-bold text-[11px] sm:text-sm leading-tight">{item.label}</p>
                                 </button>
                               );
                             })}
@@ -1405,8 +1405,8 @@ export default function BookingPage() {
                       </div>
 
                       {/* Langkah 3: Pilihan Kategori Kebutuhan Utama */}
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="inline-flex p-1 bg-slate-200/70 rounded-xl text-xs font-bold">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                        <div className="w-full sm:w-auto grid grid-cols-3 p-1 bg-slate-200/70 rounded-xl text-xs font-bold gap-1">
                           <button
                             type="button"
                             onClick={() => {
@@ -1414,14 +1414,14 @@ export default function BookingPage() {
                               setIsManualSearch(false);
                             }}
                             className={cn(
-                              'px-3.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5',
+                              'px-2 sm:px-3.5 py-2 sm:py-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 text-center',
                               mainCategory === 'cuci' && !isManualSearch
                                 ? 'bg-white text-blue-700 shadow-xs'
                                 : 'text-slate-600 hover:text-slate-900'
                             )}
                           >
-                            <Wind className="w-3.5 h-3.5 text-blue-600" />
-                            <span>Paket Cuci AC</span>
+                            <Wind className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                            <span className="truncate">Cuci AC</span>
                           </button>
 
                           <button
@@ -1431,14 +1431,14 @@ export default function BookingPage() {
                               setIsManualSearch(false);
                             }}
                             className={cn(
-                              'px-3.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5',
+                              'px-2 sm:px-3.5 py-2 sm:py-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 text-center',
                               mainCategory === 'pasang_bongkar' && !isManualSearch
                                 ? 'bg-white text-blue-700 shadow-xs'
                                 : 'text-slate-600 hover:text-slate-900'
                             )}
                           >
-                            <Wrench className="w-3.5 h-3.5 text-blue-600" />
-                            <span>Pasang / Bongkar</span>
+                            <Wrench className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                            <span className="truncate">Instalasi</span>
                           </button>
 
                           <button
@@ -1448,24 +1448,24 @@ export default function BookingPage() {
                               setIsManualSearch(false);
                             }}
                             className={cn(
-                              'px-3.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5',
+                              'px-2 sm:px-3.5 py-2 sm:py-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 text-center',
                               mainCategory === 'diagnosa' && !isManualSearch
                                 ? 'bg-white text-blue-700 shadow-xs'
                                 : 'text-slate-600 hover:text-slate-900'
                             )}
                           >
-                            <HelpCircle className="w-3.5 h-3.5 text-amber-600" />
-                            <span>Pengecekan / Diagnosa</span>
+                            <HelpCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span className="truncate">Diagnosa</span>
                           </button>
                         </div>
 
                         <button
                           type="button"
                           onClick={() => setIsManualSearch(!isManualSearch)}
-                          className="text-xs font-semibold text-slate-500 hover:text-blue-600 flex items-center gap-1 cursor-pointer"
+                          className="text-xs font-semibold text-slate-500 hover:text-blue-600 flex items-center justify-center sm:justify-start gap-1 cursor-pointer py-1"
                         >
-                          <Search className="w-3.5 h-3.5" />
-                          <span>{isManualSearch ? 'Kembali ke Pilihan Praktis' : 'Cari Manual di Semua Katalog'}</span>
+                          <Search className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">{isManualSearch ? 'Pilihan Praktis' : 'Semua Katalog'}</span>
                         </button>
                       </div>
 
@@ -1854,7 +1854,7 @@ export default function BookingPage() {
                       <Button
                         type="button"
                         onClick={handleNext}
-                        className="h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/25 cursor-pointer flex items-center gap-2"
+                        className="w-full sm:w-auto h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/25 cursor-pointer flex items-center justify-center gap-2"
                       >
                         <span>Pilih Jadwal Kedatangan</span>
                         <ArrowRight className="w-4 h-4" />
@@ -2149,12 +2149,12 @@ export default function BookingPage() {
                       </div>
                     </div>
 
-                    <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
+                    <div className="pt-6 border-t border-slate-100 flex items-center justify-between gap-3">
                       <Button
                         type="button"
                         variant="outline"
                         onClick={handlePrev}
-                        className="h-12 px-6 rounded-2xl border-slate-300 text-slate-700 font-bold text-sm cursor-pointer"
+                        className="flex-1 sm:flex-initial h-12 px-6 rounded-2xl border-slate-300 text-slate-700 font-bold text-sm cursor-pointer justify-center"
                       >
                         <ArrowLeft className="w-4 h-4 mr-1.5" />
                         <span>Kembali</span>
@@ -2163,7 +2163,7 @@ export default function BookingPage() {
                       <Button
                         type="button"
                         onClick={handleNext}
-                        className="h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/25 cursor-pointer flex items-center gap-2"
+                        className="flex-1 sm:flex-initial h-12 px-6 sm:px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/25 cursor-pointer flex items-center justify-center gap-2"
                       >
                         <span>Lanjut Isi Alamat</span>
                         <ArrowRight className="w-4 h-4" />
@@ -2310,12 +2310,12 @@ export default function BookingPage() {
                       </div>
                     </div>
 
-                    <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
+                    <div className="pt-6 border-t border-slate-100 flex items-center justify-between gap-3">
                       <Button
                         type="button"
                         variant="outline"
                         onClick={handlePrev}
-                        className="h-12 px-6 rounded-2xl border-slate-300 text-slate-700 font-bold text-sm cursor-pointer"
+                        className="flex-1 sm:flex-initial h-12 px-6 rounded-2xl border-slate-300 text-slate-700 font-bold text-sm cursor-pointer justify-center"
                       >
                         <ArrowLeft className="w-4 h-4 mr-1.5" />
                         <span>Kembali</span>
@@ -2324,10 +2324,10 @@ export default function BookingPage() {
                       <Button
                         type="button"
                         onClick={handleNext}
-                        className="h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/25 cursor-pointer flex items-center gap-2"
+                        className="flex-1 sm:flex-initial h-12 px-5 sm:px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/25 cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2"
                       >
-                        <span>Cek Ringkasan Pesanan</span>
-                        <ArrowRight className="w-4 h-4" />
+                        <span className="truncate">Cek Ringkasan</span>
+                        <ArrowRight className="w-4 h-4 shrink-0" />
                       </Button>
                     </div>
                   </motion.div>
@@ -2525,13 +2525,13 @@ export default function BookingPage() {
                       </div>
                     </div>
 
-                    <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
+                    <div className="pt-6 border-t border-slate-100 flex items-center justify-between gap-3">
                       <Button
                         type="button"
                         variant="outline"
                         onClick={handlePrev}
                         disabled={isSubmitting}
-                        className="h-12 px-6 rounded-2xl border-slate-300 text-slate-700 font-bold text-sm cursor-pointer"
+                        className="flex-1 sm:flex-initial h-12 px-5 sm:px-6 rounded-2xl border-slate-300 text-slate-700 font-bold text-sm cursor-pointer justify-center"
                       >
                         <ArrowLeft className="w-4 h-4 mr-1.5" />
                         <span>Ubah Data</span>
@@ -2541,7 +2541,7 @@ export default function BookingPage() {
                         type="button"
                         onClick={handleSubmit}
                         disabled={isSubmitting}
-                        className="h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm shadow-xl shadow-blue-600/25 cursor-pointer flex items-center gap-2"
+                        className="flex-1 sm:flex-initial h-12 px-6 sm:px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm shadow-xl shadow-blue-600/25 cursor-pointer flex items-center justify-center gap-2"
                       >
                         {isSubmitting ? (
                           <>

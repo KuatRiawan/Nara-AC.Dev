@@ -368,19 +368,20 @@ export default function LandingPage() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             <Link to="/status">
               <Button
                 variant="outline"
                 size="sm"
-                className="border-sky-200 text-slate-700 hover:text-blue-600 hover:bg-sky-50 font-bold rounded-xl px-3 sm:px-3.5 h-9.5 text-xs cursor-pointer shadow-2xs flex items-center gap-1.5"
+                className="border-sky-200 text-slate-700 hover:text-blue-600 hover:bg-sky-50 font-bold rounded-xl px-2.5 sm:px-3.5 h-9 sm:h-9.5 text-xs cursor-pointer shadow-2xs flex items-center gap-1 sm:gap-1.5"
               >
-                <Search className="w-3.5 h-3.5 text-blue-600" />
-                <span>Cek Status</span>
+                <Search className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span className="hidden xs:inline sm:inline">Cek Status</span>
+                <span className="inline xs:hidden sm:hidden">Lacak</span>
               </Button>
             </Link>
 
-            <Link to="/login" className="inline-flex">
+            <Link to="/login" className="hidden sm:inline-flex">
               <Button
                 size="sm"
                 className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl px-3.5 sm:px-4.5 h-9.5 text-xs shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 transition-all cursor-pointer flex items-center gap-1.5"
@@ -392,7 +393,7 @@ export default function LandingPage() {
 
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden p-2 rounded-xl text-slate-700 hover:bg-sky-50 transition-colors cursor-pointer ml-1"
+              className="lg:hidden p-2 rounded-xl text-slate-700 hover:bg-sky-50 transition-colors cursor-pointer"
               aria-label="Buka menu navigasi"
             >
               <div className="flex flex-col gap-1.5 w-5">
@@ -414,7 +415,7 @@ export default function LandingPage() {
       <main id="main-content">
         <section
           id="home"
-          className="relative pt-32 pb-20 md:pt-40 md:pb-28 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-sky-50/90 via-blue-50/40 to-white text-slate-900 overflow-hidden min-h-[92vh] flex items-center"
+          className="relative pt-24 pb-14 sm:pt-36 sm:pb-24 lg:pt-40 lg:pb-28 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-sky-50/90 via-blue-50/40 to-white text-slate-900 overflow-hidden min-h-[85vh] sm:min-h-[92vh] flex items-center"
         >
           <motion.div
             style={{ y: yHeroGlow1 }}
@@ -427,21 +428,21 @@ export default function LandingPage() {
 
           <AirflowBreeze />
 
-          <div className="max-w-7xl mx-auto w-full relative z-10 grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+          <div className="max-w-7xl mx-auto w-full relative z-10 grid lg:grid-cols-12 gap-8 lg:gap-16 items-center">
 
             <motion.div
               style={{ y: yHeroLeft }}
-              className="lg:col-span-7 space-y-7 text-center lg:text-left"
+              className="lg:col-span-7 space-y-5 sm:space-y-7 text-center lg:text-left"
             >
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.6, ease: easeOutCubic }}
-                className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.12] text-slate-900"
+                className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.15] text-slate-900"
               >
                 Udara Nyaman,<br />
                 Perawatan AC<br />
-                <span className="inline-block relative overflow-hidden pb-2 pt-1">
+                <span className="inline-block relative overflow-hidden pb-1 pt-0.5">
                   <AnimatePresence mode="wait">
                     <motion.span
                       key={rotatingWords[typingIndex]}
@@ -461,7 +462,7 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.6, ease: easeOutCubic }}
-                className="text-slate-600 text-base sm:text-lg lg:text-xl font-normal leading-relaxed max-w-2xl mx-auto lg:mx-0"
+                className="text-slate-600 text-sm sm:text-lg lg:text-xl font-normal leading-relaxed max-w-2xl mx-auto lg:mx-0"
               >
                 Jadwalkan servis AC dengan lebih mudah, pantau proses pengerjaan secara transparan, dan kelola perawatan AC Anda bersama teknisi terverifikasi NARA AC.
               </motion.p>
@@ -470,14 +471,14 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3, duration: 0.6, ease: easeOutCubic }}
-                className="flex flex-col sm:flex-row gap-3.5 sm:gap-4 justify-center lg:justify-start pt-2"
+                className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start pt-1"
               >
-                <Link to="/booking">
+                <Link to="/booking" className="w-full sm:w-auto">
                   <Button
                     size="lg"
-                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl px-8 h-13 sm:h-14 text-base shadow-xl shadow-blue-500/25 hover:shadow-2xl hover:shadow-blue-500/35 transition-all cursor-pointer group flex items-center justify-center"
+                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl px-8 h-12 sm:h-14 text-sm sm:text-base shadow-xl shadow-blue-500/25 hover:shadow-2xl hover:shadow-blue-500/35 transition-all cursor-pointer group flex items-center justify-center"
                   >
-                    <CalendarCheck className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
+                    <CalendarCheck className="w-4.5 h-4.5 sm:w-5 sm:h-5 mr-2 group-hover:scale-110 transition-transform" />
                     Booking Service Sekarang
                   </Button>
                 </Link>
@@ -485,7 +486,7 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={() => scrollTo('layanan')}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 h-13 sm:h-14 rounded-2xl bg-white hover:bg-sky-50 text-slate-800 font-bold text-base border border-sky-200 shadow-xs transition-all cursor-pointer group"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 sm:px-7 h-12 sm:h-14 rounded-2xl bg-white hover:bg-sky-50 text-slate-800 font-bold text-sm sm:text-base border border-sky-200 shadow-xs transition-all cursor-pointer group"
                 >
                   <span>Jelajahi Paket & Harga</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform text-blue-600" />
@@ -542,46 +543,46 @@ export default function LandingPage() {
               </h2>
             </div>
 
-            {/* Kategori Tab Filter */}
-            <div className="flex justify-center mb-12">
-              <div className="inline-flex p-1.5 bg-sky-50/80 rounded-2xl border border-sky-100 gap-1.5 shadow-xs flex-wrap justify-center">
+            {/* Kategori Tab Filter Responsive */}
+            <div className="flex justify-center mb-10 sm:mb-12">
+              <div className="w-full max-w-2xl grid grid-cols-1 sm:grid-cols-3 p-1.5 bg-sky-50/80 rounded-2xl border border-sky-100 gap-1.5 shadow-xs">
                 <button
                   type="button"
                   onClick={() => setActiveCatalogTab('cuci')}
-                  className={`px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                  className={`px-3 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                     activeCatalogTab === 'cuci'
                       ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                   }`}
                 >
-                  <Wind className="w-4 h-4" />
-                  <span>Paket Cuci AC (4 Pilihan)</span>
+                  <Wind className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Paket Cuci AC</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setActiveCatalogTab('pasang_bongkar')}
-                  className={`px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                  className={`px-3 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                     activeCatalogTab === 'pasang_bongkar'
                       ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                   }`}
                 >
-                  <Wrench className="w-4 h-4" />
-                  <span>Pasang & Bongkar (2 Layanan)</span>
+                  <Wrench className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Pasang & Bongkar</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setActiveCatalogTab('diagnosa')}
-                  className={`px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                  className={`px-3 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                     activeCatalogTab === 'diagnosa'
                       ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                   }`}
                 >
-                  <HelpCircle className="w-4 h-4" />
-                  <span>Perbaikan & Freon (3 Layanan)</span>
+                  <HelpCircle className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Perbaikan & Freon</span>
                 </button>
               </div>
             </div>

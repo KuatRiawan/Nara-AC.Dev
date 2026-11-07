@@ -962,7 +962,7 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
           </h1>
 
           <form onSubmit={handleSearch} className="mt-6 flex items-center gap-2 max-w-md mx-auto">
-            <div className="relative flex-1">
+            <div className="relative flex-1 min-w-0">
               <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <label htmlFor="status-search" className="sr-only">Masukkan kode booking</label>
               <Input
@@ -970,8 +970,8 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
                 type="text"
                 value={kodeInput}
                 onChange={(e) => setKodeInput(e.target.value.toUpperCase())}
-                placeholder="Contoh: NARA-AC... atau BK-..."
-                className="h-12 pl-10 uppercase font-mono font-bold tracking-wider rounded-2xl border-slate-200 bg-white shadow-xs focus:ring-2 focus:ring-blue-500 text-sm"
+                placeholder="Kode tiket: AC-... / BK-..."
+                className="h-12 pl-10 pr-3 uppercase font-mono font-bold tracking-wider rounded-2xl border-slate-200 bg-white shadow-xs focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                 required
                 aria-label="Kode booking"
               />
@@ -979,7 +979,7 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
             <Button
               type="submit"
               disabled={loading || !kodeInput.trim()}
-              className="h-12 px-6 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 cursor-pointer flex items-center gap-1.5"
+              className="h-12 px-4 sm:px-6 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
               <span>Lacak</span>
@@ -1600,8 +1600,8 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
               </div>
 
               <div className="pt-6 mt-6 border-t border-slate-100 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                  <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto">
                     {['scheduled', 'rescheduled'].includes((booking.status || '').toLowerCase()) && (
                       <>
                         <Button
@@ -1609,7 +1609,7 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
                           variant="outline"
                           size="sm"
                           onClick={() => setIsRescheduleModalOpen(true)}
-                          className="rounded-xl border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 cursor-pointer h-9"
+                          className="w-full sm:w-auto justify-center rounded-xl border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 cursor-pointer h-9"
                         >
                           Ubah Jadwal
                         </Button>
@@ -1619,7 +1619,7 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
                           variant="outline"
                           size="sm"
                           onClick={() => setIsCancelModalOpen(true)}
-                          className="rounded-xl border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold cursor-pointer h-9"
+                          className="w-full sm:w-auto justify-center rounded-xl border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold cursor-pointer h-9"
                         >
                           Batalkan
                         </Button>
@@ -1627,10 +1627,10 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
                     )}
 
                     {booking.status === 'done' && !hasQualifyingReview && (
-                      <Link to={`/feedback/${booking.kode_booking}`}>
+                      <Link to={`/feedback/${booking.kode_booking}`} className="w-full sm:w-auto col-span-2 sm:col-span-1">
                         <Button
                           size="sm"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer h-9"
+                          className="w-full sm:w-auto justify-center bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer h-9"
                         >
                           <Star className="w-3.5 h-3.5" />
                           <span>Beri Ulasan Servis</span>
@@ -1639,7 +1639,7 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
                     )}
 
                     {booking.status === 'done' && hasQualifyingReview && (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
+                      <span className="col-span-2 sm:col-span-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
                         <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                         Ulasan Terverifikasi ({existingFeedback?.rating || 5}/5)
                       </span>
@@ -1652,7 +1652,7 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
                           setClaimModalError('');
                           setIsClaimModalOpen(true);
                         }}
-                        className="bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer h-9"
+                        className="w-full sm:w-auto justify-center col-span-2 sm:col-span-1 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer h-9"
                       >
                         <ShieldCheck className="w-3.5 h-3.5" />
                         <span>Ajukan Klaim Garansi</span>
@@ -1660,13 +1660,13 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
                     )}
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto">
                     <Button
                       type="button"
                       size="sm"
                       aria-label="Cetak Invoice Resmi"
                       onClick={() => setIsInvoiceOpen(true)}
-                      className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer h-9 px-4"
+                      className="w-full sm:w-auto justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer h-9 px-4"
                     >
                       <Printer className="w-3.5 h-3.5" />
                       <span>Cetak Invoice Resmi</span>
@@ -1678,7 +1678,7 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
                       size="sm"
                       disabled={waDeliveryState.status === 'sending'}
                       onClick={handleSendWhatsAppInvoice}
-                      className="rounded-xl border-blue-200 bg-blue-50/70 text-blue-700 hover:bg-blue-100 text-xs font-bold flex items-center gap-1.5 cursor-pointer h-9 px-3.5"
+                      className="w-full sm:w-auto justify-center rounded-xl border-blue-200 bg-blue-50/70 text-blue-700 hover:bg-blue-100 text-xs font-bold flex items-center gap-1.5 cursor-pointer h-9 px-3.5"
                     >
                       {waDeliveryState.status === 'sending' ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
@@ -1700,12 +1700,13 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
                       href={buildWhatsAppUrl(whatsappNumber, `Halo Admin NARA AC, saya butuh bantuan terkait tiket servis ${booking.kode_booking}`)}
                       target="_blank"
                       rel="noopener noreferrer"
+                      className="w-full sm:w-auto"
                     >
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-bold flex items-center gap-1.5 cursor-pointer h-9 px-3.5"
+                        className="w-full sm:w-auto justify-center rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-bold flex items-center gap-1.5 cursor-pointer h-9 px-3.5"
                       >
                         <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
                         <span>Bantuan CS</span>

@@ -34,7 +34,7 @@ export default function StickyBottomBooking() {
         hideFloatingButton={true}
       />
 
-      <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-40 pointer-events-auto">
+      <div className="fixed bottom-3 sm:bottom-6 left-3 right-3 sm:left-auto sm:right-6 z-40 pointer-events-auto">
         <AnimatePresence mode="wait">
           {showExpandedDock ? (
             <motion.div
@@ -43,9 +43,9 @@ export default function StickyBottomBooking() {
               animate={{ y: 0, opacity: 1, scale: 1 }}
               exit={shouldReduceMotion ? { opacity: 0 } : { y: 30, opacity: 0, scale: 0.96 }}
               transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              className="bg-white/95 text-slate-800 p-2.5 sm:p-3 rounded-2xl sm:rounded-3xl border border-sky-200 backdrop-blur-xl shadow-xl shadow-blue-900/10 flex items-center justify-between gap-3 sm:gap-4 transition-all max-w-[calc(100vw-2rem)] sm:max-w-xl"
+              className="bg-white/95 text-slate-800 p-2 sm:p-3 rounded-2xl sm:rounded-3xl border border-sky-200 backdrop-blur-xl shadow-xl shadow-blue-900/10 flex items-center justify-between gap-2 sm:gap-4 transition-all w-full max-w-xl mx-auto"
             >
-              <div className="flex items-center gap-2.5 pl-1.5 min-w-0">
+              <div className="flex items-center gap-2 pl-1 min-w-0">
                 <div className="relative flex-shrink-0">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 block" />
                 </div>
@@ -53,7 +53,7 @@ export default function StickyBottomBooking() {
                   <p className="text-xs font-bold text-slate-900 truncate">
                     AC Kurang Dingin?
                   </p>
-                  <p className="text-xs text-slate-500 truncate">
+                  <p className="text-[11px] text-slate-500 truncate hidden xs:block sm:block">
                     Slot teknisi tersedia hari ini
                   </p>
                 </div>
@@ -64,7 +64,7 @@ export default function StickyBottomBooking() {
                   type="button"
                   onClick={() => setIsChatOpen((prev) => !prev)}
                   className={cn(
-                    'h-9 px-2.5 sm:px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border',
+                    'h-8.5 sm:h-9 px-2 sm:px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border',
                     isChatOpen
                       ? 'bg-blue-50 border-blue-400 text-blue-700 ring-2 ring-blue-500/20'
                       : 'bg-sky-50 hover:bg-blue-50 border-sky-200 text-blue-700'
@@ -72,14 +72,14 @@ export default function StickyBottomBooking() {
                   title="Tanya AI Asisten Nara AC"
                 >
                   <Bot className="w-4 h-4 text-blue-600" />
-                  <span className="hidden xs:inline">Tanya AI</span>
+                  <span className="hidden sm:inline">Tanya AI</span>
                 </button>
 
                 <a
                   href={buildWhatsAppUrl(whatsappNumber, 'Halo NARA AC, saya ingin konsultasi jadwal servis AC')}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-9 h-9 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-600 flex items-center justify-center transition-colors cursor-pointer"
+                  className="w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-600 flex items-center justify-center transition-colors cursor-pointer"
                   title="Chat WhatsApp"
                 >
                   <Phone className="w-4 h-4" />
@@ -89,11 +89,11 @@ export default function StickyBottomBooking() {
                 <Link to="/booking">
                   <Button
                     size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-9 px-3 sm:px-3.5 rounded-xl text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer flex items-center gap-1 group"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-8.5 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer flex items-center gap-1 group"
                   >
                     <CalendarCheck className="w-3.5 h-3.5" />
                     <span>Booking</span>
-                    <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                    <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform hidden xs:inline" />
                   </Button>
                 </Link>
 

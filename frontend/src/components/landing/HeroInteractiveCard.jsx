@@ -199,15 +199,15 @@ export default function HeroInteractiveCard({ services = [] }) {
                       <div
                         key={opt.id}
                         onClick={() => setSelectedService(opt.id)}
-                        className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                        className={`p-2.5 sm:p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
                           isSelected
                             ? 'bg-blue-50/80 border-blue-500 shadow-xs'
                             : 'bg-white border-sky-100 hover:border-sky-300'
                         }`}
                       >
-                        <div className="flex items-center gap-2.5">
+                        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
                           <div
-                            className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                            className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
                               isSelected
                                 ? 'border-blue-600 bg-blue-600 text-white'
                                 : 'border-slate-300 bg-white'
@@ -215,19 +215,19 @@ export default function HeroInteractiveCard({ services = [] }) {
                           >
                             {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
                           </div>
-                          <div>
-                            <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                              {opt.name}
-                              <span className="text-xs font-bold text-blue-600 bg-sky-100 px-1.5 py-0.2 rounded">
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5 flex-wrap">
+                              <span>{opt.name}</span>
+                              <span className="text-[10px] font-bold text-blue-600 bg-sky-100 px-1.5 py-0.2 rounded">
                                 {opt.badge}
                               </span>
                             </p>
-                            <p className="text-xs text-slate-500">{opt.desc}</p>
+                            <p className="text-[11px] text-slate-500 truncate">{opt.desc}</p>
                           </div>
                         </div>
-                        <span className="text-xs font-extrabold text-slate-900 font-mono">
+                        <span className="text-xs font-extrabold text-slate-900 font-mono shrink-0 text-right">
                           Rp {(opt.basePrice / 1000).toLocaleString('id-ID')}k
-                          <span className="text-xs font-normal text-slate-500">/unit</span>
+                          <span className="text-[10px] font-normal text-slate-500 block sm:inline sm:ml-0.5">/unit</span>
                         </span>
                       </div>
                     );
