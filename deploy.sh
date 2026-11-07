@@ -1,6 +1,6 @@
 #!/bin/bash
 # =========================================================================
-#  NARA AC — Automated Production Deployment Script
+#  NARA AC - Automated Production Deployment Script
 # =========================================================================
 
 set -e
@@ -9,7 +9,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR"
 
 echo "=========================================================="
-echo "      ❄️  NARA AC — PRODUCTION DEPLOYMENT RUNNER  ❄️       "
+echo "      ❄️  NARA AC - PRODUCTION DEPLOYMENT RUNNER  ❄️       "
 echo "=========================================================="
 echo ""
 
