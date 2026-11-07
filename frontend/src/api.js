@@ -52,6 +52,8 @@ const PUBLIC_CSRF_EXEMPT_ROUTES = [
   '/feedback',
   '/bookings',
   '/ai/',
+  '/predict-cost',
+  '/predict-maintenance',
 ];
 
 function isPublicRoute(url = '') {

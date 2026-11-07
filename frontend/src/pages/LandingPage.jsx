@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'framer-motion';
 import api from '../api';
 import { useBusinessProfile, buildWhatsAppUrl } from '../hooks/useBusinessProfile';
-import { CalendarCheck, Search, ArrowRight, CheckCircle2, ShieldCheck, Clock, Sparkles, MapPin, Phone, Mail, Wind, ChevronRight, FileText, ChevronDown, Check, X, HelpCircle, User, Camera, Printer, RotateCcw, Ticket, Wrench, AlertCircle, Award, ExternalLink, Calendar } from 'lucide-react';
+import { CalendarCheck, Search, ArrowRight, CheckCircle2, ShieldCheck, Clock, MapPin, Phone, Mail, Wind, ChevronRight, FileText, ChevronDown, Check, X, HelpCircle, User, Camera, Printer, RotateCcw, Ticket, Wrench, AlertCircle, Award, ExternalLink, Calendar } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import CompanyLogo from '../components/CompanyLogo';
@@ -427,31 +427,12 @@ export default function LandingPage() {
 
           <AirflowBreeze />
 
-          <div
-            className="absolute inset-0 opacity-[0.14] pointer-events-none"
-            style={{
-              backgroundImage: `radial-gradient(circle at 1px 1px, #93C5FD 1px, transparent 0)`,
-              backgroundSize: '36px 36px'
-            }}
-          />
-
           <div className="max-w-7xl mx-auto w-full relative z-10 grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
 
             <motion.div
               style={{ y: yHeroLeft }}
               className="lg:col-span-7 space-y-7 text-center lg:text-left"
             >
-
-              <motion.div
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, ease: easeOutCubic }}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/95 backdrop-blur-md border border-sky-200 text-blue-700 text-xs sm:text-sm font-semibold shadow-xs"
-              >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Solusi Perawatan AC Terencana • CV. Nara Teknindotama</span>
-              </motion.div>
-
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -520,13 +501,11 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={() => scrollTo('ulasan')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-sky-100 shadow-2xs hover:border-blue-300 transition-all cursor-pointer group"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-sky-200 shadow-2xs hover:border-blue-300 transition-all cursor-pointer group"
                 >
-                  <span className="flex text-amber-400 text-xs">
-                    {'★'.repeat(5)}
-                  </span>
-                  <span className="font-black text-slate-900 group-hover:text-blue-600 transition-colors">5.0</span>
-                  <span className="text-slate-500 font-medium">(Google Review)</span>
+                  <Award className="w-3.5 h-3.5 text-blue-600" />
+                  <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Ulasan Pelanggan</span>
+                  <span className="text-slate-600 font-medium">(Google Maps)</span>
                 </button>
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
@@ -558,15 +537,9 @@ export default function LandingPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
             <div className="text-center max-w-3xl mx-auto mb-10">
-              <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-widest border border-blue-200 mb-3">
-                KATALOG RESMI & TARIF
-              </span>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight mb-4">
-                Pilih paket yang tepat untuk Anda.
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight">
+                Pilih Paket Layanan AC
               </h2>
-              <p className="text-slate-600 text-base sm:text-lg leading-relaxed">
-                Transparan tanpa biaya tersembunyi. Tersinkronisasi penuh dengan sistem booking resmi NARA AC.
-              </p>
             </div>
 
             {/* Kategori Tab Filter */}
@@ -581,7 +554,7 @@ export default function LandingPage() {
                       : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                   }`}
                 >
-                  <Sparkles className="w-4 h-4" />
+                  <Wind className="w-4 h-4" />
                   <span>Paket Cuci AC (4 Pilihan)</span>
                 </button>
 
@@ -633,7 +606,7 @@ export default function LandingPage() {
                   <motion.div
                     key={pkg.id || pkg.nama_layanan}
                     variants={fadeInUpVariant}
-                    whileHover={{ y: -8, scale: 1.015, transition: { duration: 0.25, ease: easeOutCubic } }}
+                    whileHover={{ y: -4, transition: { duration: 0.2, ease: easeOutCubic } }}
                     className={`rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 relative group ${isCore
                       ? 'bg-gradient-to-b from-blue-50/70 via-white to-white border-2 border-blue-500 shadow-xl shadow-blue-500/10 lg:-translate-y-2'
                       : 'bg-white border-2 border-sky-100 hover:border-sky-300 shadow-md hover:shadow-xl shadow-sky-900/5'
@@ -646,10 +619,6 @@ export default function LandingPage() {
                     )}
 
                     <div>
-                      <span className="text-xs font-bold uppercase tracking-widest text-slate-500 block mb-1">
-                        {pkg.subtitle}
-                      </span>
-
                       <h3 className="text-xl font-black text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
                         {pkg.nama_layanan}
                       </h3>
@@ -706,12 +675,9 @@ export default function LandingPage() {
 
             <div className="p-6 sm:p-8 rounded-3xl bg-sky-50/70 border border-sky-200/80 flex flex-col sm:flex-row items-center justify-between gap-5 text-center sm:text-left">
               <div>
-                <span className="text-xs font-bold tracking-wider uppercase text-blue-600 bg-white px-3 py-1 rounded-full border border-sky-200 inline-block mb-1.5">
-                  Layanan Korporat & Residensial
-                </span>
                 <h4 className="font-black text-slate-900 text-base sm:text-lg">Butuh Servis AC dalam Jumlah Banyak untuk Kantor / Ruko?</h4>
                 <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-2xl">
-                  Kami menyediakan kontrak pemeliharaan berkala untuk gedung, instansi, dan perumahan dengan invoice resmi dan penawaran harga khusus instansi.
+                  Kontrak pemeliharaan berkala untuk gedung, instansi, dan perumahan dengan invoice resmi CV. Nara Teknindotama.
                 </p>
               </div>
               <a
@@ -734,16 +700,10 @@ export default function LandingPage() {
 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold uppercase tracking-widest mb-3">
-                <ShieldCheck className="w-3.5 h-3.5" /> Standar Mutu
-              </span>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight mb-4">
+            <div className="text-center max-w-3xl mx-auto mb-14">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight">
                 Mengapa Memilih NARA AC?
               </h2>
-              <p className="text-slate-600 text-base sm:text-lg leading-relaxed font-normal">
-                Kami memadukan disiplin teknisi berpengalaman dengan sistem digital terorganisasi untuk kepuasan dan kenyamanan hunian Anda.
-              </p>
             </div>
 
             <motion.div
@@ -756,126 +716,84 @@ export default function LandingPage() {
 
               <motion.div
                 variants={fadeInUpVariant}
-                whileHover={{ y: -6, scale: 1.012, transition: { duration: 0.25, ease: easeOutCubic } }}
-                className="bg-white rounded-3xl p-7 border border-sky-100 hover:border-blue-300 shadow-md hover:shadow-xl shadow-blue-500/5 transition-all duration-300 flex flex-col justify-between"
+                className="lg:col-span-2 bg-slate-900 text-white rounded-3xl p-8 sm:p-10 border border-slate-800 shadow-xl flex flex-col justify-between relative overflow-hidden"
               >
-                <div>
-                  <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center mb-6">
-                    <CalendarCheck className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">Jadwal Pasti & Terjadwal</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">
-                    Tidak perlu menebak kapan teknisi datang. Pilih tanggal dan jam pengerjaan sesuai kebutuhan Anda langsung dari formulir booking online.
+                <div className="relative z-10">
+                  <h3 className="text-2xl sm:text-3xl font-black text-white mb-3 tracking-tight">
+                    7 Langkah SOP Standar Baku &amp; Garansi Pekerjaan Nyata s.d. 45 Hari
+                  </h3>
+                  <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-2xl">
+                    Setiap kunjungan teknisi mengikuti urutan pemeriksaan baku: pembersihan filter, pencucian evaporator bertekanan, pencucian kondensor outdoor, vakum jalur drainase, hingga uji suhu hembusan dan tekanan manifold sebelum serah terima.
                   </p>
-                </div>
-                <div className="mt-6 pt-4 border-t border-sky-50 text-xs font-semibold text-blue-600 flex items-center gap-1">
-                  <span>Manajemen Slot Jam Presisi</span>
+                  <div className="grid sm:grid-cols-2 gap-3.5 mt-6 pt-6 border-t border-slate-800">
+                    <div className="flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-bold text-white">Pemeriksaan Ulang Tanpa Biaya</p>
+                        <p className="text-xs text-slate-300 mt-0.5">Kunjungan garansi gratis bila unit kembali meneteskan air atau kurang dingin.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2.5">
+                      <Award className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-bold text-white">Dokumentasi Parameter Teknis</p>
+                        <p className="text-xs text-slate-300 mt-0.5">Foto sebelum/sesudah pengerjaan beserta catatan tekanan PSI dan arus Ampere.</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
 
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1, duration: 0.5, ease: easeOutCubic }}
-                viewport={{ once: true }}
-                className="bg-white rounded-3xl p-7 border border-sky-100 hover:border-sky-300 shadow-md hover:shadow-xl shadow-blue-500/5 transition-all duration-300 flex flex-col justify-between hover:-translate-y-1"
+                variants={fadeInUpVariant}
+                className="bg-white rounded-3xl p-7 border border-slate-200 hover:border-blue-300 shadow-sm hover:shadow-md transition-all duration-200"
               >
-                <div>
-                  <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-200 text-sky-600 flex items-center justify-center mb-6">
-                    <Search className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">Pelacakan Status Digital</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">
-                    Pantau tiket pengerjaan Anda dari mana saja. Cek apakah tiket berstatus terjadwal, sedang dikerjakan teknisi, atau sudah selesai.
-                  </p>
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center mb-5">
+                  <CalendarCheck className="w-6 h-6" />
                 </div>
-                <div className="mt-6 pt-4 border-t border-sky-50 text-xs font-semibold text-sky-600 flex items-center gap-1">
-                  <span>Terhubung API Sistem Publik</span>
-                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Jadwal Pasti &amp; Terjadwal</h3>
+                <p className="text-slate-600 text-sm leading-relaxed">
+                  Pilih tanggal dan rentang jam kedatangan teknisi langsung saat pemesanan tanpa menunggu konfirmasi manual.
+                </p>
               </motion.div>
 
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.5, ease: easeOutCubic }}
-                viewport={{ once: true }}
-                className="bg-white rounded-3xl p-7 border border-sky-100 hover:border-emerald-300 shadow-md hover:shadow-xl shadow-blue-500/5 transition-all duration-300 flex flex-col justify-between hover:-translate-y-1"
+                variants={fadeInUpVariant}
+                className="bg-white rounded-3xl p-7 border border-slate-200 hover:border-blue-300 shadow-sm hover:shadow-md transition-all duration-200"
               >
-                <div>
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mb-6">
-                    <CheckCircle2 className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">7 Langkah SOP Standar Baku</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">
-                    Bukan servis asal-asalan. Mulai dari pembersihan filter, cuci evaporator bertekanan, cuci outdoor, hingga uji running test dingin sebelum teknisi pamit.
-                  </p>
+                <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-200 text-sky-700 flex items-center justify-center mb-5">
+                  <Search className="w-6 h-6" />
                 </div>
-                <div className="mt-6 pt-4 border-t border-sky-50 text-xs font-semibold text-emerald-600 flex items-center gap-1">
-                  <span>Standar Operasional Tertulis</span>
-                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Pelacakan Status Digital</h3>
+                <p className="text-slate-600 text-sm leading-relaxed">
+                  Pantau tahapan pengerjaan melalui kode tiket resmi mulai dari penugasan teknisi hingga penerbitan e-Invoice.
+                </p>
               </motion.div>
 
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3, duration: 0.5, ease: easeOutCubic }}
-                viewport={{ once: true }}
-                className="bg-white rounded-3xl p-7 border border-sky-100 hover:border-amber-300 shadow-md hover:shadow-xl shadow-blue-500/5 transition-all duration-300 flex flex-col justify-between hover:-translate-y-1"
+                variants={fadeInUpVariant}
+                className="bg-white rounded-3xl p-7 border border-slate-200 hover:border-blue-300 shadow-sm hover:shadow-md transition-all duration-200"
               >
-                <div>
-                  <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mb-6">
-                    <ShieldCheck className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">Transparansi Biaya Mutlak</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">
-                    Tidak ada istilah tembak harga mendadak saat tiba di tempat. Semua biaya jasa mengacu pada katalog resmi tanpa biaya tersembunyi.
-                  </p>
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center mb-5">
+                  <ShieldCheck className="w-6 h-6" />
                 </div>
-                <div className="mt-6 pt-4 border-t border-sky-50 text-xs font-semibold text-amber-600 flex items-center gap-1">
-                  <span>Katalog Harga Terpublikasi</span>
-                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Transparansi Biaya Katalog</h3>
+                <p className="text-slate-600 text-sm leading-relaxed">
+                  Seluruh tarif jasa cuci, bongkar-pasang, dan pengisian refrigeran mengacu pada daftar harga resmi CV. Nara Teknindotama.
+                </p>
               </motion.div>
 
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, duration: 0.5, ease: easeOutCubic }}
-                viewport={{ once: true }}
-                className="bg-white rounded-3xl p-7 border border-sky-100 hover:border-indigo-300 shadow-md hover:shadow-xl shadow-blue-500/5 transition-all duration-300 flex flex-col justify-between hover:-translate-y-1"
+                variants={fadeInUpVariant}
+                className="bg-white rounded-3xl p-7 border border-slate-200 hover:border-blue-300 shadow-sm hover:shadow-md transition-all duration-200"
               >
-                <div>
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center mb-6">
-                    <FileText className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">Rekam Jejak & Riwayat Unit</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">
-                    Data unit AC dan riwayat servis Anda tersimpan rapi di sistem. Memudahkan mengetahui kapan jadwal perawatan berkala berikutnya.
-                  </p>
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 text-slate-800 flex items-center justify-center mb-5">
+                  <FileText className="w-6 h-6" />
                 </div>
-                <div className="mt-6 pt-4 border-t border-sky-50 text-xs font-semibold text-indigo-600 flex items-center gap-1">
-                  <span>Database Terstruktur</span>
-                </div>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5, duration: 0.5, ease: easeOutCubic }}
-                viewport={{ once: true }}
-                className="bg-white rounded-3xl p-7 border border-sky-100 hover:border-rose-300 shadow-md hover:shadow-xl shadow-blue-500/5 transition-all duration-300 flex flex-col justify-between hover:-translate-y-1"
-              >
-                <div>
-                  <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mb-6">
-                    <Sparkles className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">Garansi Pekerjaan Nyata</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">
-                    Komitmen purna-servis terjamin. Jika terjadi kendala pasca-pengerjaan, teknisi siap datang kembali melakukan pemeriksaan ulang gratis.
-                  </p>
-                </div>
-                <div className="mt-6 pt-4 border-t border-sky-50 text-xs font-semibold text-rose-600 flex items-center gap-1">
-                  <span>Perlindungan Pelanggan Nyata</span>
-                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Rekam Jejak &amp; Riwayat Unit</h3>
+                <p className="text-slate-600 text-sm leading-relaxed">
+                  Data kapasitas PK, merek, serta riwayat perawatan setiap unit tersimpan terstruktur untuk jadwal pemeliharaan berkala.
+                </p>
               </motion.div>
 
             </motion.div>
@@ -885,16 +803,10 @@ export default function LandingPage() {
         <section id="cara-kerja" className="py-24 bg-white relative border-t border-sky-100/60">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-widest border border-blue-200 mb-3">
-                <Clock className="w-3.5 h-3.5" /> Alur Cepat & Praktis
-              </span>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight mb-4">
-                4 Langkah Mudah Booking Servis AC
+            <div className="text-center max-w-3xl mx-auto mb-14">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight">
+                4 Langkah Booking Servis AC
               </h2>
-              <p className="text-slate-600 text-base sm:text-lg leading-relaxed">
-                Dari pemesanan online hingga teknisi menyelesaikan pengerjaan di tempat Anda.
-              </p>
             </div>
 
             <div className="relative">
@@ -927,24 +839,21 @@ export default function LandingPage() {
                     title: 'Verifikasi & Selesai',
                     desc: 'Uji running test suhu dingin, cek kelancaran drainase, dan riwayat servis tersimpan aman di sistem.'
                   }
-                ].map((st, sIndex) => (
+                ].map((st) => (
                   <motion.div
                     key={st.step}
                     variants={fadeInUpVariant}
-                    whileHover={{ y: -8, scale: 1.015, transition: { duration: 0.25, ease: easeOutCubic } }}
+                    whileHover={{ y: -4, transition: { duration: 0.2, ease: easeOutCubic } }}
                     className="relative group"
                   >
                     <div className="bg-sky-50/60 border border-sky-100 rounded-3xl p-6 sm:p-7 h-full flex flex-col justify-between hover:bg-white hover:border-blue-300 hover:shadow-xl shadow-blue-900/5 transition-all duration-300">
                       <div>
-                        <div className="flex items-center justify-between gap-3 mb-5 pb-4 border-b border-sky-100">
+                        <div className="mb-5">
                           <div className="w-12 h-12 rounded-2xl bg-white border-2 border-sky-200 flex items-center justify-center shadow-sm group-hover:border-blue-500 group-hover:bg-blue-600 transition-colors">
                             <span className="font-mono text-lg font-black text-blue-600 group-hover:text-white transition-colors">
                               {st.step}
                             </span>
                           </div>
-                          <span className="text-xs font-bold tracking-wider uppercase text-blue-700 bg-white px-3 py-1 rounded-full border border-sky-200 shadow-2xs whitespace-nowrap">
-                            Tahap {sIndex + 1}
-                          </span>
                         </div>
                         <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">{st.title}</h3>
                         <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{st.desc}</p>
@@ -969,9 +878,6 @@ export default function LandingPage() {
             <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
 
               <div className="lg:col-span-6 space-y-6">
-                <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-widest border border-blue-200">
-                  <ShieldCheck className="w-3.5 h-3.5" /> Profil Resmi
-                </span>
                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-[1.15]">
                   CV. Nara Teknindotama
                 </h2>
@@ -999,11 +905,7 @@ export default function LandingPage() {
 
                 <div className="relative z-10 space-y-6">
                   <div>
-                    <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">Wilayah Layanan</span>
-                    <h3 className="text-2xl font-black text-slate-900 mt-1">Cakupan Wilayah Operasional</h3>
-                    <p className="text-slate-600 text-xs sm:text-sm mt-2 leading-relaxed">
-                      Teknisi NARA AC siap melayani pengerjaan servis langsung ke lokasi di area:
-                    </p>
+                    <h3 className="text-2xl font-black text-slate-900">Cakupan Wilayah Operasional</h3>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2.5 text-xs sm:text-sm">
@@ -1036,16 +938,10 @@ export default function LandingPage() {
         <section id="faq" className="py-24 bg-sky-50/30 border-t border-sky-100/60 relative">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-widest border border-blue-200 mb-3">
-                <ChevronDown className="w-3.5 h-3.5" /> Tanya Jawab
-              </span>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight mb-4">
+            <div className="text-center max-w-3xl mx-auto mb-14">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight">
                 Pertanyaan yang Sering Diajukan
               </h2>
-              <p className="text-slate-600 text-base sm:text-lg leading-relaxed">
-                Jawaban ringkas dan jelas seputar cara booking, waktu pengerjaan, dan ketentuan garansi NARA AC.
-              </p>
             </div>
 
             <div className="space-y-4">
@@ -1096,19 +992,11 @@ export default function LandingPage() {
               <div className="absolute bottom-0 left-0 w-80 h-80 bg-sky-300/20 rounded-full blur-[90px] pointer-events-none" />
 
               <div className="relative z-10 max-w-3xl mx-auto space-y-6">
-                <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/15 backdrop-blur-md text-white text-xs font-bold uppercase tracking-wider border border-white/20">
-                  <Wind className="w-3.5 h-3.5" /> Udara Sejuk, Nyaman, & Sehat
-                </span>
-
                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.15]">
-                  Jadwalkan Perawatan AC Anda dengan Lebih Mudah
+                  Jadwalkan Perawatan AC Anda Sekarang
                 </h2>
 
-                <p className="text-blue-50 text-base sm:text-lg leading-relaxed font-normal">
-                  Mulai dengan memilih paket layanan dan menentukan jadwal yang sesuai. Nikmati proses pengerjaan profesional dan transparan bersama CV. Nara Teknindotama.
-                </p>
-
-                <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+                <div className="flex flex-col sm:flex-row gap-4 justify-center pt-2">
                   <Link to="/booking">
                     <Button
                       size="lg"

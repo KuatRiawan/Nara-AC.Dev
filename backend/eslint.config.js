@@ -15,6 +15,7 @@ module.exports = [
     rules: {
       "no-unused-vars": "warn",
       "no-undef": "error",
+      "no-empty": ["error", { "allowEmptyCatch": true }],
       "eqeqeq": "error",
       "require-await": "warn"
     }

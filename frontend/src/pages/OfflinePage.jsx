@@ -240,7 +240,7 @@ export default function OfflinePage() {
               onClick={() => setIsGameOpen((prev) => !prev)}
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-sky-50 hover:bg-sky-100 text-blue-700 text-xs font-bold border border-sky-200 transition-colors cursor-pointer"
             >
-              <span>❄️</span>
+              <Wind className="w-3.5 h-3.5 text-sky-600" />
               <span>{isGameOpen ? 'Tutup Game' : 'Mainkan "Frosty AC Catch"'}</span>
             </button>
 
@@ -252,7 +252,7 @@ export default function OfflinePage() {
                   height={170}
                   className="w-full h-auto bg-sky-50/70 border border-sky-200 rounded-2xl cursor-pointer touch-none select-none"
                 />
-                <div className="flex items-center justify-between mt-2 text-[11px] font-semibold text-slate-500">
+                <div className="flex items-center justify-between mt-2 text-[11px] font-semibold text-slate-600">
                   <span>Geser unit AC untuk tangkap es</span>
                   <span className="text-blue-600 font-black">Skor: {score}</span>
                 </div>
@@ -263,7 +263,7 @@ export default function OfflinePage() {
       </main>
 
       {/* Footer */}
-      <footer className="shrink-0 text-center py-4 border-t border-slate-200/60 bg-white text-xs text-slate-400">
+      <footer className="shrink-0 text-center py-4 border-t border-slate-200/60 bg-white text-xs text-slate-500">
         © 2026 CV. Nara Teknindotama. Seluruh hak cipta dilindungi.
       </footer>
     </div>

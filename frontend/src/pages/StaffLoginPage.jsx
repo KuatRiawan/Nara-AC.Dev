@@ -16,13 +16,11 @@ import {
   ArrowRight,
   Mail,
   Lock,
-  Sparkles,
   Shield,
   Clock,
   AlertTriangle,
   CheckCircle2,
   FileText,
-  Star,
   Zap,
   PhoneCall,
   Briefcase,
@@ -109,11 +107,6 @@ export default function StaffLoginPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 w-full items-center">
           
           <div className="lg:col-span-7 space-y-6">
-            
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50/80 border border-blue-200 text-blue-700 text-xs font-bold shadow-2xs">
-              <Sparkles className="w-4 h-4 text-blue-600" />
-              <span>Workspace Operasional CV. Nara Teknindotama</span>
-            </div>
 
             <div className="space-y-3">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">
@@ -131,7 +124,7 @@ export default function StaffLoginPage() {
                   <Zap className="w-4 h-4" />
                 </div>
                 <h2 className="text-xs font-black text-slate-800 mb-1">Smart Dispatching</h2>
-                <p className="text-xs text-slate-500 leading-normal">
+                <p className="text-xs text-slate-600 leading-normal">
                   Penugasan tiket teknisi otomatis berbasis zona operasional &amp; kapasitas.
                 </p>
               </div>
@@ -141,7 +134,7 @@ export default function StaffLoginPage() {
                   <Wrench className="w-4 h-4" />
                 </div>
                 <h2 className="text-xs font-black text-slate-800 mb-1">SOP 7 Langkah</h2>
-                <p className="text-xs text-slate-500 leading-normal">
+                <p className="text-xs text-slate-600 leading-normal">
                   Checklist digital, foto bukti pengerjaan, dan pencatatan spare part.
                 </p>
               </div>
@@ -151,7 +144,7 @@ export default function StaffLoginPage() {
                   <FileText className="w-4 h-4" />
                 </div>
                 <h2 className="text-xs font-black text-slate-800 mb-1">E-Invoice &amp; Garansi</h2>
-                <p className="text-xs text-slate-500 leading-normal">
+                <p className="text-xs text-slate-600 leading-normal">
                   Rekonsiliasi tagihan otomatis dan verifikasi klaim garansi pelanggan.
                 </p>
               </div>
@@ -162,17 +155,17 @@ export default function StaffLoginPage() {
               <div className="flex items-center gap-1.5">
                 <Briefcase className="w-4 h-4 text-blue-600" />
                 <span className="font-black text-slate-900">Admin &amp; CS</span>
-                <span className="text-slate-500">Panel Manajemen</span>
+                <span className="text-slate-600">Panel Manajemen</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <Wrench className="w-4 h-4 text-emerald-600" />
                 <span className="font-black text-slate-900">Teknisi</span>
-                <span className="text-slate-500">Portal Lapangan</span>
+                <span className="text-slate-600">Portal Lapangan</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-indigo-600" />
-                <span className="font-black text-slate-900">TLS 1.3</span>
-                <span className="text-slate-500">Terenkripsi</span>
+                <ShieldCheck className="w-4 h-4 text-blue-600" />
+                <span className="font-black text-slate-900">Otorisasi RBAC</span>
+                <span className="text-slate-600">Akses Terkontrol</span>
               </div>
             </div>
 
@@ -188,20 +181,14 @@ export default function StaffLoginPage() {
               <div className="absolute -bottom-16 -left-16 w-40 h-40 bg-sky-50 rounded-full blur-2xl pointer-events-none" />
 
               <div className="mb-5 relative z-10">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-blue-600 uppercase tracking-wider block">
-                    Workspace Staf Internal
-                  </span>
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                    Masuk ke Workspace
+                  </h2>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
                     Staf &amp; Teknisi
                   </span>
                 </div>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-                  Masuk ke Workspace
-                </h2>
-                <p className="text-xs text-slate-500 mt-1">
-                  Gunakan email kredensial resmi CV. Nara Teknindotama.
-                </p>
               </div>
 
               {error && (

@@ -31,7 +31,6 @@ import {
   X,
   AlertTriangle,
   MessageSquare,
-  Sparkles,
   CalendarDays,
   Ticket,
   Star,
@@ -958,15 +957,9 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 print:hidden">
         <div className="text-center max-w-2xl mx-auto mb-8">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider border border-blue-200 mb-3">
-            <FileText className="w-3.5 h-3.5" /> Pelacakan Tiket Digital Real-Time
-          </span>
-          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-2">
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
             Lacak Status Servis AC
           </h1>
-          <p className="text-slate-500 text-xs sm:text-sm">
-            Pantau aktivitas pengerjaan teknisi, riwayat status, pembayaran, garansi, dan unduh E-Invoice resmi.
-          </p>
 
           <form onSubmit={handleSearch} className="mt-6 flex items-center gap-2 max-w-md mx-auto">
             <div className="relative flex-1">
@@ -1205,7 +1198,7 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
                       <Clock className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-black text-sky-950">Jadwal Terdaftar — Menunggu Alokasi Teknisi</h4>
+                      <h4 className="text-sm font-black text-sky-950">Jadwal Terdaftar : Menunggu Alokasi Teknisi</h4>
                       <p className="text-xs text-sky-800 mt-0.5">
                         Tiket servis Anda sudah terdaftar. Tim operasional sedang menetapkan teknisi untuk rute lokasi Anda.
                       </p>
@@ -1395,7 +1388,7 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
                         <h4 className="font-black text-sm text-slate-900">Garansi Pengerjaan &amp; Komponen Resmi</h4>
                         <p className="text-xs text-slate-500 font-medium">
                           {hasQualifyingReview
-                            ? 'Ulasan servis telah tercatat — Anda dapat langsung mengajukan klaim garansi jika diperlukan'
+                            ? 'Ulasan servis telah tercatat. Anda dapat langsung mengajukan klaim garansi jika diperlukan'
                             : 'Ulasan servis diperlukan 1 kali sebelum mengajukan klaim garansi'}
                         </p>
                       </div>
@@ -1484,10 +1477,7 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-200 pb-3">
                   <div className="flex items-center gap-2">
                     <CreditCard className="w-5 h-5 text-blue-600" />
-                    <div>
-                      <h4 className="font-black text-sm text-slate-900">Skema, Metode &amp; Bukti Pembayaran</h4>
-                      <p className="text-xs text-slate-500 font-medium">Pengaturan tagihan dan unggah foto bukti transfer bank</p>
-                    </div>
+                    <h4 className="font-black text-sm text-slate-900">Skema, Metode &amp; Bukti Pembayaran</h4>
                   </div>
                   <Badge variant={booking.status_pembayaran === 'paid' ? 'success' : 'secondary'} className="text-xs font-bold uppercase">
                     {booking.status_pembayaran === 'paid' ? 'LUNAS (PAID)' : 'TAGIHAN AKTIF (PENDING)'}
@@ -1642,7 +1632,7 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
                           size="sm"
                           className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer h-9"
                         >
-                          <Sparkles className="w-3.5 h-3.5" />
+                          <Star className="w-3.5 h-3.5" />
                           <span>Beri Ulasan Servis</span>
                         </Button>
                       </Link>
@@ -2106,7 +2096,7 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
 
                     <div>
                       <label htmlFor="claim-photo-upload" className="font-bold text-slate-700 block mb-1">
-                        Foto Bukti Kondisi AC (Opsional — JPG/PNG/WEBP Maks 5 MB)
+                        Foto Bukti Kondisi AC (Opsional: JPG/PNG/WEBP Maks 5 MB)
                       </label>
                       <input
                         id="claim-photo-upload"
@@ -2197,7 +2187,7 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
 
                 <div>
                   <label htmlFor="proof-file-input" className="font-bold text-slate-700 block mb-1.5">
-                    Pilih Foto / Tangkapan Layar Bukti Transfer (JPG, PNG, WEBP — Maks 5 MB) *
+                    Pilih Foto / Tangkapan Layar Bukti Transfer (JPG, PNG, WEBP: Maks 5 MB) *
                   </label>
                   <label
                     htmlFor="proof-file-input"
@@ -2211,7 +2201,7 @@ export default function StatusPage({ initialInvoiceOpen = false }) {
                           className="max-h-44 w-auto mx-auto rounded-xl object-contain border border-slate-200 bg-white"
                         />
                         <span className="text-[11px] font-bold text-blue-600 block">
-                          {proofFile?.name} ({Math.round((proofFile?.size || 0) / 1024)} KB) — Klik untuk mengganti foto
+                          {proofFile?.name} ({Math.round((proofFile?.size || 0) / 1024)} KB) : Klik untuk mengganti foto
                         </span>
                       </div>
                     ) : (

@@ -212,21 +212,67 @@ async function buildCorpus() {
     id: `layanan-${s.kode}`,
     title: s.nama_layanan,
     source: s.is_synthetic ? 'katalog-layanan (DATA DEMO SINTETIS)' : 'katalog-layanan',
-    text: `Layanan ${s.nama_layanan} (kategori ${s.kategori}). ${s.deskripsi} Harga ${rupiah(s.harga)}. Estimasi durasi pengerjaan ${s.durasi_menit} menit.`,
+    text: `Layanan ${s.nama_layanan} (${s.kategori}). ${s.deskripsi} Tarif resmi ${rupiah(s.harga)}. Estimasi pengerjaan ±${s.durasi_menit} menit dengan teknisi bersertifikasi dan SOP 7 langkah Nara AC.`,
   }));
+
   const hari = ops.days.map((d) => DAY_NAMES[d]).join(', ');
   docs.push({
     id: 'jam-operasional',
-    title: 'Jam operasional',
+    title: 'Jam operasional & Area Layanan',
     source: 'pengaturan-operasional',
-    text: `Jam operasional layanan servis AC: ${ops.open} sampai ${ops.close} WIB. Hari layanan: ${hari}. Booking minimal ${ops.min_lead_minutes} menit sebelum jadwal.`,
+    text: `Jam operasional layanan servis AC: ${ops.open} sampai ${ops.close} WIB. Hari layanan: ${hari}. Area layanan mencakup Bogor Kota, Kabupaten Bogor, Depok, dan Jabodetabek. Booking minimal ${ops.min_lead_minutes} menit sebelum jadwal kunjungan teknisi.`,
   });
+
   docs.push({
     id: 'cara-booking',
     title: 'Cara booking dan pengingat',
     source: 'prosedur-aplikasi',
-    text: 'Cara booking servis AC: buka halaman Booking, pilih layanan, pilih tanggal dan jam yang tersedia, isi alamat, keluhan, dan nomor HP, lalu kirim. Anda akan menerima kode booking berformat AC-XXXX. Cek status pekerjaan dengan kode booking tersebut. Status pekerjaan: scheduled, on process, lalu done. Pengingat jadwal dicatat H-1 sebelum kunjungan. Setelah pekerjaan selesai Anda dapat memberi rating dan feedback.',
+    text: 'Cara booking servis AC di Nara AC: Buka halaman Booking, pilih paket layanan (Cuci Biasa, Cuci Overhaul, Isi Freon, dsb), pilih tanggal dan jam kosong, isi alamat lengkap dan nomor WhatsApp aktif, lalu klik Buat Booking. Anda akan otomatis mendapatkan Kode Booking unik resmi (format AC-XXXX). Cek status pengerjaan teknisi kapan saja di menu Lacak Status. Notifikasi pengingat jadwal dikirim H-1 sebelum teknisi tiba.',
   });
+
+  // Wawasan Data Science: Edukasi Keluhan & Rekomendasi Solusi
+  docs.push({
+    id: 'edukasi-ac-kurang-dingin',
+    title: 'Solusi AC Kurang Dingin atau Panas',
+    source: 'data-science-knowledge',
+    text: 'Penyebab AC kurang dingin atau hanya keluar angin: 1) Filter udara dan kisi evaporator tersumbat debu tebal (butuh Cuci Standar Rp75.000). 2) Tekanan freon R32/R410A turun karena kebocoran halus pada sambungan pipa flare (butuh pengecekan kebocoran & isi freon). 3) Kapasitor kipas outdoor melemah. Rekomendasi: Lakukan cuci berkala setiap 70-90 hari agar performa kompresor tetap prima dan hemat listrik hingga 30%.',
+  });
+
+  docs.push({
+    id: 'edukasi-ac-bocor-air',
+    title: 'Solusi AC Bocor Menetes Air di Ruangan',
+    source: 'data-science-knowledge',
+    text: 'Penyebab AC meneteskan air dari unit indoor: Saluran pipa pembuangan (drainase) tersumbat lendir lumut atau kotoran debu yang menumpuk di talang penampung air. Hal ini menyebabkan air meluap dan menetes ke dinding atau lantai. Solusi: Layanan Cuci Semi Overhaul atau Overhaul Total (Rp200.000 - Rp350.000) untuk flushing pipa pembuangan dan pembersihan talang air secara menyeluruh.',
+  });
+
+  docs.push({
+    id: 'edukasi-ac-berisik-bau',
+    title: 'Solusi AC Berisik Bergetar dan Bau Apek',
+    source: 'data-science-knowledge',
+    text: 'Penyebab AC mengeluarkan suara berisik atau bau apek: 1) Blower fan indoor kotor tidak seimbang karena kerak debu menempel. 2) Tumbuh jamur mikroskopis pada sirip evaporator di ruangan lembap yang menyebabkan bau asam/apek. 3) Baut braket outdoor longgar. Solusi: Cuci Foam / Deep Clean dengan cairan pembersih khusus sterilisasi jamur dan pengencangan baut unit oleh teknisi.',
+  });
+
+  docs.push({
+    id: 'edukasi-ac-mati-total',
+    title: 'Solusi AC Mati Total atau Error',
+    source: 'data-science-knowledge',
+    text: 'Penyebab AC mati total atau lampu indikator berkedip (error code): Masalah pada pasokan listrik, sekring putus, kapasitor starter terbakar, atau PCB modul elektronik mengalami lonjakan voltase. Solusi: Pengecekan kelistrikan oleh teknisi, perbaikan modul/kelistrikan, atau penggantian kapasitor kompresor.',
+  });
+
+  docs.push({
+    id: 'edukasi-siklus-servis-berkala',
+    title: 'Rekomendasi Siklus Servis Berkala (Predictive Maintenance)',
+    source: 'data-science-knowledge',
+    text: 'Berdasarkan model analitik prediktif Nara AC: Unit AC rumah tangga disarankan dicuci rutin setiap 85-95 hari (sekitar 3 bulan). Untuk AC kantor/bisnis dengan jam operasional tinggi (>10 jam/hari), rekomendasi cuci berkala adalah setiap 60-70 hari. Perawatan rutin mencegah konsumsi listrik boros dan memperpanjang usia kompresor hingga 10-15 tahun.',
+  });
+
+  docs.push({
+    id: 'edukasi-garansi-layanan',
+    title: 'Garansi Resmi dan Kualitas Nara AC',
+    source: 'prosedur-aplikasi',
+    text: 'Setiap pengerjaan teknisi Nara AC dilindungi Garansi Resmi Dingin & Bebas Bocor selama 30 Hari. Jika dalam masa garansi AC mengalami keluhan yang sama, teknisi kami akan datang melakukan perbaikan ulang tanpa biaya tambahan. Anda dapat mengajukan klaim garansi dengan mudah di menu website atau via WhatsApp.',
+  });
+
   return { docs, hash: sha256(JSON.stringify(docs)) };
 }
 
@@ -446,30 +492,36 @@ async function handleServiceQuery(message, context) {
     }
     
     const lowerMsg = message.toLowerCase();
-    for (const service of services) {
-      if (lowerMsg.includes(service.nama_layanan.toLowerCase()) ||
-          lowerMsg.includes(service.kategori.toLowerCase())) {
-        return {
-          jawaban: `Ya, kami menawarkan layanan ${service.nama_layanan}. ${service.deskripsi} Harganya ${rupiah(service.harga)} dan biasanya memakan waktu ${service.durasi_menit} menit.`,
-          sumber: ['katalog-layanan'],
-          fallback: false,
-          aksi: [{ type: 'open_booking', label: 'Pesan layanan ini', path: `/booking?service=${service.kode}` }],
-          quick_replies: ['Pesan sekarang', 'Tanya layanan lain', 'Cek harga lain']
-        };
-      }
+    
+    // Pencocokan kategori atau kata kunci spesifik
+    const matches = services.filter(service => 
+      lowerMsg.includes(service.nama_layanan.toLowerCase()) ||
+      lowerMsg.includes(service.kategori.toLowerCase())
+    );
+
+    if (matches.length > 0) {
+      // Prioritaskan kategori Rumah atau standar
+      const chosen = matches.find(s => s.nama_layanan.includes('Rumah')) || matches[0];
+      return {
+        jawaban: `Kami menyediakan layanan ${chosen.nama_layanan} (${chosen.kategori}). ${chosen.deskripsi} Tarif: ${rupiah(chosen.harga)} dengan durasi pengerjaan ±${chosen.durasi_menit} menit.`,
+        sumber: ['katalog-layanan'],
+        fallback: false,
+        aksi: [{ type: 'open_booking', label: 'Pesan Layanan Ini', path: `/booking?service=${chosen.kode}` }],
+        quick_replies: ['Pesan sekarang', 'Tanya layanan lain', 'Cek harga lainnya']
+      };
     }
     
-    const serviceList = services.map(s => `• ${s.nama_layanan}: ${rupiah(s.harga)}`).join('\n');
+    const popular = services.slice(0, 4).map(s => `• ${s.nama_layanan}: ${rupiah(s.harga)}`).join('\n');
     return {
-      jawaban: `Ini beberapa layanan yang kami tawarkan:\n${serviceList}\n\nTertarik dengan yang mana? Atau mau tanya detail suatu layanan?`,
+      jawaban: `Berikut beberapa layanan unggulan Nara AC:\n\n${popular}\n\nAda layanan spesifik yang ingin ditanyakan?`,
       fallback: false,
-      quick_replies: services.slice(0, 3).map(s => `Info ${s.nama_layanan}`)
+      quick_replies: services.slice(0, 4).map(s => s.nama_layanan)
     };
   }
   
   if (!r.in_domain) {
     return {
-      jawaban: 'Maaf ya, aku gak nemu info tentang itu di katalog layanan kami. Coba tanyakan dengan cara lain, misal: "Harga cuci AC berapa?", "Jam operasionalnya kapan?", atau "Bisa isi freon ga?"',
+      jawaban: 'Maaf, saya belum menemukan info terkait hal tersebut di katalog kami. Anda bisa menanyakan tarif cuci AC, perbaikan freon, atau jam operasional kami.',
       fallback: true,
       saran: ['Berapa harga cuci AC?', 'Jam operasional kapan?', 'Apakah bisa isi freon?'],
       quick_replies: ['Harga cuci AC', 'Jam operasional', 'Layanan perbaikan']
@@ -496,30 +548,47 @@ async function handlePriceQuery(message, context) {
   
   if (services.length === 0) {
     return {
-      jawaban: 'Maaf, daftar harganya lagi gak bisa diload. Coba lagi nanti ya.',
+      jawaban: 'Maaf, daftar harganya lagi gak bisa dimuat. Coba lagi nanti ya.',
       fallback: true
     };
   }
   
   const lowerMsg = message.toLowerCase();
-  for (const service of services) {
-    if (lowerMsg.includes(service.nama_layanan.toLowerCase()) ||
-        lowerMsg.includes(service.kode.toLowerCase())) {
-      return {
-        jawaban: `Harga ${service.nama_layanan} (${service.kategori}) adalah ${rupiah(service.harga)}. Perkiraan waktu pengerjaan ${service.durasi_menit} menit.`,
-        harga: { layanan: service.nama_layanan, harga: service.harga },
-        fallback: false,
-        aksi: [{ type: 'open_booking', label: 'Pesan sekarang', path: `/booking?service=${service.kode}` }],
-        quick_replies: ['Pesan layanan ini', 'Tanya layanan lain', 'Lihat semuanya']
-      };
-    }
-  }
   
-  const priceList = services.map(s => `• ${s.nama_layanan}: ${rupiah(s.harga)}`).join('\n');
+  // 1. Cek pencocokan spesifik layanan jika user mengetik nama/kode tertentu
+  const specificMatches = services.filter(service => 
+    lowerMsg.includes(service.nama_layanan.toLowerCase()) ||
+    lowerMsg.includes(service.kode.toLowerCase())
+  );
+
+  if (specificMatches.length === 1) {
+    const service = specificMatches[0];
+    return {
+      jawaban: `Harga ${service.nama_layanan} (${service.kategori}) adalah ${rupiah(service.harga)}. Perkiraan waktu pengerjaan ±${service.durasi_menit} menit.`,
+      harga: { layanan: service.nama_layanan, harga: service.harga },
+      fallback: false,
+      aksi: [{ type: 'open_booking', label: 'Pesan Sekarang', path: `/booking?service=${service.kode}` }],
+      quick_replies: ['Pesan sekarang', 'Tanya layanan lain', 'Lihat daftar harga']
+    };
+  }
+
+  // 2. Jika user hanya bertanya "cek harga", "harga service", dsb, tampilkan ringkasan kategori populer yang ringkas dan nyaman dibaca di chat
+  const popularServices = [
+    services.find(s => s.nama_layanan.includes('Cuci Biasa') && s.nama_layanan.includes('Rumah')),
+    services.find(s => s.nama_layanan.includes('Cuci Overhaul') && s.nama_layanan.includes('Rumah')),
+    services.find(s => s.nama_layanan.includes('Isi Ulang Freon R32') && s.nama_layanan.includes('0.5PK')),
+    services.find(s => s.nama_layanan.includes('Bongkar AC') && s.nama_layanan.includes('Rumah')),
+    services.find(s => s.nama_layanan.includes('Pasang AC') && s.nama_layanan.includes('Rumah')),
+  ].filter(Boolean);
+
+  const listToDisplay = popularServices.length > 0 ? popularServices : services.slice(0, 5);
+  const formattedList = listToDisplay.map(s => `• ${s.nama_layanan}: ${rupiah(s.harga)}`).join('\n');
+
   return {
-    jawaban: `Ini daftar harga layanan kami:\n${priceList}\n\nMau tanya harga layanan tertentu? Cukup sebutkan namanya.`,
+    jawaban: `Berikut ringkasan tarif layanan populer Nara AC:\n\n${formattedList}\n\nIngin info harga tipe lainnya atau langsung reservasi jadwal teknisi?`,
     fallback: false,
-    quick_replies: services.slice(0, 5).map(s => s.nama_layanan)
+    aksi: [{ type: 'open_booking', label: 'Reservasi Jadwal Servis', path: '/booking' }],
+    quick_replies: ['Cuci Biasa Rumah', 'Cuci Overhaul', 'Isi Freon R32', 'Bongkar Pasang AC', 'Booking Servis']
   };
 }
 
@@ -531,9 +600,9 @@ async function handleComplaint(message, context) {
   
   let safetyWarning = '';
   if (severity === 'severe') {
-    safetyWarning = '⚠️ PERINGATAN: Kalau ada kebocoran listrik, percikan api, atau bau terbakar, SEGERA matikan AC dan cabut stekernya! Hubungi layanan darurat!\n\n';
+    safetyWarning = '⚠️ **PERINGATAN KESELAMATAN:** Terdeteksi indikasi bahaya kelistrikan/kebocoran serius. Mohon segera matikan AC dari remote dan turunkan MCB/cabut steker listrik!\n\n';
   } else if (severity === 'urgent') {
-    safetyWarning = 'ℹ️ Saran: Kalau AC gak mau nyala sama sekali atau freon habis, sebaiknya segera periksa.\n\n';
+    safetyWarning = 'ℹ️ **Penanganan Cepat:** AC mati total atau freon kosong berisiko membebani kompresor jika terus dipaksa menyala.\n\n';
   }
   
   const m = BOOKING_CODE_RE.exec(message);
@@ -547,24 +616,60 @@ async function handleComplaint(message, context) {
     "INSERT INTO complaint_tickets (booking_id, pesan, sumber, severity) VALUES ($1,$2,'chatbot',$3) RETURNING id",
     [bookingId, message.slice(0, 1000), severity]
   )).rows[0];
-  
-  const response = `${safetyWarning}Oke, keluhanmu sudah aku catat sebagai tiket #${t.id}. Admin akan lihat dan tanggapi secepatnya. Maaf ya atas ketidaknyamanannya.`;
-  
-  const hasBookingCode = m !== null;
-  const suggestions = [];
-  
-  if (severity === 'severe') {
-    suggestions.push('Hubungi admin SEKARANG');
-  } else if (!hasBookingCode) {
-    suggestions.push('Booking pemeriksaan');
+
+  // Integrasi Wawasan Data Science: Berikan analisis teknis cerdas berdasarkan jenis keluhan
+  let dsAnalysis = '';
+  let dsCategory = 'AC Kurang Dingin';
+  let recommendedService = 'Cuci Biasa (0.5PK - 1PK) - Rumah';
+
+  if (lowerMsg.includes('bocor') || lowerMsg.includes('netes') || lowerMsg.includes('air')) {
+    dsCategory = 'Bocor Air / Menetes';
+    recommendedService = 'Cuci Semi Overhaul (0.5PK - 1PK) - Rumah';
+    dsAnalysis = '🔍 **Analisis Masalah:** Keluhan air menetes umumnya disebabkan talang penampung air atau selang drainase tersumbat lendir lumut/debu mikro. Solusi paling tepat adalah paket Cuci Semi Overhaul atau Overhaul Total agar jalur pipa diflushing tuntas.';
+  } else if (lowerMsg.includes('mati') || lowerMsg.includes('error') || lowerMsg.includes('tidak mau nyala')) {
+    dsCategory = 'AC Mati Total / Error';
+    recommendedService = 'Pergantian Kapasitor';
+    dsAnalysis = '🔍 **Analisis Masalah:** Indikasi masalah kelistrikan, modul PCB, atau kapasitor kompresor melemah. Teknisi kami akan melakukan pengecekan arus ampere dan komponen kelistrikan di lokasi.';
+  } else if (lowerMsg.includes('berisik') || lowerMsg.includes('bunyi') || lowerMsg.includes('bau') || lowerMsg.includes('apek')) {
+    dsCategory = 'Suara Berisik / Bau';
+    recommendedService = 'Cuci Overhaul (0.5PK - 1PK) - Rumah';
+    dsAnalysis = '🔍 **Analisis Masalah:** Suara berisik biasanya karena fan blower tidak seimbang oleh kerak debu, sedangkan bau apek timbul dari koloni jamur di sirip evaporator. Solusi terbaik adalah cuci deep clean/overhaul dengan disinfeksi.';
+  } else {
+    dsCategory = 'AC Kurang Dingin';
+    recommendedService = 'Cuci Biasa (0.5PK - 1PK) - Rumah';
+    dsAnalysis = '🔍 **Analisis Masalah:** AC kurang dingin umumnya disebabkan kisi evaporator kotor tebal atau tekanan freon R32/R410A berkurang. Disarankan mulai dari pengecekan cuci standar & tekanan manifold freon.';
   }
+
+  // Coba jalankan model Data Science predict-cost untuk memberikan estimasi biaya transparan
+  let costEstimasiText = '';
+  try {
+    const costPred = await ai.predictCost({
+      tipe_customer: 'Rumah Tangga',
+      tipe_ac: 'Split Standard',
+      kapasitas_pk: entities?.ac_units ? 1.0 : 1.0,
+      usia_ac_tahun: 3,
+      keluhan_utama: dsCategory,
+    });
+    if (costPred?.data?.estimated_cost) {
+      costEstimasiText = `\n\n💡 **Estimasi Biaya Transparan (Model AI):** Sekitar ${rupiah(costPred.data.estimated_cost)} (${rupiah(costPred.data.lower_bound)} - ${rupiah(costPred.data.upper_bound)}). Biaya final disesuaikan setelah pengecekan fisik unit.`;
+    }
+  } catch (_e) {
+    // Lewati jika model cost tidak dapat dihubungi
+  }
+
+  const response = `${safetyWarning}Keluhan Anda telah kami catat dengan nomor tiket resmi **#${t.id}**.\n\n${dsAnalysis}${costEstimasiText}\n\nIngin teknisi kami langsung datang memeriksa ke lokasi?`;
   
+  const actions = [
+    { type: 'open_booking', label: 'Jadwalkan Kunjungan Teknisi', path: '/booking' }
+  ];
+  const quickReplies = ['Jadwalkan teknisi', 'Tanya tarif lainnya', 'Hubungi customer service'];
+
   return {
     jawaban: response,
     tiket: { id: t.id, status: 'open', severity },
     fallback: false,
-    aksi: suggestions.length > 0 ? suggestions.map(s => ({ type: 'open_booking', label: s, path: '/booking' })) : [],
-    quick_replies: ['Hubungi admin', 'Buat booking', 'Info layanan']
+    aksi: actions,
+    quick_replies: quickReplies
   };
 }
 
@@ -608,18 +713,18 @@ async function handleBookingRequest(message, context) {
   
   if (infoParts.length > 0) {
     if (urgency) {
-      response = `Oke, aku catat kamu butuh ${infoParts.join(', ')} segera. `;
-      response += 'Penting: Pemesanan Anda belum tersimpan di sistem. Silakan buka formulir booking, pilih layanan, tanggal dan jam kosong untuk mendapatkan Kode Booking resmi.';
+      response = `Baik, keluhan Anda butuh penanganan segera (${infoParts.join(', ')}). `;
+      response += 'Silakan pilih jadwal kunjungan teknisi melalui formulir booking agar mendapatkan Kode Booking dan jadwal resmi.';
     } else {
-      response = `Oke, aku catat kamu mau booking untuk ${infoParts.join(', ')}. `;
-      response += 'Penting: Pemesanan Anda belum tersimpan di sistem. Buka formulir booking ya, lalu pilih layanan, tanggal, dan jam yang tersedia untuk mendapatkan Kode Booking resmi.';
+      response = `Baik, rencana pemesanan Anda untuk ${infoParts.join(', ')} sudah kami catat. `;
+      response += 'Silakan lengkapi formulir booking di bawah untuk menentukan alamat dan tanggal kunjungan teknisi.';
     }
     quickReplies.push('Lihat layanan lain');
   } else {
     if (urgency) {
-      response = 'Oke, kamu butuh service AC segera ya? Pemesanan Anda belum tersimpan. Silakan buka formulir booking, pilih layanan dan jam yang kosong.';
+      response = 'Butuh servis darurat hari ini? Silakan buka formulir booking untuk memilih jadwal teknisi yang masih tersedia.';
     } else {
-      response = 'Mau booking service AC? Pemesanan belum tersimpan sebelum Anda melengkapi formulir dan mendapatkan kode booking resmi.';
+      response = 'Ingin reservasi jadwal servis AC? Silakan isi formulir pemesanan resmi untuk memilih layanan dan waktu kunjungan.';
     }
   }
   

@@ -273,7 +273,6 @@ export default function TechnicianDashboard() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Semua Tugas</h2>
-              <p className="text-xs sm:text-sm text-slate-500">Kelola dan update status tiket pekerjaan Anda</p>
             </div>
             <div className="relative w-full sm:w-72">
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -329,7 +328,6 @@ export default function TechnicianDashboard() {
         <div className="space-y-6">
           <div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Jadwal Tugas</h2>
-            <p className="text-xs sm:text-sm text-slate-500">Daftar agenda pekerjaan servis AC Anda</p>
           </div>
 
           <div className="space-y-6">
@@ -372,7 +370,6 @@ export default function TechnicianDashboard() {
         <div className="space-y-6">
           <div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Riwayat Pekerjaan Selesai</h2>
-            <p className="text-xs sm:text-sm text-slate-500">Daftar servis yang telah berhasil dikerjakan</p>
           </div>
 
           {completedJobs.length === 0 ? (
@@ -455,7 +452,6 @@ export default function TechnicianDashboard() {
                   </span>
                 )}
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500">Pemberitahuan penugasan tiket dan jadwal servis terbaru</p>
             </div>
 
             <div className="flex items-center gap-2">

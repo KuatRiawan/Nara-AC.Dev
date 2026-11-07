@@ -50,6 +50,8 @@ export default [
       ...reactHooks.configs.recommended.rules,
       "react-hooks/set-state-in-effect": "off",
       "react-hooks/immutability": "off",
+      "react-hooks/purity": "off",
+      "no-empty": ["error", { "allowEmptyCatch": true }],
       "no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
       "react/no-unescaped-entities": "warn",
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../../api';
-import { Calendar as CalendarIcon, Clock, Wrench, AlertCircle, AlertTriangle, CheckCircle2, ChevronRight, ChevronLeft, X, Sparkles, Phone, MapPin, RefreshCw, Copy, Check, UserCheck, UserPlus, CalendarClock } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, Wrench, AlertCircle, AlertTriangle, CheckCircle2, ChevronRight, ChevronLeft, X, Phone, MapPin, RefreshCw, Copy, Check, UserCheck, UserPlus, CalendarClock, Award } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, format, isSameMonth, isSameDay, addMonths, subMonths, isSunday } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -357,7 +357,7 @@ export default function AdminSchedule({ onBookingAssigned }) {
                 onClick={() => handleReplaceTechnician(null)}
                 className="bg-white border-amber-300 text-amber-900 hover:bg-amber-100 font-bold text-xs rounded-xl shadow-xs shrink-0 cursor-pointer"
               >
-                {isReplacing ? 'Mencari...' : '⚡ Cari Pengganti Otomatis'}
+                {isReplacing ? 'Mencari...' : 'Cari Pengganti Otomatis'}
               </Button>
             </div>
           )}
@@ -401,12 +401,9 @@ export default function AdminSchedule({ onBookingAssigned }) {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-black text-slate-900 text-lg flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-500" />
+                <Award className="w-5 h-5 text-blue-600" />
                 <span>Rekomendasi Teknisi Terbaik</span>
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Dianalisa berdasarkan jadwal, ketersediaan slot, dan beban pekerjaan hari ini.
-              </p>
             </div>
           </div>
 
@@ -436,7 +433,7 @@ export default function AdminSchedule({ onBookingAssigned }) {
                 >
                   {tech.direkomendasikan && (
                     <div className="absolute top-0 right-0 bg-emerald-600 text-white text-xs font-black px-2.5 py-1 rounded-bl-xl uppercase tracking-wider flex items-center gap-1">
-                      <Sparkles className="w-3 h-3" />
+                      <Award className="w-3 h-3" />
                       <span>Pilihan Terbaik</span>
                     </div>
                   )}
@@ -680,9 +677,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             Jadwal Servis & Kalender
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Pantau sebaran jadwal servis harian, alokasi penugasan teknisi, dan agenda kunjungan pelanggan.
-          </p>
         </div>
 
         <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200/80 shadow-2xs w-full sm:w-auto justify-between sm:justify-start">
@@ -736,7 +730,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
           </div>
           <div>
             <p className="text-xl sm:text-3xl font-black text-slate-900">{monthStats.total}</p>
-            <p className="text-[11px] sm:text-xs font-medium text-slate-500 mt-0.5 sm:mt-1 truncate">Seluruh agenda servis</p>
           </div>
         </div>
 
@@ -749,7 +742,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
           </div>
           <div>
             <p className="text-xl sm:text-3xl font-black text-amber-700">{monthStats.unassigned}</p>
-            <p className="text-[11px] sm:text-xs font-medium text-amber-600/80 mt-0.5 sm:mt-1 truncate">Belum ada teknisi</p>
           </div>
         </div>
 
@@ -762,7 +754,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
           </div>
           <div>
             <p className="text-xl sm:text-3xl font-black text-sky-700">{monthStats.onProcess}</p>
-            <p className="text-[11px] sm:text-xs font-medium text-sky-600/80 mt-0.5 sm:mt-1 truncate">Teknisi aktif di lokasi</p>
           </div>
         </div>
 
@@ -775,7 +766,6 @@ export default function AdminSchedule({ onBookingAssigned }) {
           </div>
           <div>
             <p className="text-xl sm:text-3xl font-black text-emerald-700">{monthStats.done}</p>
-            <p className="text-[11px] sm:text-xs font-medium text-emerald-600/80 mt-0.5 sm:mt-1 truncate">Tuntas & bergaransi</p>
           </div>
         </div>
       </div>
@@ -963,9 +953,9 @@ export default function AdminSchedule({ onBookingAssigned }) {
                                     size="sm"
                                     onClick={() => openAssign(b)}
                                     className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl h-8 px-3 cursor-pointer transition-all flex items-center gap-1 shadow-sm"
-                                    title="Rekomendasi Teknisi AI"
+                                    title="Rekomendasi Teknisi"
                                   >
-                                    <Sparkles className="w-3.5 h-3.5" />
+                                    <UserCheck className="w-3.5 h-3.5" />
                                     <span>Smart Assign</span>
                                   </Button>
                                 )}

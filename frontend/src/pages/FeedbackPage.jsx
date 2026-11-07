@@ -8,7 +8,7 @@ import { Input } from '../components/ui/input';
 import CompanyLogo from '../components/CompanyLogo';
 import { cn } from '../lib/utils';
 import { useToast } from '../components/ui/toast';
-import { Star, MessageSquare, CheckCircle2, ArrowLeft, Loader2, ShieldCheck, User, Wrench, Sparkles, HeartHandshake, Check, AlertCircle, FileText, Clock } from 'lucide-react';
+import { Star, MessageSquare, CheckCircle2, ArrowLeft, Loader2, ShieldCheck, User, Wrench, HeartHandshake, Check, AlertCircle, FileText, Clock, Award } from 'lucide-react';
 
 export default function FeedbackPage() {
   const handleBack = useContextualBack('/');
@@ -24,7 +24,7 @@ export default function FeedbackPage() {
 
   const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
-  const [selectedTags, setSelectedTags] = useState(['❄️ AC Dingin Maksimal', '👨‍🔧 Teknisi Ramah & Sopan', '🛠️ Kerja Rapi & Bersih']);
+  const [selectedTags, setSelectedTags] = useState(['AC Dingin Maksimal', 'Teknisi Ramah & Sopan', 'Kerja Rapi & Bersih']);
   const [komentar, setKomentar] = useState('');
   const [kontak, setKontak] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,14 +32,14 @@ export default function FeedbackPage() {
   const [submitError, setSubmitError] = useState('');
 
   const quickTags = [
-    '❄️ AC Dingin Maksimal',
-    '⏱️ Tepat Waktu',
-    '🛠️ Kerja Rapi & Bersih',
-    '👨‍🔧 Teknisi Ramah & Sopan',
-    '📋 Penjelasan Teknis Jelas',
-    '💰 Biaya Sesuai & Transparan',
-    '🛡️ Garansi Terjamin',
-    '🧹 Area Sekitar Tetap Kering'
+    'AC Dingin Maksimal',
+    'Tepat Waktu',
+    'Kerja Rapi & Bersih',
+    'Teknisi Ramah & Sopan',
+    'Penjelasan Teknis Jelas',
+    'Biaya Sesuai & Transparan',
+    'Garansi Terjamin',
+    'Area Sekitar Tetap Kering'
   ];
 
   useEffect(() => {
@@ -78,16 +78,16 @@ export default function FeedbackPage() {
   const getRatingEmotion = (val) => {
     switch (val) {
       case 1:
-        return { text: 'Sangat Mengecewakan', emoji: '😞', color: 'text-rose-600', bg: 'bg-rose-50 border-rose-200' };
+        return { text: '1/5 : Sangat Mengecewakan', color: 'text-rose-700', bg: 'bg-rose-50 border-rose-200' };
       case 2:
-        return { text: 'Kurang Memuaskan', emoji: '🙁', color: 'text-orange-600', bg: 'bg-orange-50 border-orange-200' };
+        return { text: '2/5 : Kurang Memuaskan', color: 'text-orange-700', bg: 'bg-orange-50 border-orange-200' };
       case 3:
-        return { text: 'Cukup Baik & Berfungsi', emoji: '😐', color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' };
+        return { text: '3/5 : Cukup Baik & Berfungsi', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' };
       case 4:
-        return { text: 'Memuaskan & Rapi', emoji: '🙂', color: 'text-sky-600', bg: 'bg-sky-50 border-sky-200' };
+        return { text: '4/5 : Memuaskan & Rapi', color: 'text-sky-700', bg: 'bg-sky-50 border-sky-200' };
       case 5:
       default:
-        return { text: 'Sangat Puas & AC Dingin Maksimal!', emoji: '🤩', color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' };
+        return { text: '5/5 : Sangat Puas & AC Dingin Maksimal', color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' };
     }
   };
 
@@ -276,7 +276,7 @@ export default function FeedbackPage() {
             </div>
             
             <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black uppercase tracking-wider mb-3">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-600" /> Ulasan Diterima
+              <Award className="w-3.5 h-3.5 text-emerald-600" /> Ulasan Diterima
             </span>
 
             <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2">
@@ -327,15 +327,11 @@ export default function FeedbackPage() {
             className="space-y-6"
           >
             <div className="text-center max-w-xl mx-auto mb-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider border border-blue-200 mb-3">
-                <HeartHandshake className="w-3.5 h-3.5" /> Ulasan Kepuasan Servis
-              </span>
               <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-2">
                 Bagaimana Hasil Servis AC Anda?
               </h1>
               <p className="text-slate-500 text-xs sm:text-sm">
-                Bantu kami memberikan layanan pendingin udara terbaik dengan memberikan penilaian untuk tiket{' '}
-                <strong className="text-blue-600 font-mono font-bold tracking-wide">{booking.kode_booking}</strong>
+                Tiket <strong className="text-blue-600 font-mono font-bold tracking-wide">{booking.kode_booking}</strong>
               </p>
             </div>
 
@@ -360,7 +356,10 @@ export default function FeedbackPage() {
                   <User className="w-3.5 h-3.5 text-blue-600" />
                   <span>{booking.teknisi_lengkap || booking.teknisi || 'Teknisi NARA AC'}</span>
                 </p>
-                <span className="text-xs text-emerald-600 font-bold block mt-0.5">✓ Terverifikasi SOP 7 Langkah</span>
+                <span className="text-xs text-emerald-600 font-bold inline-flex items-center sm:justify-end gap-1 mt-0.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>Terverifikasi SOP 7 Langkah</span>
+                </span>
               </div>
             </div>
 
@@ -388,7 +387,7 @@ export default function FeedbackPage() {
                         onClick={() => setRating(star)}
                         onMouseEnter={() => setHoverRating(star)}
                         onMouseLeave={() => setHoverRating(0)}
-                        className="p-1 sm:p-2 rounded-2xl hover:bg-amber-50/50 transition-all transform hover:scale-115 active:scale-95 cursor-pointer focus:outline-none"
+                        className="p-1 sm:p-2 rounded-2xl hover:bg-amber-50/50 transition-all transform hover:scale-110 active:scale-95 cursor-pointer focus-visible:outline-2 focus-visible:outline-blue-600"
                         aria-label={`Beri bintang ${star}`}
                       >
                         <Star
@@ -409,19 +408,16 @@ export default function FeedbackPage() {
                       ratingEmotion.bg,
                       ratingEmotion.color
                     )}>
-                      <span className="text-base">{ratingEmotion.emoji}</span>
+                      <Star className="w-3.5 h-3.5 fill-current" />
                       <span>{ratingEmotion.text}</span>
                     </span>
                   </div>
                 </div>
 
                 <div className="pt-6 border-t border-slate-100" role="group" aria-labelledby="feedback-tags-label">
-                  <label id="feedback-tags-label" className="text-xs font-bold text-slate-900 block mb-2">
+                  <label id="feedback-tags-label" className="text-xs font-bold text-slate-900 block mb-3">
                     Apa yang paling memuaskan dari servis kami? (Pilih satu atau lebih):
                   </label>
-                  <p className="text-xs text-slate-500 mb-3.5">
-                    Klik tag untuk menandai hal-hal positif yang Anda rasakan selama pengerjaan.
-                  </p>
 
                   <div className="flex flex-wrap gap-2 sm:gap-2.5">
                     {quickTags.map((tag) => {
@@ -512,7 +508,7 @@ export default function FeedbackPage() {
                       </>
                     ) : (
                       <>
-                        <Sparkles className="w-5 h-5" />
+                        <CheckCircle2 className="w-5 h-5" />
                         <span>Kirim Ulasan Resmi NARA AC</span>
                       </>
                     )}

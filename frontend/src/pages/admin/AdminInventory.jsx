@@ -288,9 +288,6 @@ export default function AdminInventory() {
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             Inventaris Logistik & Sparepart
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Monitoring stok suku cadang, freon teknisi, log mutasi keluar-masuk, dan peringatan batas minimum.
-          </p>
         </div>
 
         <div className="flex items-center gap-2.5">
@@ -329,9 +326,6 @@ export default function AdminInventory() {
             <p className="text-2xl font-black text-slate-900">
               {kpis.totalCount} <span className="text-xs font-semibold text-slate-500">Jenis</span>
             </p>
-            <p className="text-xs font-medium text-slate-500 mt-1">
-              Suku cadang & bahan operasional
-            </p>
           </div>
         </div>
 
@@ -345,9 +339,6 @@ export default function AdminInventory() {
           <div>
             <p className="text-2xl font-black text-emerald-700">
               {kpis.okCount} <span className="text-xs font-semibold text-emerald-600/70">Item</span>
-            </p>
-            <p className="text-xs font-medium text-emerald-600/80 mt-1">
-              Di atas batas minimum restock
             </p>
           </div>
         </div>
@@ -363,9 +354,6 @@ export default function AdminInventory() {
             <p className="text-2xl font-black text-amber-700">
               {kpis.warningCount} <span className="text-xs font-semibold text-amber-600/70">Item</span>
             </p>
-            <p className="text-xs font-medium text-amber-600/80 mt-1">
-              {kpis.outCount > 0 ? `${kpis.outCount} item habis total` : 'Mendekati batas minimum'}
-            </p>
           </div>
         </div>
 
@@ -379,9 +367,6 @@ export default function AdminInventory() {
           <div>
             <p className="text-2xl font-black text-slate-900">
               {kpis.categoryCount} <span className="text-xs font-semibold text-slate-500">Kategori</span>
-            </p>
-            <p className="text-xs font-medium text-slate-500 mt-1">
-              Freon, Pipa, Kabel & Komponen
             </p>
           </div>
         </div>
@@ -646,7 +631,6 @@ export default function AdminInventory() {
                         <p className="font-mono font-bold text-slate-700">
                           {Number(item.min_stok).toLocaleString('id-ID')} <span className="text-xs text-slate-500 font-sans">{item.satuan}</span>
                         </p>
-                        <p className="text-xs text-slate-500">Batas restock</p>
                       </td>
 
                       <td className="py-3.5 px-5">
@@ -656,7 +640,6 @@ export default function AdminInventory() {
                           </span>
                           <span className="text-xs text-slate-500">{item.satuan}</span>
                         </div>
-                        <p className="text-xs text-slate-500">Dipakai teknisi</p>
                       </td>
 
                       <td className="py-3.5 px-5 text-right">
@@ -735,9 +718,6 @@ export default function AdminInventory() {
                   <h3 className="font-black text-base text-white">
                     Penyesuaian Stok Barang
                   </h3>
-                  <p className="text-xs text-slate-300 mt-0.5">
-                    Update mutasi stok masuk, keluar, atau stock opname aktual
-                  </p>
                 </div>
               </div>
               <button

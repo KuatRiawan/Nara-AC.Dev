@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
-  Sparkles,
   Ticket,
   Wrench,
   CheckCircle2,
@@ -230,19 +229,10 @@ export default function DigitalExperienceSection() {
       <div className="absolute bottom-10 -left-20 w-80 h-80 bg-sky-100/50 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="text-center max-w-3xl mx-auto mb-14">
-          <div className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-widest border border-blue-200 mb-3 shadow-2xs">
-            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-            <span>Pengalaman Digital &amp; Transparan</span>
-          </div>
-
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight mb-4">
+        <div className="text-center max-w-3xl mx-auto mb-12">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight">
             Sistem Layanan Terpadu &amp; <span className="text-blue-600">Transparan</span>
           </h2>
-
-          <p className="text-slate-600 text-base sm:text-lg leading-relaxed">
-            Simulasi interaktif bagaimana NARA AC mengawal setiap tahapan servis dari pemesanan, verifikasi mutu pengerjaan, hingga rekam riwayat unit secara otomatis.
-          </p>
         </div>
 
         <div
@@ -516,9 +506,6 @@ export default function DigitalExperienceSection() {
                             Checklist 7 Langkah SOP Pengerjaan Teknisi
                           </h4>
                         </div>
-                        <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                          Simulasi kendali mutu wajib: teknisi mencentang laporan kerja langkah demi langkah hingga lolos QC penuh.
-                        </p>
                       </div>
 
                       <div className="flex items-center gap-2.5">
@@ -681,9 +668,6 @@ export default function DigitalExperienceSection() {
                             Database Unit AC &amp; Rekam Riwayat Servis
                           </h4>
                         </div>
-                        <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                          Setiap unit AC pelanggan memiliki identitas digital: tipe unit, riwayat pencucian, data suhu, dan estimasi waktu servis berkala.
-                        </p>
                       </div>
                       <Link
                         to="/login"
@@ -751,7 +735,6 @@ export default function DigitalExperienceSection() {
                             {activeUnit.temperature}
                             <span className="w-2 h-2 rounded-full bg-emerald-500" />
                           </div>
-                          <span className="text-[10px] text-slate-400">Target Dingin Tercapai</span>
                         </div>
 
                         <div className="p-3 rounded-xl bg-sky-50/70 border border-sky-100">
@@ -761,7 +744,6 @@ export default function DigitalExperienceSection() {
                           <div className="text-base font-black text-slate-800 font-mono">
                             {activeUnit.pressure}
                           </div>
-                          <span className="text-[10px] text-slate-400">Kondisi Ideal Standar</span>
                         </div>
 
                         <div className="p-3 rounded-xl bg-sky-50/70 border border-sky-100">
@@ -771,7 +753,6 @@ export default function DigitalExperienceSection() {
                           <div className="text-base font-black text-slate-800 font-mono">
                             {activeUnit.current}
                           </div>
-                          <span className="text-[10px] text-slate-400">Kompresor Efisien</span>
                         </div>
 
                         <div className="p-3 rounded-xl bg-sky-50/70 border border-sky-100">
@@ -781,7 +762,6 @@ export default function DigitalExperienceSection() {
                           <div className="text-base font-black text-emerald-700 font-mono">
                             {activeUnit.warrantyDaysLeft > 0 ? `${activeUnit.warrantyDaysLeft} Hari` : 'Tidak Aktif'}
                           </div>
-                          <span className="text-[10px] text-slate-400">Klaim Tanpa Kertas</span>
                         </div>
                       </div>
 
@@ -918,7 +898,7 @@ export default function DigitalExperienceSection() {
 
                   <div className="p-4 bg-slate-50 border-t border-slate-100 flex flex-col gap-2.5">
                     <div className="flex items-start gap-2 text-[11px] text-slate-500">
-                      <Sparkles className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
+                      <MessageCircle className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
                       <span>
                         <strong>Mode Simulasi Interaktif:</strong> Pada sistem riil, tombol ini menghubungkan Anda ke koordinasi WhatsApp resmi NARA AC.
                       </span>

@@ -19,7 +19,6 @@ import {
 import {
   Bot,
   BrainCircuit,
-  Sparkles,
   TrendingUp,
   Users,
   Wrench,
@@ -302,9 +301,6 @@ export default function AdminAnalytics() {
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             Analitik Operasional, Keuangan & Data Science
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Metrik transaksional terverifikasi (PostgreSQL) dipadukan dengan peramalan permintaan 14 hari & profil RFM Data Science CV. Nara Teknindotama.
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -471,27 +467,17 @@ export default function AdminAnalytics() {
         </div>
       </div>
 
-      {/* ============================================================== */}
-      {/* LAPORAN LABA RUGI & PROFITABILITAS EKSEKUTIF (PROFIT & LOSS)    */}
-      {/* ============================================================== */}
+      {/* LAPORAN LABA RUGI & PROFITABILITAS EKSEKUTIF (PROFIT & LOSS) */}
       <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-6 space-y-6">
         {/* Top Header & Master Status */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-100">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
-                <DollarSign className="w-4 h-4" />
-              </span>
-              <span className="text-xs font-black uppercase tracking-wider text-slate-500">
-                Executive Financial Overview
-              </span>
-            </div>
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <DollarSign className="w-4 h-4" />
+            </span>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               Laporan Laba Rugi &amp; Profitabilitas Bisnis
             </h2>
-            <p className="text-xs text-slate-500">
-              Rekonsiliasi arus kas masuk riil, estimasi biaya operasional bahan/teknisi, dan laba bersih proyek komersial.
-            </p>
           </div>
 
           {/* Master Status Badge: Untung vs Rugi */}
@@ -618,9 +604,6 @@ export default function AdminAnalytics() {
                   {pnlSummary.marginLaba}%
                 </span>
               </div>
-              <div className="text-[10px] text-slate-400 italic">
-                *Sudah dikurangi material freon, fee operasional teknisi, dan retur.
-              </div>
             </div>
           </div>
         </div>
@@ -628,15 +611,10 @@ export default function AdminAnalytics() {
         {/* Interactive B2B Projects Audit Table */}
         <div className="space-y-3 pt-2">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-blue-600" />
-                <span>Rincian Laba &amp; Rugi per Kontrak Proyek B2B ({b2bProjects.length} Proyek)</span>
-              </h3>
-              <p className="text-xs text-slate-500">
-                Audit transparansi proyek komersial: mendeteksi proyek yang menghasilkan surplus vs pengeluaran vendor (defisit).
-              </p>
-            </div>
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-blue-600" />
+              <span>Rincian Laba &amp; Rugi per Kontrak Proyek B2B ({b2bProjects.length} Proyek)</span>
+            </h3>
 
             {/* Filter buttons & search */}
             <div className="flex flex-wrap items-center gap-2">
@@ -776,17 +754,12 @@ export default function AdminAnalytics() {
       {(rfmGov || regGov || b2bGov) && (
         <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-sky-600 rounded-2xl p-5 sm:p-6 text-white shadow-md">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
-            <div>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/15 text-sky-100 text-[11px] font-bold uppercase tracking-wider">
-                <BrainCircuit className="w-3.5 h-3.5" />
-                Governed Data Science Pipeline (CV. Nara Teknindotama)
-              </span>
-              <h2 className="text-lg sm:text-xl font-extrabold mt-1">
-                Rekonsiliasi Dataset Historis Tervalidasi & Peramalan Permintaan
-              </h2>
-            </div>
+            <h2 className="text-lg sm:text-xl font-extrabold flex items-center gap-2">
+              <BrainCircuit className="w-5 h-5 text-sky-200" />
+              <span>Rekonsiliasi Dataset Historis &amp; Peramalan Permintaan</span>
+            </h2>
             <div className="text-xs text-blue-100 font-mono">
-              Model: {dsForecastSource?.model_version || 'nara-ds-v2.1-ridge-ts'} · Holdout 74 Hari MAE: {dsForecastSource?.metrik?.daily_order_MAE ?? '1.29'}
+              Model: {dsForecastSource?.model_version || 'nara-ds-v2.1-ridge-ts'} · MAE: {dsForecastSource?.metrik?.daily_order_MAE ?? '1.29'}
             </div>
           </div>
 
@@ -838,7 +811,7 @@ export default function AdminAnalytics() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-blue-50 text-blue-600 rounded-xl border border-blue-200/60">
-              <Sparkles className="w-4 h-4" />
+              <TrendingUp className="w-4 h-4" />
             </div>
             <div>
               <h3 className="font-bold text-sm text-slate-900">Rekomendasi & Peringatan Operasional</h3>
@@ -882,14 +855,9 @@ export default function AdminAnalytics() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-bold text-sm text-slate-900">
-                Prediksi Permintaan Harian (Data Science 14 Hari)
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Output model Autoregressive Ridge Regression beserta rentang ketidakpastian
-              </p>
-            </div>
+            <h3 className="font-bold text-sm text-slate-900">
+              Prediksi Permintaan Harian (Data Science 14 Hari)
+            </h3>
             <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
               <TrendingUp className="w-4 h-4" />
             </div>
@@ -945,14 +913,9 @@ export default function AdminAnalytics() {
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-bold text-sm text-slate-900">
-                Distribusi Beban Kerja & Penyelesaian Teknisi
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Perbandingan tiket terjadwal, sedang dikerjakan, dan selesai per teknisi
-              </p>
-            </div>
+            <h3 className="font-bold text-sm text-slate-900">
+              Distribusi Beban Kerja & Penyelesaian Teknisi
+            </h3>
             <div className="p-2 bg-teal-50 text-teal-600 rounded-xl">
               <Users className="w-4 h-4" />
             </div>
@@ -994,10 +957,7 @@ export default function AdminAnalytics() {
               <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
                 <Layers className="w-4 h-4" />
               </div>
-              <div>
-                <h3 className="font-bold text-sm text-slate-900">Layanan Paling Sering Digunakan</h3>
-                <p className="text-xs text-slate-500">Peringkat paket layanan berdasarkan volume order & unit AC</p>
-              </div>
+              <h3 className="font-bold text-sm text-slate-900">Layanan Paling Sering Digunakan</h3>
             </div>
           </div>
 
@@ -1040,10 +1000,7 @@ export default function AdminAnalytics() {
               <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
                 <Clock className="w-4 h-4" />
               </div>
-              <div>
-                <h3 className="font-bold text-sm text-slate-900">Booking Pelanggan Terjadwal</h3>
-                <p className="text-xs text-slate-500">Daftar jadwal kunjungan aktif & penugasan teknisi</p>
-              </div>
+              <h3 className="font-bold text-sm text-slate-900">Booking Pelanggan Terjadwal</h3>
             </div>
             <span className="text-xs font-bold text-blue-600">
               {schedMetrics.daftar_jadwal?.length || 0} Jadwal Aktif

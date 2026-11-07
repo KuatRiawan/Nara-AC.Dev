@@ -2,6 +2,7 @@ const { withTx, query } = require('../db/pool');
 const { E } = require('../errors');
 const { audit, notify } = require('./common');
 const bs = require('./bookingService');
+const aiClient = require('./aiClient');
 const {
   parseDateTimeInput, wibDateString, formatWib, startOfWibDay, DAY_MS,
 } = require('../utils/time');
@@ -357,6 +358,42 @@ async function completeJob(id, { override_alasan: overrideAlasan } = {}, user) {
     await audit(client, user, 'job_completed', 'booking', id, { before: { status: 'on process' }, after: { status: 'done' }, metadata: { kode: label(b), override: pending.length ? overrideAlasan : null } });
     await notify(client, { role: 'customer', id: b.customer_id, title: 'Service selesai', message: `Booking ${label(b)} telah selesai. Berikan penilaian Anda.`, type: 'booking', bookingId: id, tautan: `/feedback/${label(b)}` });
     await notify(client, { role: 'admin', title: 'Pekerjaan selesai', message: `${label(b)} diselesaikan oleh ${user.nama}.`, type: 'booking', bookingId: id, tautan: `/admin/bookings?bookingId=${id}` });
+
+    try {
+      const unitRes = await client.query(
+        `SELECT u.tipe, u.kapasitas_pk, u.tanggal_pasang, c.kontak, c.nama, s.nama_layanan
+         FROM bookings b
+         JOIN customers c ON c.id=b.customer_id
+         JOIN service_catalog s ON s.id=b.layanan_id
+         LEFT JOIN ac_units u ON u.id=b.ac_unit_id
+         WHERE b.id=$1`, [id]
+      );
+      if (unitRes.rows[0]) {
+        const u = unitRes.rows[0];
+        const ageYears = u.tanggal_pasang ? Math.max(1, new Date().getFullYear() - new Date(u.tanggal_pasang).getFullYear()) : 3;
+        const maintPred = await aiClient.predictMaintenance({
+          tipe_customer: 'Rumah Tangga',
+          tipe_ac: u.tipe || 'Split Standard',
+          kapasitas_pk: Number(u.kapasitas_pk) || 1.0,
+          usia_ac_tahun: ageYears,
+          jenis_layanan: u.nama_layanan || 'Cuci Standar',
+          freon_ditambahkan: 0,
+          penggantian_sparepart: 0,
+          service_completion_date: new Date().toISOString().slice(0, 10),
+        });
+        if (maintPred?.data?.next_maintenance_date) {
+          const nextDate = maintPred.data.next_maintenance_date;
+          const msg = maintPred.data.reminder_message_template;
+          await client.query(
+            `INSERT INTO reminder_log (booking_id, target, penerima, kanal, untuk_tanggal, pesan, status)
+             VALUES ($1, 'pelanggan', $2, 'whatsapp', $3, $4, 'pending')
+             ON CONFLICT (booking_id, target, untuk_tanggal) DO UPDATE SET pesan=$4, status='pending'`,
+            [id, u.kontak, nextDate, msg]
+          );
+        }
+      }
+    } catch (_predErr) {}
+
     return bookingRow(client, id);
   });
 }

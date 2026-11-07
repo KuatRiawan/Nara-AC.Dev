@@ -414,7 +414,7 @@ export default function AdminCustomers() {
                           const parsed = formatAddressDisplay(selectedCustomer.alamat);
                           return parsed.patokan ? (
                             <span className="inline-flex items-center gap-1 text-xs text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60 font-medium w-fit">
-                              <span>📍 Patokan:</span>
+                              <span>Patokan:</span>
                               <span className="font-bold">{parsed.patokan}</span>
                             </span>
                           ) : null;
@@ -503,7 +503,6 @@ export default function AdminCustomers() {
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="font-black text-slate-900 text-base">Inventaris Unit AC Pelanggan</h3>
-                <p className="text-xs text-slate-500">Unit AC terdaftar yang siap dipilih saat penjadwalan servis.</p>
               </div>
               {acUnitsList.length > 0 && (
                 <Button
@@ -624,7 +623,6 @@ export default function AdminCustomers() {
           <div className="space-y-4">
             <div>
               <h3 className="font-black text-slate-900 text-base">Riwayat Servis Pelanggan</h3>
-              <p className="text-xs text-slate-500">Seluruh catatan tiket pekerjaan servis AC yang pernah dipesan oleh pelanggan ini.</p>
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
@@ -771,7 +769,6 @@ export default function AdminCustomers() {
           <div className="space-y-4">
             <div>
               <h3 className="font-black text-slate-900 text-base">Ulasan & Kepuasan Pelanggan</h3>
-              <p className="text-xs text-slate-500">Feedback kepuasan yang dikirimkan pelanggan setelah teknisi menyelesaikan pekerjaan.</p>
             </div>
 
             {feedbackList.length === 0 ? (
@@ -820,9 +817,6 @@ export default function AdminCustomers() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Data Pelanggan & Unit AC</h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Direktori pelanggan CV. Nara Teknindotama terintegrasi dengan data kepemilikan unit AC dan riwayat servis.
-            </p>
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
@@ -846,7 +840,6 @@ export default function AdminCustomers() {
             <div>
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Total Pelanggan</span>
               <span className="text-2xl sm:text-3xl font-black text-slate-900 mt-1 block">{metrics.totalCust}</span>
-              <span className="text-xs text-slate-500 font-medium mt-0.5 block">Tercatat di sistem</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
               <User className="w-6 h-6" />
@@ -857,7 +850,6 @@ export default function AdminCustomers() {
             <div>
               <span className="text-xs font-bold text-blue-600 uppercase tracking-wider block">Unit AC Terdaftar</span>
               <span className="text-2xl sm:text-3xl font-black text-blue-700 mt-1 block">{metrics.totalAC} Unit</span>
-              <span className="text-xs text-slate-500 font-medium mt-0.5 block">Aset terpasang aktif</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
               <AirVent className="w-6 h-6" />
@@ -868,7 +860,6 @@ export default function AdminCustomers() {
             <div>
               <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider block">Integrasi CRM</span>
               <span className="text-base sm:text-lg font-black text-slate-900 mt-1 block">Profil & AC Terpusat</span>
-              <span className="text-xs text-slate-500 font-medium mt-0.5 block">Riwayat servis terekam</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
               <Layers className="w-6 h-6" />
@@ -1055,7 +1046,7 @@ export default function AdminCustomers() {
                         )}
                         {parsed.patokan && (
                           <span className="text-xs text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200/60 font-medium truncate max-w-[180px]">
-                            📍 {parsed.patokan}
+                            Patokan: {parsed.patokan}
                           </span>
                         )}
                       </div>
@@ -1163,7 +1154,7 @@ export default function AdminCustomers() {
                                 )}
                                 {parsed.patokan && (
                                   <span className="text-xs text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200/60 font-medium truncate max-w-[130px]" title={`Patokan: ${parsed.patokan}`}>
-                                    📍 {parsed.patokan}
+                                    Patokan: {parsed.patokan}
                                   </span>
                                 )}
                                 {!parsed.city && !parsed.district && !parsed.patokan && c.alamat && (

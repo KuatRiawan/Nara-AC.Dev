@@ -512,8 +512,8 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             Dashboard Operasional
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Pantauan jadwal servis, performa operasional, dan alokasi teknisi: <strong className="text-slate-700 font-bold">{todayFormatted}</strong>
+          <p className="text-xs sm:text-sm text-slate-500 font-semibold mt-1">
+            {todayFormatted}
           </p>
         </div>
 
@@ -553,13 +553,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
             <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
               {bookingStats.todayBookings} <span className="text-xs font-semibold text-slate-500">Tiket</span>
             </p>
-            <p className="text-xs text-slate-500 font-medium mt-1">
-              {bookingStats.todayBookings > 0 
-                ? "Jadwal servis hari ini" 
-                : (upcomingPending.length > 0 
-                    ? `0 hari ini • ${upcomingPending.length} terjadwal besok` 
-                    : "Jadwal servis terdaftar")}
-            </p>
           </div>
         </div>
 
@@ -577,9 +570,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
             <p className="text-2xl sm:text-3xl font-black text-sky-600 tracking-tight">
               {bookingStats.onProcess} <span className="text-xs font-semibold text-slate-500">Tiket</span>
             </p>
-            <p className="text-xs text-slate-500 font-medium mt-1">
-              Sedang dikerjakan teknisi
-            </p>
           </div>
         </div>
 
@@ -596,9 +586,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
           <div>
             <p className="text-2xl sm:text-3xl font-black text-emerald-600 tracking-tight">
               {bookingStats.doneToday} <span className="text-xs font-semibold text-slate-500">Tiket</span>
-            </p>
-            <p className="text-xs text-slate-500 font-medium mt-1">
-              Pengerjaan tuntas & beres
             </p>
           </div>
         </div>
@@ -678,9 +665,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
             <p className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-mono">
               Rp {bookingStats.todayOmzet.toLocaleString('id-ID')}
             </p>
-            <p className="text-xs text-slate-500 font-medium mt-1">
-              Akumulasi tiket hari ini
-            </p>
           </div>
         </div>
 
@@ -692,7 +676,7 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
           <div>
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
               <div className="flex-1 min-w-0 sm:pr-4">
-                <div className="flex items-center gap-2.5 flex-wrap mb-1">
+                <div className="flex items-center gap-2.5 flex-wrap">
                   <h2 className="text-base sm:text-xl font-black text-slate-900 tracking-tight leading-snug">
                     {chartViewConfigs[activeChartTab]?.title || 'Tren Kunjungan Servis'}
                   </h2>
@@ -703,9 +687,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
                     {chartViewConfigs[activeChartTab]?.badge}
                   </span>
                 </div>
-                <p className="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed">
-                  {chartViewConfigs[activeChartTab]?.subtitle}
-                </p>
               </div>
 
               <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
@@ -1151,9 +1132,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
                 <h3 className="text-base font-black text-slate-900 tracking-tight">
                   Kapasitas Teknisi Hari Ini
                 </h3>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  Beban alokasi tugas per teknisi
-                </p>
               </div>
               <Button 
                 size="sm"
@@ -1226,9 +1204,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
             <h3 className="text-base font-black text-slate-900 tracking-tight">
               Status Distribusi Tiket
             </h3>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Proporsi pengerjaan aktif hari ini
-            </p>
           </div>
 
           <div className="h-[210px] w-full relative flex items-center justify-center my-3">
@@ -1295,7 +1270,6 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
                 </div>
                 <div>
                   <h3 className="font-black text-slate-900 text-base">Pusat Tindakan & Perhatian</h3>
-                  <p className="text-xs text-slate-500">Status alokasi penugasan dan antrian prioritas</p>
                 </div>
               </div>
               <Badge className={cn(
@@ -1310,7 +1284,7 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
                   ? `${todayPending.length} Hari Ini Perlu Alokasi` 
                   : (upcomingPending.length > 0
                       ? `${upcomingPending.length} Jadwal Mendatang Perlu Alokasi`
-                      : 'Hari Ini Terkendali ✓')}
+                      : 'Hari Ini Terkendali')}
               </Badge>
             </div>
 

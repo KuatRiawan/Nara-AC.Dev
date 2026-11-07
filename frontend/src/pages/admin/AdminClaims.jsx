@@ -247,9 +247,6 @@ export default function AdminClaims() {
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             Manajemen Klaim Garansi Servis
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Penetapan jadwal inspeksi gratis (Rp 0), penugasan teknisi pemeriksa, dan keputusan kelayakan klaim garansi.
-          </p>
         </div>
       </div>
 
@@ -263,7 +260,6 @@ export default function AdminClaims() {
           </div>
           <div>
             <p className="text-2xl font-extrabold text-slate-900">{kpis.total}</p>
-            <p className="text-xs text-slate-500 mt-0.5">Seluruh riwayat klaim garansi</p>
           </div>
         </div>
 
@@ -276,7 +272,6 @@ export default function AdminClaims() {
           </div>
           <div>
             <p className="text-2xl font-extrabold text-amber-800">{kpis.diajukan}</p>
-            <p className="text-xs text-amber-600 mt-0.5">Menunggu jadwal & teknisi</p>
           </div>
         </div>
 
@@ -289,7 +284,6 @@ export default function AdminClaims() {
           </div>
           <div>
             <p className="text-2xl font-extrabold text-blue-800">{kpis.aktif}</p>
-            <p className="text-xs text-blue-600 mt-0.5">Kunjungan pemeriksaan gratis</p>
           </div>
         </div>
 
@@ -302,7 +296,6 @@ export default function AdminClaims() {
           </div>
           <div>
             <p className="text-2xl font-extrabold text-emerald-800">{kpis.disetujui}</p>
-            <p className="text-xs text-emerald-600 mt-0.5">Bebas biaya servis (Rp 0)</p>
           </div>
         </div>
       </div>

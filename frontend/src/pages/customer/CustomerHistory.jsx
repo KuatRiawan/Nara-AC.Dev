@@ -185,12 +185,7 @@ export default function CustomerHistory() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Riwayat Servis &amp; Garansi</h2>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Pantau riwayat pekerjaan selesai, unduh E-Invoice, beri ulasan, atau ajukan klaim garansi resmi.
-          </p>
-        </div>
+        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Riwayat Servis &amp; Garansi</h2>
       </div>
 
       <div className="space-y-4">

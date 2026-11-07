@@ -9,7 +9,6 @@ import {
   Tag,
   Clock,
   ShieldCheck,
-  Sparkles,
   Plus,
   Edit3,
   Check,
@@ -462,9 +461,6 @@ export default function AdminServices() {
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             Katalog Layanan & Tarif Resmi
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Kelola paket layanan, tarif satuan, durasi pengerjaan, masa garansi (14/30/45 hari), serta interval perawatan berkala.
-          </p>
         </div>
 
         <Button
@@ -481,7 +477,6 @@ export default function AdminServices() {
           <div>
             <p className="text-xs uppercase tracking-wider text-slate-500 font-bold">Total Paket Servis</p>
             <h3 className="text-2xl font-extrabold text-slate-900 mt-1">{services.length} Layanan</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Tersedia di katalog & form booking</p>
           </div>
           <div className="w-11 h-11 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
             <Tag className="w-5 h-5" />
@@ -492,7 +487,6 @@ export default function AdminServices() {
           <div>
             <p className="text-xs uppercase tracking-wider text-emerald-600 font-bold">Opsi Garansi Resmi</p>
             <h3 className="text-2xl font-extrabold text-emerald-700 mt-1">14 / 30 / 45 Hari</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Masa garansi resmi pengerjaan</p>
           </div>
           <div className="w-11 h-11 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
             <ShieldCheck className="w-5 h-5" />
@@ -503,10 +497,9 @@ export default function AdminServices() {
           <div>
             <p className="text-xs uppercase tracking-wider text-blue-600 font-bold">Sinkronisasi Tarif</p>
             <h3 className="text-2xl font-extrabold text-blue-700 mt-1">Real-Time</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Tersinkronisasi ke halaman booking</p>
           </div>
           <div className="w-11 h-11 bg-sky-50 text-blue-600 rounded-xl flex items-center justify-center">
-            <Sparkles className="w-5 h-5" />
+            <Layers className="w-5 h-5" />
           </div>
         </div>
       </div>

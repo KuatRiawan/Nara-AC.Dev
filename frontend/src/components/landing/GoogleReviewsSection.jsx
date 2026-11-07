@@ -89,46 +89,23 @@ export default function GoogleReviewsSection() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, ease: easeOutCubic }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-slate-200/80 shadow-xs mb-4"
-          >
-            <GoogleIcon className="w-4 h-4" />
-            <span className="text-xs font-bold text-slate-800 tracking-wide">Ulasan Resmi Google Maps</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span className="text-xs font-extrabold text-emerald-700">100% Puas</span>
-          </motion.div>
-
+        <div className="text-center max-w-3xl mx-auto mb-14">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.1, duration: 0.6, ease: easeOutCubic }}
-            className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight mb-4"
+            className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight"
           >
-            Kata Mereka tentang <span className="text-blue-600">NARA AC</span>
+            Ulasan Pelanggan <span className="text-blue-600">NARA AC</span>
           </motion.h2>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.15, duration: 0.6, ease: easeOutCubic }}
-            className="text-slate-600 text-base sm:text-lg leading-relaxed"
-          >
-            Ulasan nyata dan terverifikasi langsung dari pelanggan hunian residensial serta perkantoran di Google Maps.
-          </motion.p>
 
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ delay: 0.2, duration: 0.5, ease: easeOutCubic }}
-            className="mt-8 p-4 sm:p-5 rounded-2xl bg-white border border-sky-100 shadow-lg shadow-blue-900/5 max-w-xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4"
+            className="mt-6 p-4 sm:p-5 rounded-2xl bg-white border border-sky-100 shadow-lg shadow-blue-900/5 max-w-xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4"
           >
             <div className="flex items-center gap-3.5">
               <div className="w-13 h-13 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col items-center justify-center shrink-0">
@@ -142,12 +119,9 @@ export default function GoogleReviewsSection() {
 
               <div className="text-left">
                 <div className="flex items-center gap-1.5">
-                  <h4 className="text-sm font-bold text-slate-900">Rating Sempurna Google</h4>
+                  <h4 className="text-sm font-bold text-slate-900">Rating Google Maps</h4>
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Berdasarkan seluruh ulasan publik di Google Business
-                </p>
               </div>
             </div>
 
@@ -225,13 +199,6 @@ export default function GoogleReviewsSection() {
                 <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal whitespace-pre-line">
                   "{rev.comment}"
                 </p>
-              </div>
-
-              <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-                <span className="flex items-center gap-1 text-emerald-700 font-semibold">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Ulasan Terverifikasi
-                </span>
-                <span>Google Maps</span>
               </div>
             </motion.div>
           ))}

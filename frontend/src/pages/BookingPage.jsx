@@ -22,7 +22,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   Loader2,
-  Sparkles,
+  Calculator,
   User,
   Phone,
   Check,
@@ -112,6 +112,30 @@ export default function BookingPage() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showRestoreDraft, setShowRestoreDraft] = useState(false);
   const [userHasInteracted, setUserHasInteracted] = useState(false);
+  const [aiCostEstimate, setAiCostEstimate] = useState(null);
+  const [loadingAiCost, setLoadingAiCost] = useState(false);
+
+  const fetchAiCostEstimate = useCallback(async (customKeluhan) => {
+    const keluhanText = (typeof customKeluhan === 'string' ? customKeluhan : form.keluhan).trim() || 'AC Kurang Dingin';
+    try {
+      setLoadingAiCost(true);
+      const res = await api.post('/predict-cost', {
+        tipe_customer: 'Rumah Tangga',
+        tipe_ac: 'Split Standard',
+        kapasitas_pk: 1.0,
+        usia_ac_tahun: 3,
+        keluhan_utama: keluhanText,
+      });
+      const data = res?.data?.data || res?.data;
+      if (data && data.estimated_cost) {
+        setAiCostEstimate(data);
+      }
+    } catch (_) {
+      // Fallback silent
+    } finally {
+      setLoadingAiCost(false);
+    }
+  }, [form.keluhan]);
 
   const [operatingSettings, setOperatingSettings] = useState({
     open: '08:00',
@@ -1265,21 +1289,15 @@ export default function BookingPage() {
                     className="space-y-6"
                   >
                     <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-                        Langkah 1 dari 4
-                      </span>
-                      <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-2.5">
+                      <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
                         Pilih Paket Servis AC
                       </h2>
-                      <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                        Sesuaikan dengan kebutuhan dan kondisi unit AC Anda saat ini.
-                      </p>
                     </div>
 
                     {customerUnits.length > 0 && (
                       <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200/80 space-y-2">
                         <label htmlFor="booking-ac-unit-select" className="text-xs font-bold text-slate-800 block">
-                          Pilih Unit AC Terdaftar (Opsional — untuk Pencatatan Riwayat Per Unit):
+                          Pilih Unit AC Terdaftar (Opsional):
                         </label>
                         <select
                           id="booking-ac-unit-select"
@@ -1290,7 +1308,7 @@ export default function BookingPage() {
                           <option value="">-- Tidak Spesifik / Unit Baru --</option>
                           {customerUnits.map((u) => (
                             <option key={u.id} value={u.id}>
-                              {u.brand} {u.model || ''} ({u.kapasitas_pk || 1} PK) — {u.lokasi}
+                              {u.brand} {u.model || ''} ({u.kapasitas_pk || 1} PK) - {u.lokasi}
                             </option>
                           ))}
                         </select>
@@ -1308,13 +1326,12 @@ export default function BookingPage() {
                               <Home className="w-3.5 h-3.5 text-blue-600" />
                               1. Pilih Lokasi Pengerjaan:
                             </label>
-                            <span className="text-[11px] font-semibold text-slate-400">Tarif transparan sesuai properti</span>
                           </div>
                           <div className="grid grid-cols-3 gap-2 sm:gap-3">
                             {[
-                              { id: 'rumah', label: 'Rumah Tinggal', sub: 'Hunian & Kontrakan', icon: Home },
-                              { id: 'kantor', label: 'Kantor / Usaha', sub: 'Ruko & Komersial', icon: Building2 },
-                              { id: 'apartemen', label: 'Apartemen', sub: 'Unit Bertingkat', icon: Building },
+                              { id: 'rumah', label: 'Rumah Tinggal', icon: Home },
+                              { id: 'kantor', label: 'Kantor / Usaha', icon: Building2 },
+                              { id: 'apartemen', label: 'Apartemen', icon: Building },
                             ].map((item) => {
                               const Icon = item.icon;
                               const isActive = propertyType === item.id;
@@ -1324,27 +1341,21 @@ export default function BookingPage() {
                                   type="button"
                                   onClick={() => setPropertyType(item.id)}
                                   className={cn(
-                                    'p-3 rounded-xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between',
+                                    'p-3 rounded-xl border-2 text-left transition-all cursor-pointer flex items-center gap-2.5',
                                     isActive
                                       ? 'border-blue-600 bg-blue-50/70 text-blue-900 shadow-xs'
                                       : 'border-slate-200 hover:border-slate-300 bg-slate-50/50 text-slate-700 hover:bg-white'
                                   )}
                                 >
-                                  <div className="flex items-center justify-between mb-1.5">
-                                    <div
-                                      className={cn(
-                                        'w-7 h-7 rounded-lg flex items-center justify-center',
-                                        isActive ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'
-                                      )}
-                                    >
-                                      <Icon className="w-3.5 h-3.5" />
-                                    </div>
-                                    {isActive && <Check className="w-3.5 h-3.5 text-blue-600 stroke-[3]" />}
+                                  <div
+                                    className={cn(
+                                      'w-7 h-7 rounded-lg flex items-center justify-center shrink-0',
+                                      isActive ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'
+                                    )}
+                                  >
+                                    <Icon className="w-3.5 h-3.5" />
                                   </div>
-                                  <div>
-                                    <p className="font-bold text-xs sm:text-sm leading-tight">{item.label}</p>
-                                    <p className="text-[10px] text-slate-500 mt-0.5 hidden sm:block">{item.sub}</p>
-                                  </div>
+                                  <p className="font-bold text-xs sm:text-sm leading-tight">{item.label}</p>
                                 </button>
                               );
                             })}
@@ -1358,12 +1369,11 @@ export default function BookingPage() {
                               <Wind className="w-3.5 h-3.5 text-blue-600" />
                               2. Kapasitas / Ukuran AC:
                             </label>
-                            <span className="text-[11px] text-slate-400">Lihat di stiker label unit AC</span>
                           </div>
                           <div className="grid grid-cols-2 gap-2 sm:gap-3">
                             {[
-                              { id: '0.5-1', label: '0.5 PK – 1 PK', sub: 'Standar Kamar Tidur & Ruang Keluarga Kecil' },
-                              { id: '1.5-2', label: '1.5 PK – 2 PK', sub: 'AC Kapasitas Besar / Ruang Tamu Luas' },
+                              { id: '0.5-1', label: '0.5 PK – 1 PK' },
+                              { id: '1.5-2', label: '1.5 PK – 2 PK' },
                             ].map((cap) => {
                               const isActive = acCapacity === cap.id;
                               return (
@@ -1378,10 +1388,7 @@ export default function BookingPage() {
                                       : 'border-slate-200 hover:border-slate-300 bg-slate-50/50 text-slate-700 hover:bg-white'
                                   )}
                                 >
-                                  <div>
-                                    <p className="font-bold text-xs sm:text-sm">{cap.label}</p>
-                                    <p className="text-[10px] text-slate-500 mt-0.5">{cap.sub}</p>
-                                  </div>
+                                  <p className="font-bold text-xs sm:text-sm">{cap.label}</p>
                                   <div
                                     className={cn(
                                       'w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0',
@@ -1413,7 +1420,7 @@ export default function BookingPage() {
                                 : 'text-slate-600 hover:text-slate-900'
                             )}
                           >
-                            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                            <Wind className="w-3.5 h-3.5 text-blue-600" />
                             <span>Paket Cuci AC</span>
                           </button>
 
@@ -1612,9 +1619,6 @@ export default function BookingPage() {
                                   </span>
                                 )}
                               </h4>
-                              <p className="text-[11px] text-slate-500">
-                                Tambah isi Freon, penggantian kapasitor, perbaikan pipa, flushing, atau las sambungan.
-                              </p>
                             </div>
                           </div>
                           <div className="text-slate-400">
@@ -1693,14 +1697,9 @@ export default function BookingPage() {
 
                     <div className="pt-6 border-t border-slate-100">
                       <div role="group" aria-labelledby="booking-unit-count-label" className="flex items-center justify-between mb-3">
-                        <div>
-                          <label id="booking-unit-count-label" className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
-                            Jumlah Unit AC yang Diservis
-                          </label>
-                          <p className="text-xs text-slate-500">
-                            Pilih kuantiti unit AC yang akan dikerjakan oleh teknisi di lokasi
-                          </p>
-                        </div>
+                        <label id="booking-unit-count-label" className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
+                          Jumlah Unit AC yang Diservis
+                        </label>
                         <span className="text-xs font-black text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg">
                           {form.jumlah_unit} Unit Terpilih
                         </span>
@@ -1750,16 +1749,11 @@ export default function BookingPage() {
                       </div>
 
                       <div className="mt-4 p-4 rounded-2xl bg-blue-50/50 border border-blue-100/80">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                              <Layers className="w-4 h-4 text-blue-600" />
-                              Layanan Berbeda untuk Unit Lain?
-                            </span>
-                            <p className="text-xs text-slate-500 mt-0.5">
-                              Tambahkan kombinasi layanan dalam satu jadwal kunjungan.
-                            </p>
-                          </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <Layers className="w-4 h-4 text-blue-600" />
+                            Layanan Berbeda untuk Unit Lain?
+                          </span>
                           <button
                             type="button"
                             onClick={() => {
@@ -1799,7 +1793,7 @@ export default function BookingPage() {
                                   >
                                     {services.map((s) => (
                                       <option key={s.id} value={s.id}>
-                                        {s.nama_layanan} — Rp {Number(s.harga).toLocaleString('id-ID')} ({s.durasi_menit} mnt)
+                                        {s.nama_layanan} : Rp {Number(s.harga).toLocaleString('id-ID')} ({s.durasi_menit} mnt)
                                       </option>
                                     ))}
                                   </select>
@@ -1879,14 +1873,11 @@ export default function BookingPage() {
                     className="space-y-6"
                   >
                     <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-                        Langkah 2 dari 4
-                      </span>
-                      <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-2.5">
+                      <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
                         Tentukan Tanggal & Jam Servis
                       </h2>
                       <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                        Jam operasional {operatingDaysText} ({availability?.jam_operasional || `${operatingSettings.open}–${operatingSettings.close}`} WIB). Estimasi durasi layanan Anda: <strong>{calculation.estDuration} menit</strong>.
+                        Operasional {operatingDaysText} ({availability?.jam_operasional || `${operatingSettings.open}–${operatingSettings.close}`} WIB) · Estimasi durasi: <strong>{calculation.estDuration} menit</strong>.
                       </p>
                     </div>
 
@@ -2191,15 +2182,9 @@ export default function BookingPage() {
                     className="space-y-6"
                   >
                     <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-                        Langkah 3 dari 4
-                      </span>
-                      <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-2.5">
+                      <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
                         Data Pemesan & Lokasi
                       </h2>
-                      <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                        Informasi ini digunakan teknisi untuk navigasi dan konfirmasi pengerjaan.
-                      </p>
                     </div>
 
                     <div className="space-y-4">
@@ -2238,9 +2223,6 @@ export default function BookingPage() {
                             autoComplete="tel"
                           />
                         </div>
-                        <p className="text-xs text-slate-500 mt-1">
-                          Notifikasi tiket digital dan kontak teknisi akan dikirim via WhatsApp.
-                        </p>
                       </div>
 
                       <AddressSelector
@@ -2273,12 +2255,57 @@ export default function BookingPage() {
                             <button
                               key={tag}
                               type="button"
-                              onClick={() => handleAddComplaint(tag)}
+                              onClick={() => {
+                                handleAddComplaint(tag);
+                                fetchAiCostEstimate(form.keluhan ? `${form.keluhan}, ${tag}` : tag);
+                              }}
                               className="text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 px-2.5 py-1 rounded-lg border border-slate-200/80 cursor-pointer"
                             >
                               + {tag}
                             </button>
                           ))}
+                        </div>
+
+                        {/* AI Cost Estimation by Data Science Team (A26-CS054) */}
+                        <div className="mt-4 p-4 rounded-2xl bg-sky-50/70 border border-sky-200/80 shadow-xs">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2 text-slate-900 font-bold text-xs">
+                              <Calculator className="w-4 h-4 text-blue-600" />
+                              <span>Kalkulasi Estimasi Biaya Servis</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => fetchAiCostEstimate()}
+                              className="text-[11px] font-semibold text-blue-700 hover:text-blue-800 underline cursor-pointer"
+                            >
+                              {loadingAiCost ? 'Menghitung...' : 'Hitung Estimasi'}
+                            </button>
+                          </div>
+                          {aiCostEstimate ? (
+                            <div className="space-y-1.5">
+                              <div className="flex items-baseline justify-between pt-1">
+                                <span className="text-xs text-slate-600 font-medium">Rentang Biaya Estimasi:</span>
+                                <span className="text-sm font-black text-blue-700 font-mono">
+                                  Rp {aiCostEstimate.lower_bound?.toLocaleString('id-ID')} - Rp {aiCostEstimate.upper_bound?.toLocaleString('id-ID')}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-600 leading-snug">
+                                {aiCostEstimate.disclaimer}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between text-xs text-slate-600">
+                              <span>Pilih tag keluhan di atas untuk menghitung perkiraan rentang biaya servis.</span>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => fetchAiCostEstimate()}
+                                className="h-7 px-3 text-[11px] font-bold bg-white text-blue-700 border-blue-200 hover:bg-blue-50"
+                              >
+                                {loadingAiCost ? 'Memproses...' : 'Cek Estimasi'}
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -2316,15 +2343,9 @@ export default function BookingPage() {
                     className="space-y-6"
                   >
                     <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-                        Langkah Terakhir (4 dari 4)
-                      </span>
-                      <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-2.5">
+                      <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
                         Konfirmasi Pesanan
                       </h2>
-                      <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                        Pastikan seluruh data jadwal dan lokasi sudah akurat sebelum mengirim tiket booking.
-                      </p>
                     </div>
 
                     <div className="bg-sky-50/50 border border-sky-100 rounded-2xl p-5 space-y-4">
@@ -2374,19 +2395,26 @@ export default function BookingPage() {
                           </p>
                         </div>
                       )}
+
+                      {aiCostEstimate && (
+                        <div className="pt-2 border-t border-sky-100 flex items-center justify-between text-xs">
+                          <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                            <Calculator className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Rentang Estimasi Keluhan:</span>
+                          </span>
+                          <span className="font-extrabold text-blue-700 font-mono">
+                            Rp {aiCostEstimate.lower_bound?.toLocaleString('id-ID')} - Rp {aiCostEstimate.upper_bound?.toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Pemilihan Metode Pembayaran */}
                     <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3.5">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <CreditCard className="w-4 h-4 text-blue-600" />
-                            <h3 className="text-sm font-black text-slate-900">Pilih Metode Pembayaran</h3>
-                          </div>
-                          <p className="text-xs text-slate-500 font-medium mt-0.5">
-                            Silakan tentukan metode pembayaran yang Anda inginkan
-                          </p>
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="w-4 h-4 text-blue-600" />
+                          <h3 className="text-sm font-black text-slate-900">Pilih Metode Pembayaran</h3>
                         </div>
                         <span className="self-start sm:self-auto text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
                           <CheckCircle2 className="w-3 h-3 text-emerald-600" />
@@ -2399,29 +2427,26 @@ export default function BookingPage() {
                         <div
                           onClick={() => setForm(prev => ({ ...prev, metode_pembayaran: 'transfer' }))}
                           className={cn(
-                            "relative p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between select-none",
+                            "relative p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between gap-2.5 select-none",
                             form.metode_pembayaran === 'transfer'
                               ? "border-blue-600 bg-blue-50/40 shadow-xs ring-2 ring-blue-500/10"
                               : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 bg-white"
                           )}
                         >
-                          <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2.5">
                             <div className={cn(
-                              "w-8 h-8 rounded-xl flex items-center justify-center font-bold transition-colors",
+                              "w-8 h-8 rounded-xl flex items-center justify-center font-bold transition-colors shrink-0",
                               form.metode_pembayaran === 'transfer' ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
                             )}>
                               <CreditCard className="w-4 h-4" />
                             </div>
-                            <div className={cn(
-                              "w-4 h-4 rounded-full flex items-center justify-center border transition-all",
-                              form.metode_pembayaran === 'transfer' ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 bg-white"
-                            )}>
-                              {form.metode_pembayaran === 'transfer' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                            </div>
+                            <span className="font-black text-slate-900 text-xs">Transfer Bank</span>
                           </div>
-                          <div>
-                            <span className="font-black text-slate-900 text-xs block">Transfer Bank</span>
-                            <span className="text-[11px] text-slate-500 font-medium">BCA & Mandiri Resmi</span>
+                          <div className={cn(
+                            "w-4 h-4 rounded-full flex items-center justify-center border transition-all shrink-0",
+                            form.metode_pembayaran === 'transfer' ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 bg-white"
+                          )}>
+                            {form.metode_pembayaran === 'transfer' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
                           </div>
                         </div>
 
@@ -2429,29 +2454,26 @@ export default function BookingPage() {
                         <div
                           onClick={() => setForm(prev => ({ ...prev, metode_pembayaran: 'qris' }))}
                           className={cn(
-                            "relative p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between select-none",
+                            "relative p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between gap-2.5 select-none",
                             form.metode_pembayaran === 'qris'
                               ? "border-blue-600 bg-blue-50/40 shadow-xs ring-2 ring-blue-500/10"
                               : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 bg-white"
                           )}
                         >
-                          <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2.5">
                             <div className={cn(
-                              "w-8 h-8 rounded-xl flex items-center justify-center font-bold transition-colors",
+                              "w-8 h-8 rounded-xl flex items-center justify-center font-bold transition-colors shrink-0",
                               form.metode_pembayaran === 'qris' ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
                             )}>
                               <QrCode className="w-4 h-4" />
                             </div>
-                            <div className={cn(
-                              "w-4 h-4 rounded-full flex items-center justify-center border transition-all",
-                              form.metode_pembayaran === 'qris' ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 bg-white"
-                            )}>
-                              {form.metode_pembayaran === 'qris' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                            </div>
+                            <span className="font-black text-slate-900 text-xs">QRIS</span>
                           </div>
-                          <div>
-                            <span className="font-black text-slate-900 text-xs block">QRIS</span>
-                            <span className="text-[11px] text-slate-500 font-medium">Semua E-Wallet / Bank</span>
+                          <div className={cn(
+                            "w-4 h-4 rounded-full flex items-center justify-center border transition-all shrink-0",
+                            form.metode_pembayaran === 'qris' ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 bg-white"
+                          )}>
+                            {form.metode_pembayaran === 'qris' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
                           </div>
                         </div>
 
@@ -2459,29 +2481,26 @@ export default function BookingPage() {
                         <div
                           onClick={() => setForm(prev => ({ ...prev, metode_pembayaran: 'cash' }))}
                           className={cn(
-                            "relative p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between select-none",
+                            "relative p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between gap-2.5 select-none",
                             form.metode_pembayaran === 'cash'
                               ? "border-blue-600 bg-blue-50/40 shadow-xs ring-2 ring-blue-500/10"
                               : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 bg-white"
                           )}
                         >
-                          <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2.5">
                             <div className={cn(
-                              "w-8 h-8 rounded-xl flex items-center justify-center font-bold transition-colors",
+                              "w-8 h-8 rounded-xl flex items-center justify-center font-bold transition-colors shrink-0",
                               form.metode_pembayaran === 'cash' ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
                             )}>
                               <Banknote className="w-4 h-4" />
                             </div>
-                            <div className={cn(
-                              "w-4 h-4 rounded-full flex items-center justify-center border transition-all",
-                              form.metode_pembayaran === 'cash' ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 bg-white"
-                            )}>
-                              {form.metode_pembayaran === 'cash' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                            </div>
+                            <span className="font-black text-slate-900 text-xs">Tunai di Tempat</span>
                           </div>
-                          <div>
-                            <span className="font-black text-slate-900 text-xs block">Tunai (Cash)</span>
-                            <span className="text-[11px] text-slate-500 font-medium">Bayar di Tempat ke Teknisi</span>
+                          <div className={cn(
+                            "w-4 h-4 rounded-full flex items-center justify-center border transition-all shrink-0",
+                            form.metode_pembayaran === 'cash' ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 bg-white"
+                          )}>
+                            {form.metode_pembayaran === 'cash' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
                           </div>
                         </div>
                       </div>
@@ -2490,34 +2509,19 @@ export default function BookingPage() {
                       <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-600 leading-relaxed">
                         {form.metode_pembayaran === 'transfer' && (
                           <span>
-                            <strong>Transfer Bank:</strong> Rekening resmi BCA & Mandiri a.n. <strong>CV. Nara Teknindotama</strong> akan tercantum pada invoice dan halaman tracking tiket. Bukti pembayaran dapat diunggah langsung via portal.
+                            <strong>Transfer Bank:</strong> Rekening resmi BCA & Mandiri a.n. <strong>CV. Nara Teknindotama</strong> tercantum pada invoice.
                           </span>
                         )}
                         {form.metode_pembayaran === 'qris' && (
                           <span>
-                            <strong>QRIS:</strong> QR Code resmi terbit pada e-invoice dan dapat dipindai langsung lewat BCA, Mandiri, GoPay, OVO, Dana, atau ShopeePay.
+                            <strong>QRIS:</strong> QR Code resmi terbit pada e-invoice setelah pengerjaan selesai.
                           </span>
                         )}
                         {form.metode_pembayaran === 'cash' && (
                           <span>
-                            <strong>Bayar Tunai di Tempat:</strong> Pembayaran tunai langsung diserahkan kepada teknisi setelah seluruh pengerjaan selesai dites dingin dan beres.
+                            <strong>Tunai di Tempat:</strong> Pembayaran diserahkan langsung kepada teknisi setelah servis selesai.
                           </span>
                         )}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2 text-xs text-slate-600 bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>SOP 7 Langkah Pengerjaan Standar Industri CV. Nara Teknindotama</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
-                        <span>Garansi Pengerjaan Resmi <strong>{calculation.warranty}</strong></span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Percent className="w-4 h-4 text-sky-600 shrink-0" />
-                        <span>Metode Pembayaran Terpilih: <strong>{form.metode_pembayaran === 'cash' ? 'Tunai di Tempat' : form.metode_pembayaran === 'qris' ? 'QRIS' : 'Transfer Bank'}</strong></span>
                       </div>
                     </div>
 
@@ -2617,12 +2621,9 @@ export default function BookingPage() {
                       )}
 
                       <div className="pt-3 border-t border-slate-100 flex items-baseline justify-between">
-                        <div>
-                          <span className="text-xs font-bold uppercase text-slate-500 tracking-wider block">
-                            Total Estimasi
-                          </span>
-                          <span className="text-xs text-slate-500">Termasuk SOP & Peralatan</span>
-                        </div>
+                        <span className="text-xs font-bold uppercase text-slate-500 tracking-wider">
+                          Total Estimasi
+                        </span>
                         <div className="text-right">
                           <span className="text-2xl font-black text-blue-700 font-mono tracking-tight">
                             Rp {calculation.total.toLocaleString('id-ID')}

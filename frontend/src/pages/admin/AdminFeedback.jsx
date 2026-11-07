@@ -3,7 +3,7 @@ import api from '../../api';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { useToast } from '../../components/ui/toast';
-import { Star, Search, ThumbsUp, MessageSquare, Sparkles, Award, CheckCircle2, Wrench } from 'lucide-react';
+import { Star, Search, ThumbsUp, MessageSquare, Award, CheckCircle2, Wrench } from 'lucide-react';
 
 export default function AdminFeedback() {
   const { error: showError } = useToast();
@@ -89,9 +89,6 @@ export default function AdminFeedback() {
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
           Feedback & Ulasan Konsumen
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          Evaluasi kepuasan pelanggan, performa SOP teknisi, dan ulasan setelah servis AC selesai.
-        </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -109,7 +106,7 @@ export default function AdminFeedback() {
               <span className="text-sm font-bold text-slate-500">/ 5.0</span>
             </div>
             <p className="text-xs font-medium text-slate-500 mt-1">
-              Berdasarkan {stats.total} ulasan masuk
+              {stats.total} ulasan
             </p>
           </div>
         </div>
@@ -123,9 +120,6 @@ export default function AdminFeedback() {
           </div>
           <div>
             <span className="text-3xl font-black text-emerald-700">{stats.positivePercent}%</span>
-            <p className="text-xs font-medium text-emerald-600/80 mt-1">
-              Ulasan bintang 4 dan 5
-            </p>
           </div>
         </div>
 
@@ -138,15 +132,6 @@ export default function AdminFeedback() {
           </div>
           <div>
             <span className="text-xl font-black text-slate-900 truncate block">{stats.topTech}</span>
-            <p className="text-xs font-medium text-blue-600 mt-1 flex items-center gap-1">
-              {stats.topTech !== '-' ? (
-                <>
-                  <Sparkles className="w-3 h-3" /> 100% SOP Terverifikasi
-                </>
-              ) : (
-                'Belum ada data'
-              )}
-            </p>
           </div>
         </div>
 
@@ -159,9 +144,6 @@ export default function AdminFeedback() {
           </div>
           <div>
             <span className="text-xl font-black text-slate-900">SOP 7 Langkah</span>
-            <p className="text-xs font-medium text-slate-500 mt-1">
-              CV. Nara Teknindotama Bogor
-            </p>
           </div>
         </div>
 
@@ -194,7 +176,7 @@ export default function AdminFeedback() {
             onClick={() => setRatingFilter('5')}
             className={`rounded-xl text-xs font-bold cursor-pointer h-9 ${ratingFilter === '5' ? 'bg-amber-600 text-white' : 'border-slate-200 text-slate-600'}`}
           >
-            ⭐ Bintang 5
+            Bintang 5
           </Button>
           <Button
             size="sm"
@@ -202,7 +184,7 @@ export default function AdminFeedback() {
             onClick={() => setRatingFilter('4')}
             className={`rounded-xl text-xs font-bold cursor-pointer h-9 ${ratingFilter === '4' ? 'bg-amber-500 text-white' : 'border-slate-200 text-slate-600'}`}
           >
-            ⭐ Bintang 4
+            Bintang 4
           </Button>
         </div>
       </div>
@@ -268,9 +250,10 @@ export default function AdminFeedback() {
                     {item.tags.map((t, idx) => (
                       <span 
                         key={idx} 
-                        className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-100"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-100"
                       >
-                        ✓ {t}
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                        <span>{t}</span>
                       </span>
                     ))}
                   </div>

@@ -1,0 +1,30 @@
+{
+    "target": "total_biaya",
+    "features": [
+        "tipe_customer",
+        "tipe_ac",
+        "kapasitas_pk",
+        "usia_ac_tahun",
+        "keluhan_utama"
+    ],
+    "train_samples": 1080,
+    "test_samples": 270,
+    "evaluation_metrics": {
+        "Baseline_RidgeRegression": {
+            "MAE": 36645.81,
+            "RMSE": 51678.35,
+            "R2_Score": 0.817
+        },
+        "RandomForest_Regressor": {
+            "MAE": 35602.02,
+            "RMSE": 53646.76,
+            "R2_Score": 0.8028
+        },
+        "GradientBoosting_Regressor": {
+            "MAE": 36522.22,
+            "RMSE": 52985.73,
+            "R2_Score": 0.8077
+        }
+    },
+    "best_model": "Baseline_RidgeRegression"
+}

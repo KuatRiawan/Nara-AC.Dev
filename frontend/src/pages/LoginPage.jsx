@@ -19,13 +19,11 @@ import {
   Lock,
   Phone,
   MessageSquare,
-  Sparkles,
   Shield,
   Clock,
   AlertTriangle,
   CheckCircle2,
   FileText,
-  Star,
   Zap,
   PhoneCall,
   X,
@@ -259,11 +257,6 @@ export default function LoginPage() {
 
           <div className="lg:col-span-7 space-y-6">
 
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50/80 border border-blue-200 text-blue-700 text-xs font-bold shadow-2xs">
-              <Sparkles className="w-4 h-4 text-blue-600" />
-              <span>Keanggotaan Eksklusif Nara Member Care</span>
-            </div>
-
             <div className="space-y-3">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">
                 Perawatan AC Rumah &amp; Kantor Lebih Terencana
@@ -280,7 +273,7 @@ export default function LoginPage() {
                   <MessageSquare className="w-4 h-4" />
                 </div>
                 <h2 className="text-xs font-black text-slate-800 mb-1">WhatsApp OTP Cepat</h2>
-                <p className="text-xs text-slate-500 leading-normal">
+                <p className="text-xs text-slate-600 leading-normal">
                   Login instan menggunakan kode 6-digit WhatsApp tanpa perlu repot password.
                 </p>
               </div>
@@ -290,7 +283,7 @@ export default function LoginPage() {
                   <Gift className="w-4 h-4" />
                 </div>
                 <h2 className="text-xs font-black text-slate-800 mb-1">Prioritas Layanan Member</h2>
-                <p className="text-xs text-slate-500 leading-normal">
+                <p className="text-xs text-slate-600 leading-normal">
                   Prioritas penjadwalan teknisi dan histori servis unit AC langsung dari unit pertama.
                 </p>
               </div>
@@ -300,7 +293,7 @@ export default function LoginPage() {
                   <FileText className="w-4 h-4" />
                 </div>
                 <h2 className="text-xs font-black text-slate-800 mb-1">Garansi &amp; E-Invoice</h2>
-                <p className="text-xs text-slate-500 leading-normal">
+                <p className="text-xs text-slate-600 leading-normal">
                   Klaim garansi pengerjaan s.d 45 hari dan unduh faktur resmi tersimpan rapi.
                 </p>
               </div>
@@ -309,19 +302,19 @@ export default function LoginPage() {
 
             <div className="pt-2 flex flex-wrap items-center gap-6 text-xs text-slate-600 border-t border-slate-200/70">
               <div className="flex items-center gap-1.5">
-                <Star className="w-4 h-4 text-amber-500 fill-amber-400" />
-                <span className="font-black text-slate-900">4.9/5.0</span>
-                <span className="text-slate-500">Kepuasan Pelanggan</span>
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span className="font-black text-slate-900 font-mono">NIB: 2805250066735</span>
+                <span className="text-slate-600">Badan Hukum Resmi</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-blue-600" />
-                <span className="font-black text-slate-900">2.500+</span>
-                <span className="text-slate-500">Unit Terdaftar</span>
+                <span className="font-black text-slate-900">SOP 7 Langkah</span>
+                <span className="text-slate-600">Standar Pengerjaan</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <PhoneCall className="w-4 h-4 text-emerald-600" />
-                <span className="font-black text-slate-900">24 Jam</span>
-                <span className="text-slate-500">Dukungan CS</span>
+                <Award className="w-4 h-4 text-sky-600" />
+                <span className="font-black text-slate-900">s.d. 45 Hari</span>
+                <span className="text-slate-600">Garansi Resmi</span>
               </div>
             </div>
 
@@ -337,15 +330,9 @@ export default function LoginPage() {
               <div className="absolute -bottom-16 -left-16 w-40 h-40 bg-sky-50 rounded-full blur-2xl pointer-events-none" />
 
               <div className="mb-5 relative z-10">
-                <span className="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-1">
-                  Portal Autentikasi Member
-                </span>
                 <h2 className="text-2xl font-black text-slate-900 tracking-tight">
                   Masuk ke Akun
                 </h2>
-                <p className="text-xs text-slate-500 mt-1">
-                  Pilih metode masuk yang paling nyaman untuk Anda.
-                </p>
               </div>
 
               <div className="flex rounded-2xl bg-slate-100/90 p-1 mb-5 border border-slate-200/70 relative z-10">
@@ -440,9 +427,6 @@ export default function LoginPage() {
                             className="h-11 pl-10 text-xs font-semibold rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all font-mono"
                           />
                         </div>
-                        <p className="text-[11px] text-slate-500 leading-normal">
-                          Pastikan nomor WhatsApp Anda aktif untuk menerima kode verifikasi OTP 6-digit.
-                        </p>
                       </div>
 
                       <Button

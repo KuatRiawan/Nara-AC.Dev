@@ -10,7 +10,7 @@ import {
   CalendarCheck,
   Plus,
   Wind,
-  Sparkles,
+  Award,
   ShieldCheck,
   Copy,
   Check,
@@ -206,26 +206,18 @@ export default function CustomerDashboard({ onOpenNotif }) {
           <div className="space-y-3 max-w-2xl">
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-white/15 text-white border border-white/25 backdrop-blur-md">
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <Award className="w-3.5 h-3.5 text-amber-300" />
                 MEMBER RESMI NARA AC
               </span>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-white/15 text-sky-50 border border-white/20">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
                 ID: #MBR-{String(user?.id || 1).padStart(4, '0')}
               </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/25 text-emerald-100 border border-emerald-300/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-300" />
-                Member Resmi NARA AC
-              </span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
               Halo, {user?.nama || user?.name || 'Pelanggan Setia'}
             </h1>
-
-            <p className="text-sm sm:text-base text-blue-50 leading-relaxed">
-              Selamat datang di portal servis resmi CV. Nara Teknindotama. Nikmati layanan teknisi tersertifikasi, jaminan <strong className="text-white font-bold">garansi pengerjaan 14/30/45 hari</strong>, serta pemantauan histori unit AC Anda.
-            </p>
 
             <div className="flex flex-wrap items-center gap-4 text-xs text-sky-100 pt-1">
               <span>WhatsApp: <strong className="text-white">{user?.kontak || '0813-8529-3137'}</strong></span>
@@ -268,14 +260,11 @@ export default function CustomerDashboard({ onOpenNotif }) {
               <CheckCircle2 className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-2">
+          <div className="mt-2 flex items-baseline justify-between">
             <p className="text-3xl font-black text-slate-900 group-hover:text-emerald-600 transition-colors">
               {data?.history_count || 0}
             </p>
-            <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-              <span>Servis selesai</span>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-            </p>
+            <ChevronRight className="w-4 h-4 text-slate-400" />
           </div>
         </motion.div>
 
@@ -287,19 +276,16 @@ export default function CustomerDashboard({ onOpenNotif }) {
           className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Unit AC</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Unit AC Terdaftar</span>
             <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <Wind className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-2">
+          <div className="mt-2 flex items-baseline justify-between">
             <p className="text-3xl font-black text-slate-900 group-hover:text-blue-600 transition-colors">
               {data?.ac_units_count || 0}
             </p>
-            <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-              <span>Unit terdaftar</span>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-            </p>
+            <ChevronRight className="w-4 h-4 text-slate-400" />
           </div>
         </motion.div>
 
@@ -311,17 +297,14 @@ export default function CustomerDashboard({ onOpenNotif }) {
           className="bg-gradient-to-br from-blue-50 to-sky-50/70 p-5 rounded-2xl border border-blue-200/80 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-700">Benefit Member</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-700">Garansi Member</span>
             <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
-              <Sparkles className="w-5 h-5 text-amber-300" />
+              <Award className="w-5 h-5 text-amber-300" />
             </div>
           </div>
-          <div className="mt-2">
-            <p className="text-2xl font-black text-blue-900">Garansi</p>
-            <p className="text-xs text-blue-700 font-medium mt-0.5 flex items-center gap-1">
-              <span>Hingga 45 hari resmi</span>
-              <ChevronRight className="w-3.5 h-3.5 text-blue-400" />
-            </p>
+          <div className="mt-2 flex items-baseline justify-between">
+            <p className="text-2xl font-black text-blue-900">s.d. 45 Hari</p>
+            <ChevronRight className="w-4 h-4 text-blue-400" />
           </div>
         </motion.div>
       </div>
@@ -490,7 +473,6 @@ export default function CustomerDashboard({ onOpenNotif }) {
                     <Wind className="w-5 h-5" />
                   </div>
                   <h3 className="font-black text-slate-900 text-xs">Unit AC Saya</h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Kelola &amp; pantau PK</p>
                 </button>
 
                 <button
@@ -501,7 +483,6 @@ export default function CustomerDashboard({ onOpenNotif }) {
                     <FileText className="w-5 h-5" />
                   </div>
                   <h3 className="font-black text-slate-900 text-xs">Riwayat Servis</h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Faktur &amp; garansi</p>
                 </button>
 
                 <button
@@ -512,7 +493,6 @@ export default function CustomerDashboard({ onOpenNotif }) {
                     <Settings className="w-5 h-5" />
                   </div>
                   <h3 className="font-black text-slate-900 text-xs">Pengaturan Akun</h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Profil, sandi &amp; WA</p>
                 </button>
 
                 <button
@@ -523,7 +503,6 @@ export default function CustomerDashboard({ onOpenNotif }) {
                     <ShieldCheck className="w-5 h-5" />
                   </div>
                   <h3 className="font-black text-slate-900 text-xs">Klaim Garansi</h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5">14 / 30 / 45 Hari</p>
                 </button>
               </div>
 
@@ -537,10 +516,7 @@ export default function CustomerDashboard({ onOpenNotif }) {
                   <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
                     <MessageCircle className="w-4 h-4" />
                   </div>
-                  <div>
-                    <p className="text-xs font-black text-slate-900">Bantuan CS &amp; Konsultasi WhatsApp</p>
-                    <p className="text-[10px] text-slate-500 font-medium">Respon cepat teknisi resmi NARA AC</p>
-                  </div>
+                  <p className="text-xs font-black text-slate-900">Bantuan CS &amp; Konsultasi WhatsApp</p>
                 </div>
                 <ChevronRight className="w-4 h-4 text-emerald-600" />
               </a>

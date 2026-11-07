@@ -1,0 +1,32 @@
+{
+    "target": "siklus_servis_hari",
+    "features": [
+        "tipe_customer",
+        "tipe_ac",
+        "kapasitas_pk",
+        "usia_ac_tahun",
+        "jenis_layanan",
+        "freon_ditambahkan",
+        "penggantian_sparepart"
+    ],
+    "train_samples": 988,
+    "test_samples": 247,
+    "evaluation_metrics": {
+        "Baseline_RidgeRegression": {
+            "MAE_Hari": 3.69,
+            "RMSE_Hari": 4.67,
+            "R2_Score": 0.9505
+        },
+        "RandomForest_Regressor": {
+            "MAE_Hari": 3.6,
+            "RMSE_Hari": 4.46,
+            "R2_Score": 0.9548
+        },
+        "GradientBoosting_Regressor": {
+            "MAE_Hari": 3.33,
+            "RMSE_Hari": 4.11,
+            "R2_Score": 0.9616
+        }
+    },
+    "best_model": "GradientBoosting_Regressor"
+}

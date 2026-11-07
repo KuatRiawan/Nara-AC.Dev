@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Calculator, Clock, ShieldCheck, ArrowRight, Check, AlertCircle, Sparkles } from 'lucide-react';
+import { Search, Calculator, Clock, ShieldCheck, ArrowRight, Check, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button } from '../ui/button';
 
 export default function HeroInteractiveCard({ services = [] }) {
@@ -255,14 +255,6 @@ export default function HeroInteractiveCard({ services = [] }) {
                   <span className="font-bold text-emerald-700">{calculation.warranty} Penuh</span>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-blue-700 bg-blue-50/80 px-2.5 py-1.5 rounded-lg border border-blue-200/80">
-                  <span className="font-semibold flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                    Standar Layanan:
-                  </span>
-                  <span className="font-bold">Teknisi Tersertifikasi &amp; SOP Presisi</span>
-                </div>
-
                 <div className="pt-2 border-t border-sky-200 flex items-center justify-between">
                   <div>
                     <span className="text-xs font-bold uppercase text-slate-500 tracking-wider">
@@ -292,11 +284,7 @@ export default function HeroInteractiveCard({ services = [] }) {
               className="space-y-4"
             >
               <div>
-                <span className="text-xs font-bold tracking-widest uppercase text-blue-600">Portal Publik</span>
-                <h4 className="text-lg font-black text-slate-900 mt-0.5">Lacak Status Pengerjaan</h4>
-                <p className="text-xs text-slate-600 mt-1">
-                  Masukkan kode tiket booking resmi untuk memantau perjalanan teknisi secara langsung.
-                </p>
+                <h4 className="text-lg font-black text-slate-900">Lacak Status Pengerjaan</h4>
               </div>
 
               <form onSubmit={handleTrackSubmit} className="space-y-3 pt-2">

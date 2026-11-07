@@ -1,0 +1,20 @@
+{
+    "best_model": "GradientBoosting_Regressor",
+    "metrics": {
+        "Baseline_RidgeRegression": {
+            "MAE": 39485.3,
+            "RMSE": 54558.97,
+            "R2_Score": 0.7885
+        },
+        "RandomForest_Regressor": {
+            "MAE": 36016.57,
+            "RMSE": 54516.9,
+            "R2_Score": 0.7888
+        },
+        "GradientBoosting_Regressor": {
+            "MAE": 35953.52,
+            "RMSE": 53507.1,
+            "R2_Score": 0.7966
+        }
+    }
+}

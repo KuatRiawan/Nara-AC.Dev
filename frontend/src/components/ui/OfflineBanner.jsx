@@ -95,11 +95,6 @@ export default function OfflineBanner() {
     };
   }, []);
 
-  // Don't render banner overlay if user is already on the dedicated /offline page
-  if (location.pathname === '/offline') {
-    return null;
-  }
-
   // Mini-Game Logic
   useEffect(() => {
     if (!isGameOpen || !isOffline || minimized) {
@@ -234,6 +229,11 @@ export default function OfflineBanner() {
       g.running = false;
     };
   }, [isGameOpen, isOffline, minimized]);
+
+  // Don't render banner overlay if user is already on the dedicated /offline page
+  if (location.pathname === '/offline') {
+    return null;
+  }
 
   return (
     <aside aria-label="Status Koneksi Internet" aria-live="assertive">

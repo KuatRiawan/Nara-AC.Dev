@@ -568,9 +568,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             E-Invoice &amp; Kas Pembayaran
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Rekap faktur digital, verifikasi bukti transfer, proses refund, dan pengiriman invoice WhatsApp.
-          </p>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
@@ -633,12 +630,7 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
         
         <div className="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Omzet Servis</span>
-              <span className="text-[11px] font-semibold text-blue-600 block mt-0.5">
-                {currentPeriodInfo.label}
-              </span>
-            </div>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Omzet Servis</span>
             <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
               <CreditCard className="w-4 h-4" />
             </div>
@@ -648,19 +640,14 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
               Rp {kpis.totalOmzet.toLocaleString('id-ID')}
             </p>
             <p className="text-xs font-medium text-slate-500 mt-1">
-              Dari {kpis.totalCount} tiket faktur ({currentPeriodInfo.label})
+              {kpis.totalCount} faktur ({currentPeriodInfo.label})
             </p>
           </div>
         </div>
 
         <div className="p-5 rounded-3xl bg-white border border-emerald-100 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Pembayaran Lunas</span>
-              <span className="text-[11px] font-semibold text-emerald-600/80 block mt-0.5">
-                {currentPeriodInfo.label}
-              </span>
-            </div>
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Pembayaran Lunas</span>
             <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
               <CheckCircle2 className="w-4 h-4" />
             </div>
@@ -670,7 +657,7 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
               Rp {kpis.totalLunas.toLocaleString('id-ID')}
             </p>
             <p className="text-xs font-medium text-emerald-600/80 mt-1">
-              {kpis.countLunas} transaksi terverifikasi
+              {kpis.countLunas} transaksi
             </p>
           </div>
         </div>
@@ -686,9 +673,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
             <p className="text-2xl font-black text-amber-800">
               {kpis.countVerify}
             </p>
-            <p className="text-xs font-medium text-amber-600/80 mt-1">
-              Bukti transfer pelanggan menunggu approval
-            </p>
           </div>
         </div>
 
@@ -696,7 +680,6 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
           <div className="flex justify-between items-start mb-2">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-blue-600 block">Rekening Resmi Invoice</span>
-              <p className="text-xs text-slate-500">Tercetak pada lembar faktur</p>
             </div>
             <Button
               size="sm"
@@ -970,12 +953,14 @@ export default function AdminInvoices({ bookings: propBookings, onBookingUpdated
                             </span>
                           </div>
                         ) : inv.status_verifikasi_pembayaran === 'diverifikasi' ? (
-                          <span className="text-[10px] text-emerald-700 font-bold block">
-                            ✓ Bukti Diverifikasi Admin
+                          <span className="text-[10px] text-emerald-700 font-bold inline-flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                            <span>Bukti Diverifikasi Admin</span>
                           </span>
                         ) : inv.status_verifikasi_pembayaran === 'ditolak' ? (
-                          <span className="text-[10px] text-rose-700 font-bold block">
-                            ✕ Bukti Ditolak
+                          <span className="text-[10px] text-rose-700 font-bold inline-flex items-center gap-1">
+                            <XCircle className="w-3 h-3 text-rose-600 shrink-0" />
+                            <span>Bukti Ditolak</span>
                           </span>
                         ) : null}
                       </div>

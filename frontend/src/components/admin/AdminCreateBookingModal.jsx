@@ -241,15 +241,9 @@ export default function AdminCreateBookingModal({
               <Calendar className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
                 Input Booking Pelanggan
-                <span className="text-xs uppercase font-bold px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 tracking-wider">
-                  Admin Internal
-                </span>
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                Catat pesanan masuk via WhatsApp, telepon, atau walk-in langsung ke sistem.
-              </p>
             </div>
           </div>
           <button
@@ -271,9 +265,6 @@ export default function AdminCreateBookingModal({
               <h3 className="text-xl font-black text-slate-900 tracking-tight">
                 Booking Berhasil Diterbitkan!
               </h3>
-              <p className="text-xs text-slate-500 max-w-md mx-auto">
-                Tiket servis telah tercatat di antrean sistem operasional NARA AC dan langsung terintegrasi dengan jadwal teknisi.
-              </p>
             </div>
 
             <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-5 text-left space-y-3 max-w-lg mx-auto">
@@ -480,7 +471,7 @@ export default function AdminCreateBookingModal({
                   >
                     {services.map(s => (
                       <option key={s.id} value={s.id}>
-                        {s.nama_layanan} — Rp {Number(s.harga).toLocaleString('id-ID')}
+                        {s.nama_layanan} : Rp {Number(s.harga).toLocaleString('id-ID')}
                       </option>
                     ))}
                   </select>

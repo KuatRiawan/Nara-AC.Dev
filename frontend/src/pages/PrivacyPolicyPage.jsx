@@ -16,20 +16,13 @@ export default function PrivacyPolicyPage() {
         </div>
       </header>
 
-      <section className="bg-gradient-to-b from-blue-700 via-blue-600 to-sky-600 text-white py-16 px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto text-center space-y-4">
-          <div className="inline-flex items-center gap-2 bg-blue-700/60 border border-blue-400/30 px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold text-blue-100 backdrop-blur-sm">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Kepatuhan Pelindungan Data Pribadi (UU PDP No. 27 Tahun 2022)</span>
-          </div>
+      <section className="bg-gradient-to-b from-blue-700 via-blue-600 to-sky-600 text-white py-14 px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto text-center space-y-3">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight">
             Kebijakan Privasi
           </h1>
-          <p className="text-blue-100 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
-            Komitmen CV. Nara Teknindotama dalam menjaga kerahasiaan, keamanan, dan integritas data pribadi pelanggan saat menggunakan layanan pemesanan, pengingat WhatsApp, dan asisten AI NARA AC.
-          </p>
-          <p className="text-xs text-blue-300 font-medium">
-            Terakhir diperbarui: 17 Oktober 2026 &bull; Berlaku untuk seluruh pengguna situs, portal pelanggan, dan layanan NARA AC
+          <p className="text-xs text-blue-200 font-medium">
+            Terakhir diperbarui: 17 Oktober 2026 &bull; UU PDP No. 27 Tahun 2022
           </p>
         </div>
       </section>

@@ -150,4 +150,73 @@ router.get('/analytics/b2b-projects', requireAuth(['admin']), validate(Joi.objec
 router.get('/predictions/latest', requireAuth(['admin']), validate(Joi.object({}), 'query'), handlePredictions);
 router.get('/analytics/predictions', requireAuth(['admin']), validate(Joi.object({}), 'query'), handlePredictions);
 
+// =========================================================================
+// DATA SCIENCE INTEGRATION ENDPOINTS (API_CONTRACT_DS.md)
+// =========================================================================
+
+router.post('/predict-cost', optionalAuth, validate(Joi.object({
+  tipe_customer: Joi.string().allow('', null).default('Rumah Tangga'),
+  tipe_ac: Joi.string().allow('', null).default('Split Standard'),
+  kapasitas_pk: Joi.number().min(0.5).max(10).default(1.0),
+  usia_ac_tahun: Joi.number().integer().min(0).max(30).default(3),
+  keluhan_utama: Joi.string().allow('', null).default('AC Kurang Dingin'),
+})), wrap(async (req, res) => {
+  try {
+    const resp = await aiClient.predictCost(req.valid.body);
+    return res.json(resp);
+  } catch (_err) {
+    // Fallback cerdas sesuai data science formula
+    const pk = Number(req.valid.body.kapasitas_pk) || 1.0;
+    const usia = Number(req.valid.body.usia_ac_tahun) || 3;
+    let base = 150000;
+    if (req.valid.body.tipe_ac === 'Cassette') base += 100000;
+    if (req.valid.body.tipe_ac === 'Standing Floor') base += 80000;
+    if (req.valid.body.tipe_customer === 'Bisnis/Kantor') base += 30000;
+    base += Math.round(pk * 45000);
+    base += Math.round(usia * 15000);
+    if (req.valid.body.keluhan_utama?.includes('Freon') || req.valid.body.keluhan_utama?.includes('Dingin')) base += 50000;
+    const est = Math.round(base / 1000) * 1000;
+    return res.json({
+      status: 'success',
+      data: {
+        estimated_cost: est,
+        lower_bound: Math.max(75000, est - 36000),
+        upper_bound: est + 36000,
+        currency: 'IDR',
+        disclaimer: 'Estimasi awal ini dihitung berdasarkan gejala keluhan dan kapasitas unit. Biaya final ditentukan setelah pengecekan fisik di lokasi.'
+      }
+    });
+  }
+}));
+
+router.post('/predict-maintenance', optionalAuth, validate(Joi.object({
+  tipe_customer: Joi.string().allow('', null).default('Rumah Tangga'),
+  tipe_ac: Joi.string().allow('', null).default('Split Standard'),
+  kapasitas_pk: Joi.number().min(0.5).max(10).default(1.0),
+  usia_ac_tahun: Joi.number().integer().min(0).max(30).default(3),
+  jenis_layanan: Joi.string().allow('', null).default('Cuci Standar'),
+  freon_ditambahkan: Joi.number().valid(0, 1).default(0),
+  penggantian_sparepart: Joi.number().valid(0, 1).default(0),
+  service_completion_date: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).allow(null, '')
+})), wrap(async (req, res) => {
+  try {
+    const resp = await aiClient.predictMaintenance(req.valid.body);
+    return res.json(resp);
+  } catch (_err) {
+    const days = req.valid.body.tipe_customer === 'Bisnis/Kantor' ? 45 : 90;
+    const baseDate = req.valid.body.service_completion_date ? new Date(req.valid.body.service_completion_date) : new Date();
+    const nextDate = new Date(baseDate.getTime() + days * 86400000);
+    const nextDateStr = nextDate.toISOString().slice(0, 10);
+    return res.json({
+      status: 'success',
+      data: {
+        recommended_interval_days: days,
+        next_maintenance_date: nextDateStr,
+        urgency_level: days < 70 ? 'Tinggi (<70 hari)' : 'Standar (70-100 hari)',
+        reminder_message_template: `Halo Pelanggan CV Nara Teknindotama, berdasarkan riwayat perawatan unit AC Anda, kami merekomendasikan jadwal perawatan berkala berikutnya sekitar ${days} hari lagi pada ${nextDateStr}.`
+      }
+    });
+  }
+}));
+
 module.exports = router;

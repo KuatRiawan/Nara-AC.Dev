@@ -39,8 +39,10 @@ async function call(path, { method = 'POST', body, timeoutMs = config.aiTimeoutM
 }
 
 const predictIntent = (text) => call('/predict-intent', { body: { text } });
+const predictCost = (data) => call('/predict-cost', { body: data });
+const predictMaintenance = (data) => call('/predict-maintenance', { body: data });
 const ragIndex = (documents, corpusHash) => call('/rag/index', { body: { documents, corpus_hash: corpusHash }, timeoutMs: 60000 });
 const ragAnswer = (question, corpusHash) => call('/rag/answer', { body: { question, corpus_hash: corpusHash }, timeoutMs: Math.max(config.aiTimeoutMs, 20000) });
 const health = () => call('/health', { method: 'GET', timeoutMs: 2500 });
 
-module.exports = { predictIntent, ragIndex, ragAnswer, health };
+module.exports = { predictIntent, predictCost, predictMaintenance, ragIndex, ragAnswer, health };

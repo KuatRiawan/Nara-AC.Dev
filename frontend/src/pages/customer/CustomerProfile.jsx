@@ -11,7 +11,7 @@ import {
   MapPin,
   Save,
   CheckCircle2,
-  Sparkles,
+  Award,
   Eye,
   EyeOff,
   Smartphone,
@@ -210,23 +210,18 @@ export default function CustomerProfile() {
     { id: 'profile', label: 'Profil Saya', icon: User },
     { id: 'security', label: 'Keamanan & Sandi', icon: Lock },
     { id: 'preferences', label: 'Notifikasi & WhatsApp', icon: Bell },
-    { id: 'benefits', label: 'Keanggotaan Member', icon: Sparkles },
+    { id: 'benefits', label: 'Keanggotaan Member', icon: Award },
   ];
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Pengaturan Akun &amp; Profil
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Kelola data identitas, keamanan sandi, alamat utama servis, dan preferensi notifikasi Anda.
-          </p>
-        </div>
+        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+          Pengaturan Akun &amp; Profil
+        </h1>
 
         <div className="flex items-center gap-2 self-start sm:self-auto bg-gradient-to-r from-blue-50 to-sky-50 border border-blue-200/80 px-3.5 py-1.5 rounded-2xl shadow-2xs">
-          <Sparkles className="w-4 h-4 text-amber-500" />
+          <Award className="w-4 h-4 text-amber-500" />
           <div className="text-left">
             <p className="text-[10px] font-black uppercase text-blue-700 tracking-wider">Member Aktif</p>
             <p className="text-xs font-bold text-slate-800">Layanan Prioritas Member</p>
@@ -759,7 +754,7 @@ export default function CustomerProfile() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="p-5 rounded-3xl bg-gradient-to-br from-blue-50 to-sky-50/80 border border-blue-200/80 shadow-2xs space-y-2">
               <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
-                <Sparkles className="w-5 h-5 text-amber-300" />
+                <Award className="w-5 h-5 text-amber-300" />
               </div>
               <h3 className="font-black text-base text-slate-900">Prioritas Layanan &amp; Riwayat Unit</h3>
               <p className="text-xs text-slate-600 leading-relaxed">

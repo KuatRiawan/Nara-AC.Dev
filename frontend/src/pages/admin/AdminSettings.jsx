@@ -390,9 +390,6 @@ export default function AdminSettings() {
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             Pengaturan & Profil Admin
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Kelola data akun admin, keamanan sandi, jam operasional servis, rekening pembayaran, dan identitas bisnis.
-          </p>
         </div>
 
         <div className="flex items-center gap-2.5">
@@ -420,9 +417,6 @@ export default function AdminSettings() {
             <p className="text-xl font-black text-slate-900 capitalize">
               {user?.role === 'admin' ? 'Administrator Utama' : user?.role || 'Admin'}
             </p>
-            <p className="text-xs font-medium text-slate-500 mt-1">
-              Akses penuh seluruh modul & kontrol teknisi
-            </p>
           </div>
         </div>
 
@@ -436,9 +430,6 @@ export default function AdminSettings() {
           <div>
             <p className="text-xl font-black text-emerald-700">
               Terenkripsi & Aktif
-            </p>
-            <p className="text-xs font-medium text-emerald-600/80 mt-1">
-              Proteksi hash bcrypt & session token 8 jam
             </p>
           </div>
         </div>
@@ -455,7 +446,7 @@ export default function AdminSettings() {
               {opsForm.open} – {opsForm.close} WIB
             </p>
             <p className="text-xs font-medium text-amber-600/80 mt-1">
-              {opsForm.days.length} Hari kerja aktif per minggu
+              {opsForm.days.length} hari aktif / minggu
             </p>
           </div>
         </div>
@@ -470,9 +461,6 @@ export default function AdminSettings() {
           <div>
             <p className="text-xl font-black text-blue-700">
               {paymentSettings.accounts.length} Rekening Aktif
-            </p>
-            <p className="text-xs font-medium text-blue-600/80 mt-1">
-              Otomatis terhubung pada E-Invoice
             </p>
           </div>
         </div>
@@ -600,9 +588,6 @@ export default function AdminSettings() {
               <h3 className="text-base font-black text-slate-900">
                 Edit Informasi Akun Administrator
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Perbarui identitas profil nama, email resmi, dan nomor telepon WhatsApp admin.
-              </p>
             </div>
 
             <form onSubmit={handleSaveProfile} className="space-y-4">
@@ -640,9 +625,6 @@ export default function AdminSettings() {
                       required
                     />
                   </div>
-                  <p className="text-xs text-slate-500">
-                    Digunakan untuk login sistem administrator.
-                  </p>
                 </div>
 
                 <div className="space-y-1.5">
@@ -660,9 +642,6 @@ export default function AdminSettings() {
                       className="pl-10 h-11 rounded-xl border-slate-200 text-xs font-mono focus:ring-blue-500"
                     />
                   </div>
-                  <p className="text-xs text-slate-500">
-                    Untuk komunikasi dispatch teknisi dan sistem pengingat.
-                  </p>
                 </div>
               </div>
 
@@ -718,9 +697,6 @@ export default function AdminSettings() {
               <h3 className="text-base font-black text-slate-900">
                 Perbarui Kata Sandi Akun
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Pastikan Anda mengingat kata sandi baru untuk login di sesi berikutnya.
-              </p>
             </div>
 
             <form onSubmit={handleSavePassword} className="space-y-4">
@@ -829,9 +805,6 @@ export default function AdminSettings() {
                   Engine Slot Otomatis
                 </span>
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Parameter ini secara langsung menentukan jam buka/tutup booking pelanggan, durasi slot kunjungan, dan pengingat H-1.
-              </p>
             </div>
 
           </div>
@@ -851,7 +824,6 @@ export default function AdminSettings() {
                   className="h-11 rounded-xl border-slate-200 text-xs font-mono font-bold"
                   required
                 />
-                <p className="text-xs text-slate-500">Jadwal kunjungan teknisi paling awal.</p>
               </div>
 
               <div className="space-y-1.5">
@@ -867,7 +839,6 @@ export default function AdminSettings() {
                   className="h-11 rounded-xl border-slate-200 text-xs font-mono font-bold"
                   required
                 />
-                <p className="text-xs text-slate-500">Batas akhir pekerjaan harian selesai.</p>
               </div>
 
               <div className="space-y-1.5">
@@ -886,7 +857,6 @@ export default function AdminSettings() {
                   <option value={90}>90 Menit (1.5 Jam)</option>
                   <option value={120}>120 Menit (2 Jam)</option>
                 </select>
-                <p className="text-xs text-slate-500">Satuan pembagian grid waktu kalender.</p>
               </div>
             </div>
 
@@ -1017,9 +987,6 @@ export default function AdminSettings() {
                   Sinkron E-Invoice & Kwitansi
                 </span>
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Rekening yang Anda daftarkan di sini otomatis tercetak pada faktur tagihan pelanggan.
-              </p>
             </div>
 
             <Button
@@ -1207,9 +1174,6 @@ export default function AdminSettings() {
               <h3 className="text-base font-black text-slate-900">
                 Identitas Badan Usaha & Operasional
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Parameter kop resmi perusahaan, alamat workshop, hotline layanan, dan syarat garansi servis.
-              </p>
             </div>
 
             <form onSubmit={handleSaveBusiness} className="space-y-4">

@@ -18,14 +18,11 @@ import {
   Phone,
   User,
   MapPin,
-  Sparkles,
   AlertTriangle,
   Gift,
   Clock,
   Award,
-  Star,
   CheckCircle2,
-  PhoneCall,
 } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -112,11 +109,6 @@ export default function RegisterPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 w-full items-center">
           
           <div className="lg:col-span-7 space-y-6">
-            
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50/80 border border-blue-200 text-blue-700 text-xs font-bold shadow-2xs">
-              <Sparkles className="w-4 h-4 text-blue-600" />
-              <span>Program Keanggotaan Nara Member Care</span>
-            </div>
 
             <div className="space-y-3">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-[1.15]">
@@ -135,7 +127,7 @@ export default function RegisterPage() {
                   <Award className="w-4 h-4" />
                 </div>
                 <h2 className="text-xs font-black text-slate-800 mb-1">Prioritas Layanan Member</h2>
-                <p className="text-xs text-slate-500 leading-normal">
+                <p className="text-xs text-slate-600 leading-normal">
                   Prioritas penjadwalan teknisi dan histori servis unit AC langsung dari unit pertama.
                 </p>
               </div>
@@ -145,7 +137,7 @@ export default function RegisterPage() {
                   <Clock className="w-4 h-4" />
                 </div>
                 <h2 className="text-xs font-black text-slate-800 mb-1">Pengingat Servis Otomatis</h2>
-                <p className="text-xs text-slate-500 leading-normal">
+                <p className="text-xs text-slate-600 leading-normal">
                   Notifikasi ramah via WhatsApp saat AC Anda butuh cuci rutin.
                 </p>
               </div>
@@ -155,7 +147,7 @@ export default function RegisterPage() {
                   <ShieldCheck className="w-4 h-4" />
                 </div>
                 <h2 className="text-xs font-black text-slate-800 mb-1">Garansi Terdata Resmi</h2>
-                <p className="text-xs text-slate-500 leading-normal">
+                <p className="text-xs text-slate-600 leading-normal">
                   Rekam teknisi, foto pengerjaan, dan garansi s.d 45 hari tersimpan aman.
                 </p>
               </div>
@@ -164,19 +156,19 @@ export default function RegisterPage() {
 
             <div className="pt-2 flex flex-wrap items-center gap-6 text-xs text-slate-600 border-t border-slate-200/70">
               <div className="flex items-center gap-1.5">
-                <Star className="w-4 h-4 text-amber-500 fill-amber-400" />
-                <span className="font-black text-slate-900">4.9/5.0</span>
-                <span className="text-slate-500">Kepuasan Pelanggan</span>
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span className="font-black text-slate-900 font-mono">NIB: 2805250066735</span>
+                <span className="text-slate-600">Badan Hukum Resmi</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-blue-600" />
-                <span className="font-black text-slate-900">2.500+</span>
-                <span className="text-slate-500">Unit Terdaftar</span>
+                <span className="font-black text-slate-900">SOP 7 Langkah</span>
+                <span className="text-slate-600">Standar Pengerjaan</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <PhoneCall className="w-4 h-4 text-emerald-600" />
-                <span className="font-black text-slate-900">24 Jam</span>
-                <span className="text-slate-500">Dukungan WhatsApp</span>
+                <Award className="w-4 h-4 text-sky-600" />
+                <span className="font-black text-slate-900">s.d. 45 Hari</span>
+                <span className="text-slate-600">Garansi Resmi</span>
               </div>
             </div>
 
@@ -192,15 +184,9 @@ export default function RegisterPage() {
               <div className="absolute -bottom-16 -left-16 w-40 h-40 bg-sky-50 rounded-full blur-2xl pointer-events-none" />
 
               <div className="mb-5 relative z-10">
-                <span className="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-1">
-                  Portal Registrasi Member
-                </span>
                 <h2 className="text-2xl font-black text-slate-900 tracking-tight">
                   Daftar Member Baru
                 </h2>
-                <p className="text-xs text-slate-500 mt-1">
-                  Lengkapi data di bawah ini untuk mengaktifkan akun member Anda.
-                </p>
               </div>
 
               {error && (
@@ -256,9 +242,6 @@ export default function RegisterPage() {
                       autoComplete="tel"
                     />
                   </div>
-                  <p className="text-[11px] text-slate-500 leading-normal">
-                    Digunakan untuk login cepat dengan WhatsApp OTP &amp; pengingat servis.
-                  </p>
                 </div>
 
                 <div className="space-y-1">

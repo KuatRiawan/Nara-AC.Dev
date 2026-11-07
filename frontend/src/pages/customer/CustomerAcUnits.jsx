@@ -88,10 +88,7 @@ export default function CustomerAcUnits() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Manajemen Unit AC & Perawatan</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Pantau riwayat servis dan jadwal perawatan berkala unit AC Anda.</p>
-        </div>
+        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Manajemen Unit AC &amp; Perawatan</h2>
         <Button onClick={() => { setEditingId(null); setFormData({ brand: '', model: '', tipe: '', kapasitas_pk: '', lokasi: '', tanggal_pasang: '', nomor_seri: '', catatan: '' }); setShowForm(!showForm); }} className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-xs cursor-pointer">
           <Plus className="h-4 w-4 mr-1.5" /> Tambah Unit
         </Button>

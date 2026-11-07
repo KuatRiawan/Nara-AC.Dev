@@ -274,7 +274,6 @@ export default function AdminDashboard() {
                       </span>
                     )}
                   </h3>
-                  <p className="text-xs text-slate-500">Pemberitahuan aktivitas & operasional</p>
                 </div>
               </div>
               <button 

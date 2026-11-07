@@ -1,0 +1,120 @@
+# =========================================================================
+#  NARA AC — Production Docker Compose Orchestration
+# =========================================================================
+
+services:
+  # -----------------------------------------------------------------------
+  # 1. Authoritative Relational Database (PostgreSQL 16)
+  # -----------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: nara-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nara_ac}
+      POSTGRES_USER: ${POSTGRES_USER:-nara_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-nara_secure_pass_2026}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nara_user} -d ${POSTGRES_DB:-nara_ac}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nara-network
+
+  # -----------------------------------------------------------------------
+  # 2. AI Subsystem (Python FastAPI NLP Microservice)
+  # -----------------------------------------------------------------------
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: nara-ai-service
+    restart: always
+    environment:
+      NODE_ENV: production
+      AI_API_KEY: ${AI_API_KEY:-nara_internal_ai_key_2026}
+      AI_CONFIDENCE_THRESHOLD: ${AI_CONFIDENCE_THRESHOLD:-0.55}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - nara-network
+
+  # -----------------------------------------------------------------------
+  # 3. Backend Core API (Node.js Express + Node-Cron)
+  # -----------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nara-backend
+    restart: always
+    command: >
+      sh -c "node src/db/migrate.js && node src/db/seed.js && node src/server.js"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgres://${POSTGRES_USER:-nara_user}:${DB_PASSWORD:-nara_secure_pass_2026}@postgres:5432/${POSTGRES_DB:-nara_ac}
+      JWT_SECRET: ${JWT_SECRET:-d9482f7c0a1b3e5d7f9a2c4e6b8a0c2e4f6a8b0d2e4f6a8c0e2d4f6a8b0c2e4f}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      AI_SERVICE_URL: http://ai-service:8000
+      AI_API_KEY: ${AI_API_KEY:-nara_internal_ai_key_2026}
+      AI_CONFIDENCE_THRESHOLD: ${AI_CONFIDENCE_THRESHOLD:-0.55}
+      AI_TIMEOUT_MS: ${AI_TIMEOUT_MS:-6000}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-Admin123NaraSecure!}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost,http://localhost:80,http://127.0.0.1}
+      SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-true}
+      WHATSAPP_MODE: ${WHATSAPP_MODE:-mock}
+      WHATSAPP_TOKEN: ${WHATSAPP_TOKEN:-}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      WHATSAPP_WEBHOOK_SECRET: ${WHATSAPP_WEBHOOK_SECRET:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
+    volumes:
+      - uploads_data:/app/uploads
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:4000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - nara-network
+
+  # -----------------------------------------------------------------------
+  # 4. Frontend Web Client (React 19 Vite + Nginx Reverse Proxy)
+  # -----------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nara-frontend
+    restart: always
+    ports:
+      - "${PORT_HTTP:-80}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - nara-network
+
+volumes:
+  pgdata:
+    name: nara_pgdata
+  uploads_data:
+    name: nara_uploads
+
+networks:
+  nara-network:
+    name: nara_network
+    driver: bridge
+

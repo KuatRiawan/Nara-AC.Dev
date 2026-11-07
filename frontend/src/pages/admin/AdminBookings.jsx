@@ -419,9 +419,6 @@ export default function AdminBookings({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Daftar Booking Service</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Kelola jadwal, pantau status pengerjaan, dan atur penugasan teknisi operasional CV. Nara Teknindotama.
-          </p>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
@@ -453,7 +450,6 @@ export default function AdminBookings({
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-2xl sm:text-3xl font-black text-slate-900">{metrics.total}</span>
-            <span className="text-xs text-slate-500 font-medium">semua data</span>
           </div>
         </div>
 
@@ -490,9 +486,6 @@ export default function AdminBookings({
             )}>
               {metrics.unassigned}
             </span>
-            <span className="text-xs text-amber-700 font-bold bg-amber-100/80 px-2 py-0.5 rounded-lg">
-              Tugaskan
-            </span>
           </div>
         </div>
 
@@ -513,9 +506,6 @@ export default function AdminBookings({
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-2xl sm:text-3xl font-black text-slate-900">{metrics.onProcess}</span>
-            <span className="text-xs text-sky-700 font-bold bg-sky-100/80 px-2 py-0.5 rounded-lg">
-              Dikerjakan
-            </span>
           </div>
         </div>
 
@@ -536,7 +526,6 @@ export default function AdminBookings({
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-2xl sm:text-3xl font-black text-emerald-700">{metrics.done}</span>
-            <span className="text-xs text-slate-500 font-medium">selesai servis</span>
           </div>
         </div>
       </div>
@@ -575,7 +564,7 @@ export default function AdminBookings({
                 className="appearance-none w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-3 pr-8 text-xs sm:text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer shadow-sm"
               >
                 <option value="all">Semua Teknisi</option>
-                <option value="unassigned">⚠️ Belum Ada Teknisi</option>
+                <option value="unassigned">Belum Ada Teknisi</option>
                 {technicians.map(t => (
                   <option key={t.id} value={t.id}>{t.nama}</option>
                 ))}
@@ -1443,8 +1432,9 @@ export default function AdminBookings({
                         <span>Proses Pengembalian Dana</span>
                       </Button>
                     ) : (
-                      <span className="text-2xs text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded block text-center">
-                        ✓ Refund Telah Diproses Selesai
+                      <span className="text-2xs text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded flex items-center justify-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                        <span>Refund Telah Diproses Selesai</span>
                       </span>
                     )}
                   </div>

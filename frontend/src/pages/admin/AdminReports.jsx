@@ -520,9 +520,6 @@ export default function AdminReports() {
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             Log Aktivitas Sistem
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Rekam jejak kronologis seluruh tindakan admin, teknisi, dan pelanggan CV. Nara Teknindotama.
-          </p>
         </div>
 
         <div className="flex items-center gap-2.5">
@@ -560,9 +557,6 @@ export default function AdminReports() {
             <p className="text-2xl font-black text-slate-900">
               {kpis.total} <span className="text-xs font-semibold text-slate-500">Tindakan</span>
             </p>
-            <p className="text-xs font-medium text-slate-500 mt-1">
-              Tercatat permanen di database
-            </p>
           </div>
         </div>
 
@@ -576,9 +570,6 @@ export default function AdminReports() {
           <div>
             <p className="text-2xl font-black text-indigo-700">
               {kpis.adminCount} <span className="text-xs font-semibold text-indigo-600/70">Aksi</span>
-            </p>
-            <p className="text-xs font-medium text-indigo-600/80 mt-1">
-              Penugasan, inventori & jadwal
             </p>
           </div>
         </div>
@@ -594,9 +585,6 @@ export default function AdminReports() {
             <p className="text-2xl font-black text-teal-700">
               {kpis.techCount} <span className="text-xs font-semibold text-teal-600/70">Aksi</span>
             </p>
-            <p className="text-xs font-medium text-teal-600/80 mt-1">
-              Update progres servis & foto SOP
-            </p>
           </div>
         </div>
 
@@ -610,9 +598,6 @@ export default function AdminReports() {
           <div>
             <p className="text-2xl font-black text-emerald-700">
               {kpis.custCount} <span className="text-xs font-semibold text-emerald-600/70">Aksi</span>
-            </p>
-            <p className="text-xs font-medium text-emerald-600/80 mt-1">
-              Pemesanan servis & pembatalan
             </p>
           </div>
         </div>

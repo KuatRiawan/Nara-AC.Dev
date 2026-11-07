@@ -1,22 +1,29 @@
 import os
 import re
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from fastapi import FastAPI, HTTPException, Request
+import numpy as np
+import pandas as pd
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-import numpy as np
+
 try:
     import joblib
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.metrics.pairwise import cosine_similarity
 except ImportError:
     from ml_compat import (
-        joblib,
         FallbackTfidfVectorizer as TfidfVectorizer,
+    )
+    from ml_compat import (
         fallback_cosine_similarity as cosine_similarity,
+    )
+    from ml_compat import (
+        joblib,
     )
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -25,16 +32,24 @@ VECTORIZER_PATH = BASE_DIR / "vectorizer.pkl"
 LABEL_ENCODER_PATH = BASE_DIR / "label_encoder.pkl"
 SENTIMENT_MODEL_PATH = BASE_DIR / "sentiment_model.pkl"
 SENTIMENT_VECTORIZER_PATH = BASE_DIR / "sentiment_vectorizer.pkl"
+COST_MODEL_PATH = BASE_DIR / "models" / "best_cost_estimator_model.joblib"
+MAINT_MODEL_PATH = BASE_DIR / "models" / "best_maintenance_predictor_model.joblib"
+DS_MODELS_DIR = BASE_DIR.parent / "data-science" / "models"
+ALT_COST_MODEL_PATH = DS_MODELS_DIR / "best_cost_estimator_model.joblib"
+ALT_MAINT_MODEL_PATH = DS_MODELS_DIR / "best_maintenance_predictor_model.joblib"
 
 model = None
 vectorizer = None
 label_encoder = None
 sentiment_model = None
 sentiment_vectorizer = None
+cost_model = None
+maint_model = None
 
 def load_model():
-    """Load model, vectorizer, label encoder, and sentiment models (with auto-train fallback)."""
-    global model, vectorizer, label_encoder, sentiment_model, sentiment_vectorizer
+    """Load NLP, sentiment, and Data Science models."""
+    global model, vectorizer, label_encoder
+    global sentiment_model, sentiment_vectorizer, cost_model, maint_model
     try:
         if os.path.exists(MODEL_PATH) and os.path.exists(VECTORIZER_PATH):
             model = joblib.load(MODEL_PATH)
@@ -48,7 +63,11 @@ def load_model():
             train_model()
             model = joblib.load(MODEL_PATH)
             vectorizer = joblib.load(VECTORIZER_PATH)
-            label_encoder = joblib.load(LABEL_ENCODER_PATH) if os.path.exists(LABEL_ENCODER_PATH) else None
+            label_encoder = (
+                joblib.load(LABEL_ENCODER_PATH)
+                if os.path.exists(LABEL_ENCODER_PATH)
+                else None
+            )
 
         if os.path.exists(SENTIMENT_MODEL_PATH) and os.path.exists(SENTIMENT_VECTORIZER_PATH):
             sentiment_model = joblib.load(SENTIMENT_MODEL_PATH)
@@ -58,6 +77,17 @@ def load_model():
             train_sentiment_model()
             sentiment_model = joblib.load(SENTIMENT_MODEL_PATH)
             sentiment_vectorizer = joblib.load(SENTIMENT_VECTORIZER_PATH)
+
+        # Load Data Science ML models (Cost Estimator & Predictive Maintenance)
+        cmp = COST_MODEL_PATH if os.path.exists(COST_MODEL_PATH) else ALT_COST_MODEL_PATH
+        if os.path.exists(cmp):
+            cost_model = joblib.load(cmp)
+            print(f"[ai-service] Loaded cost estimator model from {cmp}")
+
+        mmp = MAINT_MODEL_PATH if os.path.exists(MAINT_MODEL_PATH) else ALT_MAINT_MODEL_PATH
+        if os.path.exists(mmp):
+            maint_model = joblib.load(mmp)
+            print(f"[ai-service] Loaded predictive maintenance model from {mmp}")
 
         return True
     except Exception as e:
@@ -79,7 +109,10 @@ IS_PROD = os.getenv("NODE_ENV") == "production" or os.getenv("ENV") == "producti
 
 if IS_PROD and not AI_API_KEY:
     import sys
-    print("[ai-service] FATAL: AI_API_KEY wajib diisi di production. AI Service gagal start.", file=sys.stderr)
+    print(
+        "[ai-service] FATAL: AI_API_KEY wajib diisi di production. AI Service gagal start.",
+        file=sys.stderr,
+    )
 
 @app.middleware("http")
 async def verify_api_key(request, call_next):
@@ -87,7 +120,15 @@ async def verify_api_key(request, call_next):
         if IS_PROD:
             return JSONResponse(
                 status_code=503,
-                content={"error": {"code": "SERVICE_UNAVAILABLE", "message": "AI Service tidak terkonfigurasi dengan benar (missing API key)."}},
+                content={
+                    "error": {
+                        "code": "SERVICE_UNAVAILABLE",
+                        "message": (
+                            "AI Service tidak terkonfigurasi dengan benar "
+                            "(missing API key)."
+                        ),
+                    }
+                },
             )
         return await call_next(request)
 
@@ -212,7 +253,11 @@ def extract_entities(text: str, intent: str = None) -> Dict[str, Any]:
         (r'\b\d+\s*btu\b', 'btu'),
     ]
     text_no_code = re.sub(r'\bnara-ac[a-z0-9-]+\b', '', text_lower)
-    for brand in ['daikin', 'panasonic', 'sharp', 'samsung', 'lg', 'gree', 'midea', 'mitsubishi', 'polytron', 'aqua', 'changhong', 'tcl']:
+    ac_brands = [
+        'daikin', 'panasonic', 'sharp', 'samsung', 'lg', 'gree',
+        'midea', 'mitsubishi', 'polytron', 'aqua', 'changhong', 'tcl'
+    ]
+    for brand in ac_brands:
         if re.search(rf'\b{brand}\b', text_no_code):
             entities["ac_brand"] = brand
             break
@@ -235,7 +280,7 @@ def extract_entities(text: str, intent: str = None) -> Dict[str, Any]:
                 num = int(re.search(r'\d+', match.group(0)).group(0))
                 entities["ac_units"] = num
                 break
-            except:
+            except Exception:
                 pass
 
     location_keywords = ['di ', 'alamat ', 'lokasi ', 'daerah ', 'di ', 'ke ']
@@ -288,7 +333,9 @@ def extract_entities(text: str, intent: str = None) -> Dict[str, Any]:
     if match:
         entities["price"] = match.group(0)
 
-    payment_keywords = ['transfer', 'cash', 'cod', 'dana', 'ovo', 'gopay', 'bca', 'bni', 'bri', 'mandiri']
+    payment_keywords = [
+        'transfer', 'cash', 'cod', 'dana', 'ovo', 'gopay', 'bca', 'bni', 'bri', 'mandiri'
+    ]
     for keyword in payment_keywords:
         if keyword in text_lower:
             entities["payment_method"] = keyword
@@ -299,7 +346,9 @@ def extract_entities(text: str, intent: str = None) -> Dict[str, Any]:
     if match:
         entities["technician_name"] = match.group(0)
 
-    area_keywords = ['jakarta', 'bogor', 'depok', 'tangerang', 'bekasi', 'jaksel', 'jakpus', 'jakbar']
+    area_keywords = [
+        'jakarta', 'bogor', 'depok', 'tangerang', 'bekasi', 'jaksel', 'jakpus', 'jakbar'
+    ]
     for keyword in area_keywords:
         if keyword in text_lower:
             entities["area"] = keyword
@@ -607,9 +656,140 @@ def rag_answer(req: RagAnswerRequest):
         "mode": "extractive",
     }
 
+# =========================================================================
+# DATA SCIENCE INTEGRATION ENDPOINTS (API_CONTRACT_DS.md)
+# =========================================================================
+
+class PredictCostRequest(BaseModel):
+    tipe_customer: str = "Rumah Tangga"
+    tipe_ac: str = "Split Standard"
+    kapasitas_pk: float = 1.0
+    usia_ac_tahun: int = 3
+    keluhan_utama: str = "AC Kurang Dingin"
+
+@app.post("/predict-cost")
+async def predict_cost(req: PredictCostRequest):
+    """
+    Endpoint 1: Estimasi Biaya Servis Awal (Booking-Time)
+    Sesuai kontrak API Tim Data Science (API_CONTRACT_DS.md).
+    """
+    global cost_model
+    if cost_model is None:
+        load_model()
+    if cost_model is None:
+        raise HTTPException(status_code=503, detail="Model Estimasi Biaya belum tersedia.")
+
+    try:
+        input_df = pd.DataFrame([{
+            "tipe_customer": req.tipe_customer,
+            "tipe_ac": req.tipe_ac,
+            "kapasitas_pk": float(req.kapasitas_pk),
+            "usia_ac_tahun": int(req.usia_ac_tahun),
+            "keluhan_utama": req.keluhan_utama,
+        }])
+        pred = float(cost_model.predict(input_df)[0])
+        mae_margin = 36000.0
+
+        estimated_cost = int(round(pred / 1000.0) * 1000)
+        lower_bound = max(75000, int(round((pred - mae_margin) / 1000.0) * 1000))
+        upper_bound = int(round((pred + mae_margin) / 1000.0) * 1000)
+
+        return {
+            "status": "success",
+            "data": {
+                "estimated_cost": estimated_cost,
+                "lower_bound": lower_bound,
+                "upper_bound": upper_bound,
+                "currency": "IDR",
+                "disclaimer": (
+                    "Estimasi awal ini dihitung berdasarkan gejala keluhan dan kapasitas unit. "
+                    "Biaya final ditentukan setelah pengecekan fisik di lokasi."
+                ),
+            }
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Gagal memprediksi biaya servis: {str(e)}"
+        )
+
+class PredictMaintenanceRequest(BaseModel):
+    tipe_customer: str = "Bisnis/Kantor"
+    tipe_ac: str = "Cassette"
+    kapasitas_pk: float = 2.0
+    usia_ac_tahun: int = 4
+    jenis_layanan: str = "Tambah/Isi Freon & Cuci"
+    freon_ditambahkan: int = 1
+    penggantian_sparepart: int = 0
+    service_completion_date: Optional[str] = None
+
+@app.post("/predict-maintenance")
+async def predict_maintenance(req: PredictMaintenanceRequest):
+    """
+    Endpoint 2: Predictive Maintenance & Reminder (Post-Service)
+    Sesuai kontrak API Tim Data Science (API_CONTRACT_DS.md).
+    """
+    global maint_model
+    if maint_model is None:
+        load_model()
+    if maint_model is None:
+        raise HTTPException(status_code=503, detail="Model Predictive Maintenance belum tersedia.")
+
+    try:
+        input_df = pd.DataFrame([{
+            "tipe_customer": req.tipe_customer,
+            "tipe_ac": req.tipe_ac,
+            "kapasitas_pk": float(req.kapasitas_pk),
+            "usia_ac_tahun": int(req.usia_ac_tahun),
+            "jenis_layanan": req.jenis_layanan,
+            "freon_ditambahkan": int(req.freon_ditambahkan),
+            "penggantian_sparepart": int(req.penggantian_sparepart),
+        }])
+        pred_days = float(maint_model.predict(input_df)[0])
+        est_days = max(14, int(round(pred_days)))
+
+        base_date = datetime.now()
+        if req.service_completion_date:
+            try:
+                base_date = datetime.strptime(req.service_completion_date, "%Y-%m-%d")
+            except Exception:
+                pass
+
+        next_date = base_date + timedelta(days=est_days)
+        next_maintenance_date = next_date.strftime("%Y-%m-%d")
+
+        if est_days < 70:
+            urgency_level = "Tinggi (<70 hari)"
+        elif est_days <= 100:
+            urgency_level = "Standar (70-100 hari)"
+        else:
+            urgency_level = "Rendah (>100 hari)"
+
+        date_str_id = next_date.strftime("%d %B %Y")
+        base_date_str = base_date.strftime("%d/%m/%Y")
+        reminder_msg = (
+            f"Halo Bapak/Ibu Pelanggan CV Nara Teknindotama, berdasarkan riwayat perawatan "
+            f"unit AC {req.tipe_ac} ({req.kapasitas_pk} PK) Anda pada {base_date_str}, "
+            f"kami merekomendasikan jadwal perawatan berkala berikutnya pada {date_str_id} "
+            f"(sekitar {est_days} hari lagi). "
+            f"Ketik 'booking' untuk konfirmasi jadwal kunjungan teknisi."
+        )
+
+        return {
+            "status": "success",
+            "data": {
+                "recommended_interval_days": est_days,
+                "next_maintenance_date": next_maintenance_date,
+                "urgency_level": urgency_level,
+                "reminder_message_template": reminder_msg
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Gagal memprediksi jadwal servis: {str(e)}")
+
 if __name__ == "__main__":
-    import uvicorn
     import os
+
+    import uvicorn
 
     host = os.getenv("AI_HOST", "127.0.0.1")
     port = int(os.getenv("AI_PORT", "8000"))

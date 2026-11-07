@@ -198,9 +198,6 @@ export default function AdminACUnits() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Database & Unit AC Pelanggan</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Katalog master seluruh unit AC terpasang. Terintegrasi langsung dengan profil dan detail masing-masing pelanggan.
-          </p>
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
@@ -231,7 +228,6 @@ export default function AdminACUnits() {
           <div>
             <p className="text-xs uppercase tracking-wider text-slate-500 font-bold">Total Unit Terdaftar</p>
             <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">{metrics.total} Unit</h3>
-            <p className="text-xs text-slate-500 mt-1 font-medium">Seluruh unit terpasang</p>
           </div>
           <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center font-bold">
             <AirVent className="w-6 h-6" />
@@ -242,7 +238,6 @@ export default function AdminACUnits() {
           <div>
             <p className="text-xs uppercase tracking-wider text-emerald-600 font-bold">Unit Status Aktif</p>
             <h3 className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1">{metrics.active} Unit</h3>
-            <p className="text-xs text-emerald-700/80 mt-1 font-medium">Dalam perawatan rutin</p>
           </div>
           <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center font-bold">
             <CheckCircle2 className="w-6 h-6" />
@@ -253,7 +248,6 @@ export default function AdminACUnits() {
           <div>
             <p className="text-xs uppercase tracking-wider text-indigo-600 font-bold">Riwayat Servis Tercatat</p>
             <h3 className="text-2xl sm:text-3xl font-black text-indigo-600 mt-1">{metrics.withHistory} Unit</h3>
-            <p className="text-xs text-indigo-700/80 mt-1 font-medium">Pernah diservis teknisi</p>
           </div>
           <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center font-bold">
             <History className="w-6 h-6" />

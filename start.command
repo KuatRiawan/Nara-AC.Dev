@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==========================================================
-#  NARA AC — 1-Click Server Starter (macOS)
+#  NARA AC - 1-Click Server Starter (macOS)
 # ==========================================================
 
 # Otomatis pindah ke folder project
@@ -8,7 +8,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR"
 
 echo "=========================================================="
-echo "         ❄️  NARA AC — 1-CLICK SERVER STARTER  ❄️         "
+echo "         ❄️  NARA AC - 1-CLICK SERVER STARTER  ❄️         "
 echo "=========================================================="
 echo "📁 Direktori: $DIR"
 echo ""
@@ -37,6 +37,14 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM EXIT
 
+# 3a. Jalankan AI Service (Port 8000) - wajib agar chatbot bisa menjawab
+if [ ! -d "ai-service/.venv" ]; then
+    echo "🐍 Menyiapkan virtualenv AI Service (sekali saja)..."
+    python3 -m venv ai-service/.venv && ai-service/.venv/bin/pip install -q -r ai-service/requirements.txt
+fi
+echo "🤖 Menjalankan AI Service (Port 8000)..."
+(cd ai-service && .venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8000) &
+
 # 3. Jalankan Backend (Port 4000)
 echo "🚀 Menjalankan Backend API (Port 4000)..."
 (cd backend && npm run dev) &
@@ -57,6 +65,7 @@ echo "=========================================================="
 echo "  🎉 Semua Server Sedang Berjalan!                        "
 echo "  - Frontend : http://localhost:5173                      "
 echo "  - Backend  : http://localhost:4000                      "
+echo "  - AI Service: http://localhost:8000/health              "
 echo "  - API Docs : http://localhost:4000/api/docs             "
 echo "=========================================================="
 echo "  💡 Tekan [Ctrl + C] di jendela ini untuk mematikan server."

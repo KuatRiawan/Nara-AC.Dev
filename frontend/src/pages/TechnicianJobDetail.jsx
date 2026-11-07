@@ -7,7 +7,7 @@ import { useToast } from '../components/ui/toast';
 import { Badge } from '../components/ui/badge';
 import { 
   CheckCircle2, MapPin, Phone, Camera, Package, Save, ArrowLeft, ArrowRight, RefreshCw, User, Play, 
-  ListTodo, ClipboardEdit, AlertTriangle, Trash2, ZoomIn, UploadCloud, Check, X, Sparkles,
+  ListTodo, ClipboardEdit, AlertTriangle, Trash2, ZoomIn, UploadCloud, Check, X,
   Receipt, PlusCircle, Wrench, ShieldCheck, DollarSign
 } from 'lucide-react';
 
@@ -628,7 +628,7 @@ export default function TechnicianJobDetail() {
         <div className="bg-white p-5 rounded-2xl shadow-xs border border-slate-200/80">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+              <Wrench className="w-3.5 h-3.5 text-blue-600" />
               <span>Alur Kerja &amp; Progres Pengerjaan</span>
             </h2>
             <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
@@ -685,9 +685,6 @@ export default function TechnicianJobDetail() {
                     isCurrent ? 'text-blue-700 font-black' : isPast ? 'text-emerald-700 font-semibold' : 'text-slate-500'
                   }`}>
                     {st.name}
-                  </span>
-                  <span className="text-[9px] sm:text-[10px] text-slate-500 font-medium hidden sm:block mt-0.5">
-                    {st.subtitle}
                   </span>
                 </div>
               );
@@ -775,10 +772,7 @@ export default function TechnicianJobDetail() {
             <div className="p-4 border-b border-slate-100 bg-blue-50/70 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Camera className="w-4.5 h-4.5 text-blue-600" />
-                <div>
-                  <h2 className="font-bold text-sm text-blue-900">Foto Sebelum Pengerjaan (Before)</h2>
-                  <p className="text-[11px] text-blue-700">Dokumentasi kondisi awal sebelum unit AC disentuh / dibongkar.</p>
-                </div>
+                <h2 className="font-bold text-sm text-blue-900">Foto Sebelum Pengerjaan (Before)</h2>
               </div>
               <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
                 hasBefore ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-amber-100 text-amber-800 border-amber-200'
@@ -952,7 +946,7 @@ export default function TechnicianJobDetail() {
                       disabled={updating}
                       className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-colors shadow-xs cursor-pointer"
                     >
-                      <Sparkles className="w-3.5 h-3.5" />
+                      <ListTodo className="w-3.5 h-3.5" />
                       <span>Inisialisasi SOP Standar (7 Langkah Wajib)</span>
                     </button>
                   </div>
@@ -1025,10 +1019,7 @@ export default function TechnicianJobDetail() {
                   <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs">
                     <Receipt className="w-4 h-4" />
                   </div>
-                  <div>
-                    <h2 className="font-bold text-sm text-slate-900">Pergantian Sparepart &amp; Add-On</h2>
-                    <p className="text-[11px] text-slate-500">Tersinkron langsung ke Invoice &amp; Surat Jalan Pelanggan</p>
-                  </div>
+                  <h2 className="font-bold text-sm text-slate-900">Pergantian Sparepart &amp; Add-On</h2>
                 </div>
                 <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">
                   Live Invoice
@@ -1179,21 +1170,21 @@ export default function TechnicianJobDetail() {
                           <optgroup label="Suku Cadang &amp; Perbaikan (Garansi 30 Hari)">
                             {services.filter(s => s.kategori === 'perbaikan').map(s => (
                               <option key={s.id} value={s.id}>
-                                {s.nama_layanan} — Rp {Number(s.harga).toLocaleString('id-ID')}
+                                {s.nama_layanan} : Rp {Number(s.harga).toLocaleString('id-ID')}
                               </option>
                             ))}
                           </optgroup>
                           <optgroup label="Instalasi &amp; Bongkar Pasang">
                             {services.filter(s => s.kategori === 'instalasi').map(s => (
                               <option key={s.id} value={s.id}>
-                                {s.nama_layanan} — Rp {Number(s.harga).toLocaleString('id-ID')}
+                                {s.nama_layanan} : Rp {Number(s.harga).toLocaleString('id-ID')}
                               </option>
                             ))}
                           </optgroup>
                           <optgroup label="Layanan Lainnya">
                             {services.filter(s => s.kategori !== 'perbaikan' && s.kategori !== 'instalasi').map(s => (
                               <option key={s.id} value={s.id}>
-                                {s.nama_layanan} — Rp {Number(s.harga).toLocaleString('id-ID')}
+                                {s.nama_layanan} : Rp {Number(s.harga).toLocaleString('id-ID')}
                               </option>
                             ))}
                           </optgroup>
@@ -1342,10 +1333,7 @@ export default function TechnicianJobDetail() {
               <div className="p-4 border-b border-slate-100 bg-emerald-50/70 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Camera className="w-4.5 h-4.5 text-emerald-600" />
-                  <div>
-                    <h2 className="font-bold text-sm text-emerald-950">Foto Sesudah Pengerjaan (After)</h2>
-                    <p className="text-[11px] text-emerald-700">Dokumentasi hasil akhir setelah AC bersih &amp; running test normal.</p>
-                  </div>
+                  <h2 className="font-bold text-sm text-emerald-950">Foto Sesudah Pengerjaan (After)</h2>
                 </div>
                 <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
                   hasAfter ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-amber-100 text-amber-800 border-amber-200'
@@ -1581,8 +1569,9 @@ export default function TechnicianJobDetail() {
                 {workStep === 'after_photo' && (
                   <div className="w-full flex flex-col gap-2">
                     {hasAfter && pendingWajibCount > 0 && (
-                      <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200/80 rounded-xl px-3 py-2 text-center font-bold">
-                        ⚠️ Masih ada {pendingWajibCount} item SOP wajib yang belum dicentang.
+                      <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200/80 rounded-xl px-3 py-2 text-center font-bold flex items-center justify-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span>Masih ada {pendingWajibCount} item SOP wajib yang belum dicentang.</span>
                       </p>
                     )}
                     <div className="flex gap-2 sm:gap-3">

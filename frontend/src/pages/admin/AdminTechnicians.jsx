@@ -281,9 +281,6 @@ export default function AdminTechnicians() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Manajemen Teknisi Lapangan</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Kelola jadwal shift harian, beban kerja pekerjaan servis, catatan ketersediaan libur/izin, serta evaluasi rating kinerja.
-          </p>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
@@ -306,7 +303,6 @@ export default function AdminTechnicians() {
           <div>
             <p className="text-xs uppercase tracking-wider text-slate-500 font-bold">Total Tim Teknisi</p>
             <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">{metrics.total} Orang</h3>
-            <p className="text-xs text-slate-500 mt-1 font-medium">Terdaftar di sistem NARA AC</p>
           </div>
           <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center font-bold">
             <Wrench className="w-6 h-6" />
@@ -317,7 +313,6 @@ export default function AdminTechnicians() {
           <div>
             <p className="text-xs uppercase tracking-wider text-emerald-600 font-bold">Teknisi Aktif (Siap Tugas)</p>
             <h3 className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1">{metrics.active} Orang</h3>
-            <p className="text-xs text-emerald-700/80 mt-1 font-medium">Bisa menerima dispatch pesanan</p>
           </div>
           <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center font-bold">
             <UserCheck className="w-6 h-6" />
@@ -328,7 +323,6 @@ export default function AdminTechnicians() {
           <div>
             <p className="text-xs uppercase tracking-wider text-slate-500 font-bold">Status Non-Aktif / Off</p>
             <h3 className="text-2xl sm:text-3xl font-black text-slate-500 mt-1">{metrics.inactive} Orang</h3>
-            <p className="text-xs text-slate-500 mt-1 font-medium">Tidak ditugaskan sementara</p>
           </div>
           <div className="w-12 h-12 bg-slate-100 text-slate-500 rounded-2xl flex items-center justify-center font-bold">
             <UserX className="w-6 h-6" />
@@ -669,9 +663,6 @@ export default function AdminTechnicians() {
                         <Calendar className="w-4 h-4 text-blue-600" />
                         <span>Atur Ketersediaan Tanggal</span>
                       </h4>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Tentukan status teknisi (Tersedia, Sibuk, Libur/Cuti) untuk tanggal tertentu.
-                      </p>
                     </div>
 
                     <form onSubmit={handleSetAvailability} className="space-y-3.5">
@@ -699,9 +690,9 @@ export default function AdminTechnicians() {
                           onChange={(e) => setAvailForm({ ...availForm, status: e.target.value })}
                           className="w-full text-sm px-3.5 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 font-medium text-slate-900 cursor-pointer"
                         >
-                          <option value="available">🟢 Available (Siap Bertugas)</option>
-                          <option value="busy">🟡 Busy (Penuh / Sedang Padat)</option>
-                          <option value="off">🔴 Off (Libur / Izin / Cuti)</option>
+                          <option value="available">[Aktif] Available (Siap Bertugas)</option>
+                          <option value="busy">[Sibuk] Busy (Penuh / Sedang Padat)</option>
+                          <option value="off">[Libur] Off (Libur / Izin / Cuti)</option>
                         </select>
                       </div>
 
@@ -1112,8 +1103,8 @@ export default function AdminTechnicians() {
                   onChange={(e) => setEditForm({ ...editForm, aktif: e.target.value === 'true' })}
                   className="w-full text-sm px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900 cursor-pointer"
                 >
-                  <option value="true">🟢 Aktif (Siap Menerima Tugas Servis)</option>
-                  <option value="false">🔴 Non-Aktif (Istirahat / Tidak Ditugaskan)</option>
+                  <option value="true">[Aktif] Siap Menerima Tugas Servis</option>
+                  <option value="false">[Non-Aktif] Istirahat / Tidak Ditugaskan</option>
                 </select>
               </div>
 

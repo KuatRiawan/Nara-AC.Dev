@@ -53,7 +53,6 @@ export default function TrackerCard() {
           </div>
           <div>
             <h3 className="text-lg font-black text-slate-900 tracking-tight">Lacak Status Tiket</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Portal Publik - Cek status pengerjaan</p>
           </div>
         </div>
 
@@ -106,12 +105,6 @@ export default function TrackerCard() {
               <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
-        </div>
-
-        <div className="pt-4 border-t border-sky-100">
-          <p className="text-xs text-slate-500 text-center">
-            Masukkan kode tiket booking resmi NARA AC untuk memantau status servis teknisi secara langsung
-          </p>
         </div>
       </div>
     </motion.div>

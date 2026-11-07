@@ -8,7 +8,7 @@ import { getErrorMessage } from '../../utils/errors';
 import { cn } from '../../lib/utils';
 import { 
   MessageSquare, Search, Clock, Bot, UserCheck, Send, RefreshCw, Bell, AlertTriangle, ExternalLink, Calendar, CheckCircle2,
-  Settings, Key, Wifi, WifiOff, Copy, Check, Eye, EyeOff, Sparkles, ShieldCheck, ChevronRight, HelpCircle, Smartphone
+  Settings, Key, Wifi, WifiOff, Copy, Check, Eye, EyeOff, ShieldCheck, ChevronRight, HelpCircle, Smartphone
 } from 'lucide-react';
 import { useBusinessProfile, buildWhatsAppUrl } from '../../hooks/useBusinessProfile';
 
@@ -207,18 +207,13 @@ export default function AdminWhatsApp() {
     <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 bg-slate-50/50 min-w-0">
       
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
-              <MessageSquare className="w-5 h-5" />
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              Pusat Integrasi &amp; Gateway WhatsApp CS
-            </h1>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Command Center Admin untuk mengelola koneksi API WhatsApp, monitoring bot AI, dan broadcast pengingat servis.
-          </p>
+        <div className="flex items-center gap-2.5">
+          <span className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
+            <MessageSquare className="w-5 h-5" />
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+            Pusat Integrasi &amp; Gateway WhatsApp CS
+          </h1>
         </div>
 
         <div className="w-full sm:w-auto grid grid-cols-2 sm:flex items-center gap-1.5 p-1 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
@@ -318,10 +313,7 @@ export default function AdminWhatsApp() {
                   <MessageSquare className="w-4 h-4" />
                 </div>
               </div>
-              <div>
-                <p className="text-2xl font-black text-slate-900">{kpis.total}</p>
-                <p className="text-xs font-medium text-slate-500 mt-1">Interaksi via WhatsApp Gateway</p>
-              </div>
+              <p className="text-2xl font-black text-slate-900">{kpis.total}</p>
             </div>
 
             <div className="p-5 rounded-3xl bg-white border border-rose-200 shadow-sm flex flex-col justify-between">
@@ -331,10 +323,7 @@ export default function AdminWhatsApp() {
                   <AlertTriangle className="w-4 h-4" />
                 </div>
               </div>
-              <div>
-                <p className="text-2xl font-black text-rose-800">{kpis.escalated}</p>
-                <p className="text-xs font-medium text-rose-600 mt-1">Memerlukan penanganan admin segera</p>
-              </div>
+              <p className="text-2xl font-black text-rose-800">{kpis.escalated}</p>
             </div>
 
             <div className="p-5 rounded-3xl bg-white border border-emerald-200 shadow-sm flex flex-col justify-between">
@@ -344,10 +333,7 @@ export default function AdminWhatsApp() {
                   <Bot className="w-4 h-4" />
                 </div>
               </div>
-              <div>
-                <p className="text-2xl font-black text-emerald-800">{kpis.aiHandled}</p>
-                <p className="text-xs font-medium text-emerald-600 mt-1">Pengecekan slot &amp; panduan SOP otomatis</p>
-              </div>
+              <p className="text-2xl font-black text-emerald-800">{kpis.aiHandled}</p>
             </div>
           </div>
 
@@ -531,10 +517,7 @@ export default function AdminWhatsApp() {
                   <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
                     <Key className="w-4 h-4" />
                   </div>
-                  <div>
-                    <h2 className="font-black text-slate-900 text-sm">Konfigurasi Gateway WhatsApp API</h2>
-                    <p className="text-xs text-slate-500">Hubungkan server Nara AC dengan penyedia gateway resmi</p>
-                  </div>
+                  <h2 className="font-black text-slate-900 text-sm">Konfigurasi Gateway WhatsApp API</h2>
                 </div>
 
                 <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-white">
@@ -552,10 +535,10 @@ export default function AdminWhatsApp() {
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     {[
-                      { id: 'fonnte', label: 'Fonnte', desc: 'Rekomendasi Indonesia' },
-                      { id: 'wablas', label: 'Wablas', desc: 'Enterprise Server' },
-                      { id: 'twilio', label: 'Twilio', desc: 'Global API' },
-                      { id: 'custom', label: 'Kustom / Baileys', desc: 'Self-hosted' }
+                      { id: 'fonnte', label: 'Fonnte' },
+                      { id: 'wablas', label: 'Wablas' },
+                      { id: 'twilio', label: 'Twilio' },
+                      { id: 'custom', label: 'Kustom / Baileys' }
                     ].map((p) => {
                       const isSelected = gatewayConfig.provider === p.id;
                       return (
@@ -564,14 +547,13 @@ export default function AdminWhatsApp() {
                           type="button"
                           onClick={() => handleProviderChange(p.id)}
                           className={cn(
-                            "p-3 rounded-2xl border text-left transition-all cursor-pointer",
+                            "p-3 rounded-2xl border text-center transition-all cursor-pointer",
                             isSelected
                               ? "bg-blue-50/80 border-blue-500 ring-2 ring-blue-500/20 text-blue-900"
                               : "bg-slate-50/60 border-slate-200/80 hover:bg-slate-100 text-slate-700"
                           )}
                         >
                           <p className="font-black text-xs">{p.label}</p>
-                          <p className="text-[10px] text-slate-500 mt-0.5">{p.desc}</p>
                         </button>
                       );
                     })}
@@ -591,9 +573,6 @@ export default function AdminWhatsApp() {
                     placeholder="https://api.fonnte.com/send"
                     className="h-10 text-xs font-mono font-medium rounded-xl border-slate-200 bg-white"
                   />
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    URL endpoint pengiriman pesan yang disediakan oleh dashboard provider Anda.
-                  </p>
                 </div>
 
                 <div>
@@ -617,9 +596,6 @@ export default function AdminWhatsApp() {
                       {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Token ini disimpan terenkripsi di database settings dan digunakan untuk mengotentikasi webhook.
-                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -653,14 +629,11 @@ export default function AdminWhatsApp() {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-100 space-y-3">
-                  <p className="text-xs font-bold text-slate-800">Otomasi Alur WhatsApp Sistem:</p>
+                <div className="pt-2 border-t border-slate-100 space-y-2.5">
+                  <p className="text-xs font-bold text-slate-800">Otomasi Alur WhatsApp:</p>
 
                   <label className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 cursor-pointer hover:bg-slate-100/60 transition-colors">
-                    <div>
-                      <span className="text-xs font-bold text-slate-900 block">Kirim E-Invoice Otomatis ke WhatsApp</span>
-                      <span className="text-[11px] text-slate-500">Kirim salinan invoice saat pembayaran diverifikasi admin.</span>
-                    </div>
+                    <span className="text-xs font-bold text-slate-900">Kirim E-Invoice Otomatis ke WhatsApp</span>
                     <input
                       id="checkbox-auto-invoice"
                       name="auto_invoice"
@@ -672,10 +645,7 @@ export default function AdminWhatsApp() {
                   </label>
 
                   <label className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 cursor-pointer hover:bg-slate-100/60 transition-colors">
-                    <div>
-                      <span className="text-xs font-bold text-slate-900 block">Pengingat Servis H-1 Otomatis</span>
-                      <span className="text-[11px] text-slate-500">Kirim jadwal kunjungan ke pelanggan H-1 sebelum teknisi tiba.</span>
-                    </div>
+                    <span className="text-xs font-bold text-slate-900">Pengingat Servis H-1 Otomatis</span>
                     <input
                       id="checkbox-auto-reminder-h1"
                       name="auto_reminder_h1"
@@ -687,10 +657,7 @@ export default function AdminWhatsApp() {
                   </label>
 
                   <label className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 cursor-pointer hover:bg-slate-100/60 transition-colors">
-                    <div>
-                      <span className="text-xs font-bold text-slate-900 block">Asisten AI Chatbot WhatsApp Aktif</span>
-                      <span className="text-[11px] text-slate-500">Merespons ketersediaan jadwal &amp; katalog servis otomatis.</span>
-                    </div>
+                    <span className="text-xs font-bold text-slate-900">Asisten AI Chatbot WhatsApp Aktif</span>
                     <input
                       id="checkbox-ai-bot-enabled"
                       name="ai_bot_enabled"
@@ -770,8 +737,8 @@ export default function AdminWhatsApp() {
                 </Button>
 
                 {!gatewayConfig.api_token && (
-                  <p className="text-[11px] text-amber-600 font-medium text-center">
-                    ⚠️ Harap masukkan API Token di form kiri dan simpan sebelum melakukan tes.
+                  <p className="text-[11px] text-amber-700 font-medium text-center">
+                    Harap masukkan API Token di form kiri dan simpan sebelum melakukan tes.
                   </p>
                 )}
 

@@ -2,7 +2,7 @@
 @import "@fontsource/inter";
 
 @theme {
-  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   
   --color-primary-50: #eff6ff;
   --color-primary-100: #dbeafe;
@@ -18,6 +18,7 @@
 
   --color-brand-blue: var(--color-primary-600);
   --color-brand-dark: #0f172a;
+  --color-slate-400: #64748b;
 
   --text-2xs: 0.6875rem;
   --text-2xs--line-height: 0.95rem;
@@ -45,6 +46,50 @@
     background-color: var(--background);
     color: var(--foreground);
     @apply font-sans antialiased overflow-x-hidden;
+  }
+
+  a[href],
+  button,
+  summary,
+  select,
+  label[for],
+  label:has(> input[type="checkbox"], > input[type="radio"]),
+  [role="button"],
+  [role="link"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"],
+  [role="switch"],
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="file"],
+  input[type="submit"],
+  input[type="button"],
+  input[type="reset"],
+  input[type="range"],
+  input[type="color"] {
+    cursor: pointer;
+  }
+
+  :disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  :focus-visible {
+    outline: 2px solid #0369a1;
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

@@ -55,20 +55,6 @@ export default function CustomerPortal() {
     };
   }, [fetchUnread]);
 
-  useEffect(() => {
-    const handleLogout = () => {
-      navigate('/login');
-    };
-    window.addEventListener('auth-logout', handleLogout);
-    return () => window.removeEventListener('auth-logout', handleLogout);
-  }, [navigate]);
-
-  if (authLoading) return null;
-
-  if (!user || user.role !== 'customer') {
-    return <Navigate to="/login" replace />;
-  }
-
   const handleOpenNotif = useCallback(() => {
     setIsNotifOpen(true);
   }, []);
@@ -83,6 +69,20 @@ export default function CustomerPortal() {
       navigate(location.pathname + (clean ? `?${clean}` : ''), { replace: true });
     }
   }, [location.search, location.pathname, navigate]);
+
+  useEffect(() => {
+    const handleLogout = () => {
+      navigate('/login');
+    };
+    window.addEventListener('auth-logout', handleLogout);
+    return () => window.removeEventListener('auth-logout', handleLogout);
+  }, [navigate]);
+
+  if (authLoading) return null;
+
+  if (!user || user.role !== 'customer') {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <DashboardLayout

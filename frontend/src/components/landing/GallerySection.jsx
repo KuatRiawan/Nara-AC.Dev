@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { Eye, X, CheckCircle2, Sparkles, Camera, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Eye, X, CheckCircle2, Camera, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const easeOutCubic = [0.22, 1, 0.36, 1];
 
@@ -16,44 +16,44 @@ export default function GallerySection() {
     {
       id: 1,
       src: '/images/gallery/1.jpg',
-      title: 'Proteksi & Cuci Indoor Evaporator',
-      tag: 'SOP Evaporator',
-      desc: 'Pemasangan plastik terpal pelindung dinding untuk mencegah cipratan air saat evaporator dicuci bersih.'
+      title: 'Pembersihan Evaporator & SOP Proteksi Dinding',
+      tag: 'Cuci Evaporator',
+      desc: 'Pemasangan plastik pelindung dinding dan penyemprotan evaporator indoor bertekanan presisi tanpa mengotori ruangan pelanggan.'
     },
     {
       id: 2,
       src: '/images/gallery/2.jpg',
-      title: 'Pembersihan Filter Udara Mendalam',
+      title: 'Pencucian Filter Udara Bebas Debu & Jamur',
       tag: 'Filter Udara',
-      desc: 'Pencucian filter indoor hingga bebas debu mikro dan jamur agar sirkulasi udara kembali higienis.'
+      desc: 'Pembersihan mendalam kisi filter indoor menggunakan nozzle khusus hingga steril dari partikel debu halus dan alergen.'
     },
     {
       id: 3,
       src: '/images/gallery/3.jpg',
-      title: 'Pengukuran Tekanan Freon Digital / Manifold',
-      tag: 'Cek Refrigeran',
-      desc: 'Pengecekan akurat tekanan freon R32/R410A untuk mendeteksi dini kebocoran atau kekurangan sirkulasi.'
+      title: 'Diagnosa Digital & Tekanan Manifold Freon R32',
+      tag: 'Uji Refrigeran',
+      desc: 'Pemeriksaan akurasi tekanan freon dan arus kompresor dengan manifold gauge serta tang ampere digital berstandar Daikin.'
     },
     {
       id: 4,
       src: '/images/gallery/4.jpg',
-      title: 'Pembersihan Unit Kondensor Outdoor',
-      tag: 'Unit Outdoor',
-      desc: 'Semprotan air bertekanan terkontrol pada kisi-kisi kondensor luar guna membuang panas kompresor optimal.'
+      title: 'Pencucian Menyeluruh Casing & Cover Indoor',
+      tag: 'Detailing Cover',
+      desc: 'Pembersihan kisi-kisi udara, talang air kondensasi, dan cover bodi luar hingga bersih tuntas sebelum dipasang kembali.'
     },
     {
       id: 5,
       src: '/images/gallery/5.jpg',
-      title: 'Perakitan & Penguncian Cover Presisi',
-      tag: 'Finishing Unit',
-      desc: 'Pemasangan kembali cover indoor dengan teliti, memastikan sensor receiver dan swing motor berfungsi normal.'
+      title: 'Perawatan & Servis Kompresor Outdoor Lapangan',
+      tag: 'Unit Outdoor',
+      desc: 'Pemeriksaan mekanikal dan elektrikal unit kondensor luar dengan perlengkapan APD keselamatan kerja lengkap.'
     },
     {
       id: 6,
       src: '/images/gallery/6.jpg',
-      title: 'Running Test & Verifikasi Suhu Dingin',
-      tag: 'Quality Control',
-      desc: 'Pengujian performa pendinginan pasca-servis untuk menjamin hembusan udara sejuk dan debit air lancar.'
+      title: 'Perakitan Kembali Cover & Verifikasi Swing Udara',
+      tag: 'Finishing Unit',
+      desc: 'Pemasangan presisi bodi indoor, pengetesan motor swing flap, dan running test hembusan udara sejuk pasca-pengerjaan.'
     }
   ], []);
 
@@ -163,17 +163,11 @@ export default function GallerySection() {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: easeOutCubic }}
           viewport={{ once: true, margin: '-80px' }}
-          className="text-center max-w-3xl mx-auto mb-16"
+          className="text-center max-w-3xl mx-auto mb-14"
         >
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold uppercase tracking-widest mb-4">
-            <Camera className="w-3.5 h-3.5" /> Dokumentasi Nyata
-          </span>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 mb-5">
-            Bukti Nyata Pengerjaan <span className="text-blue-600">Teknisi NARA AC</span>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900">
+            Dokumentasi Pengerjaan <span className="text-blue-600">Teknisi NARA AC</span>
           </h2>
-          <p className="text-slate-600 text-base sm:text-lg leading-relaxed font-normal">
-            Setiap pengerjaan dilakukan langsung oleh teknisi internal dengan seragam resmi, peralatan khusus pendingin, dan SOP proteksi area kerja.
-          </p>
         </motion.div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
@@ -203,7 +197,7 @@ export default function GallerySection() {
                 <div className="absolute inset-0 bg-gradient-to-t from-blue-950/50 via-transparent to-transparent opacity-40 group-hover:opacity-20 transition-opacity" />
 
                 <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 bg-white/95 backdrop-blur-md text-blue-700 text-xs font-bold px-3 py-1 rounded-full border border-sky-100 shadow-md">
-                  <Sparkles className="w-3 h-3 text-blue-500" /> {item.tag}
+                  <Camera className="w-3 h-3 text-blue-500" /> {item.tag}
                 </span>
 
                 <div className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-md">
@@ -219,9 +213,6 @@ export default function GallerySection() {
                   <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
                     {item.desc}
                   </p>
-                </div>
-                <div className="mt-4 pt-4 border-t border-slate-100 flex items-center gap-2 text-xs text-blue-600 font-semibold">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" /> Standar Dokumentasi Foto NARA AC
                 </div>
               </div>
             </motion.button>
@@ -255,7 +246,7 @@ export default function GallerySection() {
                   <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-sky-100 bg-white shrink-0">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200 shrink-0">
-                        <Sparkles className="w-3 h-3 text-blue-600" />
+                        <Camera className="w-3 h-3 text-blue-600" />
                         {activePhoto.tag}
                       </span>
                       <span className="text-xs font-semibold text-slate-500">

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Calculator, Clock, ShieldCheck, ArrowRight, Check, Sparkles } from 'lucide-react';
+import { Calculator, Clock, ShieldCheck, ArrowRight, Check, CheckCircle2 } from 'lucide-react';
 import { Button } from '../ui/button';
 
 export default function EstimatorCard({ services = [] }) {
@@ -109,7 +109,6 @@ export default function EstimatorCard({ services = [] }) {
           </div>
           <div>
             <h3 className="text-lg font-black text-slate-900 tracking-tight">Kalkulator Estimasi</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Hitung biaya & waktu servis AC Anda</p>
           </div>
         </div>
 
@@ -206,14 +205,6 @@ export default function EstimatorCard({ services = [] }) {
                 Garansi Resmi:
               </span>
               <span className="font-bold text-emerald-700">{calculation.warranty} Penuh</span>
-            </div>
-
-            <div className="flex items-center justify-between text-xs text-blue-700 bg-blue-50/80 px-2.5 py-1.5 rounded-lg border border-blue-200/80">
-              <span className="font-semibold flex items-center gap-1">
-                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                Standar Layanan:
-              </span>
-              <span className="font-bold">Teknisi Tersertifikasi &amp; SOP Presisi</span>
             </div>
 
             <div className="pt-2 border-t border-sky-200 flex items-center justify-between">

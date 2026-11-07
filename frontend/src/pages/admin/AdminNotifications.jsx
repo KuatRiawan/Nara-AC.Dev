@@ -241,9 +241,6 @@ export default function AdminNotifications({ isDrawer = false, onClose, onRefres
                 </span>
               )}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Pantau seluruh aktivitas pemesanan, penugasan teknisi, dan status sistem secara real-time.
-            </p>
           </div>
 
           <div className="flex items-center gap-2">
