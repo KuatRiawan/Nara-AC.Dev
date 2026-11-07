@@ -255,22 +255,26 @@ async function importCleanDataScience() {
 
       const totalBiaya = parseFloat(r.total_biaya) || 150000;
       const complaint = r.keluhan_utama || 'Cuci Rutin / Berdebu';
+      const acUnitId = customerAcMap[cCode] || null;
 
       const bRes = await client.query(`
         INSERT INTO bookings (
-          kode_booking, customer_id, layanan_id, jadwal_mulai, jadwal_selesai,
-          alamat, keluhan, kontak, status, teknisi_id, total_biaya,
-          status_pembayaran, is_synthetic, created_by, created_at
+          kode_booking, customer_id, ac_unit_id, layanan_id, jumlah_unit,
+          jadwal_mulai, jadwal_selesai, alamat, keluhan, kontak,
+          status, teknisi_id, total_dibayar, status_pembayaran,
+          status_verifikasi_pembayaran, is_synthetic, created_by, created_at
         )
         VALUES (
-          $1, $2, $3, $4, $5,
-          $6, $7, $8, 'done', $9, $10,
-          'paid', false, 'customer', $4
+          $1, $2, $3, $4, 1,
+          $5, $6, $7, $8, $9,
+          'done', $10, $11, 'paid',
+          'diverifikasi', false, 'customer', $5
         )
         RETURNING id;
       `, [
         r.order_id,
         cust.id,
+        acUnitId,
         svcId,
         startTime,
         endTime,
@@ -282,6 +286,11 @@ async function importCleanDataScience() {
       ]);
 
       const bookingId = bRes.rows[0].id;
+
+      await client.query(`
+        INSERT INTO booking_items (booking_id, layanan_id, jumlah_unit, harga_satuan, subtotal)
+        VALUES ($1, $2, 1, $3, $3);
+      `, [bookingId, svcId, Math.round(totalBiaya)]);
 
       // Masukkan Feedback Rating
       const rating = parseInt(r.rating_feedback, 10) || 5;
