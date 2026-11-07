@@ -81,6 +81,7 @@ services:
       WHATSAPP_WEBHOOK_SECRET: ${WHATSAPP_WEBHOOK_SECRET:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
+      DS_DASHBOARD_URL: ${DS_DASHBOARD_URL:-}
     volumes:
       - uploads_data:/app/uploads
     healthcheck:
@@ -105,6 +106,29 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    networks:
+      - nara-network
+
+  # -----------------------------------------------------------------------
+  # 5. Data Science Analytics Dashboard (Streamlit)
+  # -----------------------------------------------------------------------
+  data-science:
+    build:
+      context: ./data-science
+      dockerfile: Dockerfile
+    container_name: nara-data-science
+    restart: always
+    ports:
+      - "${PORT_DS:-8501}:8501"
+    environment:
+      STREAMLIT_SERVER_HEADLESS: "true"
+      STREAMLIT_BROWSER_GATHER_USAGE_STATS: "false"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8501/_stcore/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     networks:
       - nara-network
 
