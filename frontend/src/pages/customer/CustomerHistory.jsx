@@ -241,12 +241,12 @@ export default function CustomerHistory() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap sm:flex-nowrap lg:flex-col gap-2 justify-end lg:justify-center shrink-0">
+                  <div className="flex flex-col sm:flex-row lg:flex-col gap-2 w-full sm:w-auto justify-end lg:justify-center shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => navigate(`/status/${b.kode_booking}`)}
-                      className="rounded-xl text-xs font-bold border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 cursor-pointer"
+                      className="w-full sm:w-auto rounded-xl text-xs font-bold border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1.5 cursor-pointer h-9 sm:h-8"
                     >
                       <Eye className="w-3.5 h-3.5 text-blue-600" />
                       <span>Detail &amp; E-Invoice</span>
@@ -256,7 +256,7 @@ export default function CustomerHistory() {
                       <Button
                         size="sm"
                         onClick={() => navigate(`/feedback/${b.kode_booking}`)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                        className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer h-9 sm:h-8"
                       >
                         <Star className="w-3.5 h-3.5" />
                         <span>Beri Ulasan</span>
@@ -268,7 +268,7 @@ export default function CustomerHistory() {
                         size="sm"
                         variant="outline"
                         onClick={() => handleOpenClaimModal(b)}
-                        className="rounded-xl text-xs font-bold border-emerald-200 bg-emerald-50/70 text-emerald-800 hover:bg-emerald-100 flex items-center gap-1.5 cursor-pointer"
+                        className="w-full sm:w-auto rounded-xl text-xs font-bold border-emerald-200 bg-emerald-50/70 text-emerald-800 hover:bg-emerald-100 flex items-center justify-center gap-1.5 cursor-pointer h-9 sm:h-8"
                       >
                         <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                         <span>Klaim Garansi</span>

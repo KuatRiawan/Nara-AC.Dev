@@ -202,52 +202,52 @@ export default function TechnicianDashboard() {
 
   const renderJobCard = (job) => (
     <Card key={job.id} className="shadow-sm hover:shadow-md border border-slate-100 rounded-2xl overflow-hidden transition-all bg-white">
-      <div className="p-4 sm:p-6 flex flex-col justify-between">
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2">
+      <div className="p-3.5 sm:p-6 flex flex-col justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 mb-3">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
             {getStatusBadge(job.status)}
-            <span className="text-xs font-mono font-bold text-slate-500 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100">
+            <span className="text-xs font-mono font-bold text-slate-500 bg-slate-50 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border border-slate-100">
               {job.kode_booking}
             </span>
           </div>
-          <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
+          <span className="text-xs font-semibold text-slate-500 flex items-center gap-1 shrink-0">
             <Clock className="w-3.5 h-3.5 text-slate-500" />
             {job.jadwal_mulai ? new Date(job.jadwal_mulai).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB' : '-'}
           </span>
         </div>
 
-        <h3 className="font-bold text-lg text-slate-900 mb-1">{job.nama_layanan || 'Servis AC'}</h3>
+        <h3 className="font-bold text-base sm:text-lg text-slate-900 mb-1">{job.nama_layanan || 'Servis AC'}</h3>
 
-        <div className="mt-3 space-y-2 text-sm text-slate-600 bg-slate-50/70 p-3.5 rounded-xl border border-slate-100/80">
-          <div className="flex items-center gap-2.5">
+        <div className="mt-3 space-y-2 text-sm text-slate-600 bg-slate-50/70 p-3 sm:p-3.5 rounded-xl border border-slate-100/80">
+          <div className="flex items-center gap-2">
             <User className="w-4 h-4 text-blue-500 shrink-0" />
-            <span className="font-semibold text-slate-900">{job.nama_customer || job.nama || 'Pelanggan'}</span>
+            <span className="font-semibold text-slate-900 truncate">{job.nama_customer || job.nama || 'Pelanggan'}</span>
             {(job.kontak_customer || job.telepon) && (
               <a 
                 href={`tel:${job.kontak_customer || job.telepon}`} 
-                className="ml-auto inline-flex items-center gap-1 text-xs text-blue-600 font-bold hover:underline"
+                className="ml-auto inline-flex items-center gap-1 text-xs text-blue-600 font-bold hover:underline shrink-0"
                 onClick={e => e.stopPropagation()}
               >
                 <Phone className="w-3.5 h-3.5" /> Hubungi
               </a>
             )}
           </div>
-          <div className="flex items-start gap-2.5">
+          <div className="flex items-start gap-2">
             <MapPin className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
             <span className="line-clamp-2 text-xs sm:text-sm text-slate-600">{job.alamat || 'Alamat tidak dicantumkan'}</span>
           </div>
         </div>
 
-        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
           <div className="text-xs text-slate-500">
             {job.jadwal_mulai ? new Date(job.jadwal_mulai).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' }) : ''}
           </div>
           <Link 
             to={`/technician/jobs/${job.id}`} 
-            className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-sm transition-all"
+            className="inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl shadow-sm transition-all"
           >
             {['scheduled', 'rescheduled', 'delayed'].includes(job.status) ? 'Mulai Kerja' : job.status === 'on process' ? 'Lanjutkan' : 'Detail'}
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </Link>
         </div>
       </div>
@@ -604,35 +604,35 @@ export default function TechnicianDashboard() {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tugas Hari Ini</span>
+          <div className="bg-white p-3 sm:p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+            <span className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Tugas Hari Ini</span>
             <div className="mt-2 flex items-baseline justify-between">
               <span className="text-2xl sm:text-3xl font-black text-slate-900">{kpiHariIni}</span>
-              <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">Tiket</span>
+              <span className="text-[10px] sm:text-xs font-bold text-blue-600 bg-blue-50 px-1.5 sm:px-2 py-0.5 rounded-md">Tiket</span>
             </div>
           </div>
 
-          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Mendatang</span>
+          <div className="bg-white p-3 sm:p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+            <span className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Mendatang</span>
             <div className="mt-2 flex items-baseline justify-between">
               <span className="text-2xl sm:text-3xl font-black text-amber-600">{kpiMendatang}</span>
-              <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">Jadwal</span>
+              <span className="text-[10px] sm:text-xs font-bold text-amber-700 bg-amber-50 px-1.5 sm:px-2 py-0.5 rounded-md">Jadwal</span>
             </div>
           </div>
 
-          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Sedang Proses</span>
+          <div className="bg-white p-3 sm:p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+            <span className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Sedang Proses</span>
             <div className="mt-2 flex items-baseline justify-between">
               <span className="text-2xl sm:text-3xl font-black text-blue-600">{kpiBerjalan}</span>
-              <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">Aktif</span>
+              <span className="text-[10px] sm:text-xs font-bold text-blue-700 bg-blue-50 px-1.5 sm:px-2 py-0.5 rounded-md">Aktif</span>
             </div>
           </div>
 
-          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Selesai</span>
+          <div className="bg-white p-3 sm:p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+            <span className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Selesai</span>
             <div className="mt-2 flex items-baseline justify-between">
               <span className="text-2xl sm:text-3xl font-black text-emerald-600">{kpiSelesai}</span>
-              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">Sukses</span>
+              <span className="text-[10px] sm:text-xs font-bold text-emerald-700 bg-emerald-50 px-1.5 sm:px-2 py-0.5 rounded-md">Sukses</span>
             </div>
           </div>
         </div>

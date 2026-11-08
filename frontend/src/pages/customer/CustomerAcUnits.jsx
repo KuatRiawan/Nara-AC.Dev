@@ -87,9 +87,12 @@ export default function CustomerAcUnits() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Manajemen Unit AC &amp; Perawatan</h2>
-        <Button onClick={() => { setEditingId(null); setFormData({ brand: '', model: '', tipe: '', kapasitas_pk: '', lokasi: '', tanggal_pasang: '', nomor_seri: '', catatan: '' }); setShowForm(!showForm); }} className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-xs cursor-pointer">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Manajemen Unit AC &amp; Perawatan</h2>
+        <Button 
+          onClick={() => { setEditingId(null); setFormData({ brand: '', model: '', tipe: '', kapasitas_pk: '', lokasi: '', tanggal_pasang: '', nomor_seri: '', catatan: '' }); setShowForm(!showForm); }} 
+          className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-xs cursor-pointer h-10 sm:h-9"
+        >
           <Plus className="h-4 w-4 mr-1.5" /> Tambah Unit
         </Button>
       </div>

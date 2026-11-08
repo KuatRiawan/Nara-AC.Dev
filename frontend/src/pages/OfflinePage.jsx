@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Wind, RefreshCw, Phone, ArrowLeft, Wifi, WifiOff, CheckCircle2 } from 'lucide-react';
 import CompanyLogo from '../components/CompanyLogo';
+import PageHeader from '../components/layout/PageHeader';
+import Footer from '../components/layout/Footer';
 
 export default function OfflinePage() {
   const [isChecking, setIsChecking] = useState(false);
@@ -174,26 +176,16 @@ export default function OfflinePage() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between text-slate-800">
       {/* Header */}
-      <header className="bg-white/95 backdrop-blur-md border-b border-sky-100 px-4 sm:px-8 py-3.5 sticky top-0 z-30 shadow-2xs">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <CompanyLogo className="h-8 w-auto" />
-          </Link>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
-              <span>Mode Offline</span>
-            </span>
-            <Link
-              to="/"
-              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors flex items-center gap-1 border border-slate-200/80"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Ke Beranda</span>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        backFallback="/"
+        backLabel="Ke Beranda"
+        badge={
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+            <span>Mode Offline</span>
+          </span>
+        }
+      />
 
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center p-4 sm:p-6 my-auto">
@@ -263,9 +255,7 @@ export default function OfflinePage() {
       </main>
 
       {/* Footer */}
-      <footer className="shrink-0 text-center py-4 border-t border-slate-200/60 bg-white text-xs text-slate-500">
-        © 2026 CV. Nara Teknindotama. Seluruh hak cipta dilindungi.
-      </footer>
+      <Footer variant="minimal" />
     </div>
   );
 }

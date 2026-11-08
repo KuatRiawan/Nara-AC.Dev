@@ -408,7 +408,7 @@ export default function CustomerProfile() {
                     <Button
                       type="submit"
                       disabled={savingProfile || loadingProfile}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl h-11 px-6 shadow-md shadow-blue-600/20 cursor-pointer flex items-center gap-2 text-xs sm:text-sm transition-all"
+                      className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl h-11 px-6 shadow-md shadow-blue-600/20 cursor-pointer flex items-center justify-center gap-2 text-xs sm:text-sm transition-all"
                     >
                       <Save className="w-4 h-4" />
                       <span>{savingProfile ? 'Menyimpan Perubahan...' : 'Simpan Perubahan Profil'}</span>
@@ -629,7 +629,7 @@ export default function CustomerProfile() {
                   <Button
                     type="submit"
                     disabled={savingPassword}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl h-11 px-6 shadow-md shadow-blue-600/20 cursor-pointer flex items-center gap-2 text-xs sm:text-sm transition-all"
+                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl h-11 px-6 shadow-md shadow-blue-600/20 cursor-pointer flex items-center justify-center gap-2 text-xs sm:text-sm transition-all"
                   >
                     <Save className="w-4 h-4" />
                     <span>{savingPassword ? 'Memperbarui Sandi...' : 'Perbarui Password'}</span>

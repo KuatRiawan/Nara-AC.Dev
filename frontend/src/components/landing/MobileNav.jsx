@@ -69,7 +69,7 @@ export default function MobileNav({ isOpen, onClose, scrollTo }) {
             tabIndex={-1}
             ref={drawerRef}
           >
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <div className="flex justify-between items-center pb-5 border-b border-slate-100">
                 <CompanyLogo dark={false} iconSize="h-8" />
                 <button

@@ -34,7 +34,10 @@ export default function StickyBottomBooking() {
         hideFloatingButton={true}
       />
 
-      <div className="fixed bottom-3 sm:bottom-6 left-3 right-3 sm:left-auto sm:right-6 z-40 pointer-events-auto">
+      <div
+        className="fixed left-3 right-3 sm:left-auto sm:right-6 z-40 pointer-events-auto"
+        style={{ bottom: 'max(0.75rem, env(safe-area-inset-bottom, 0.75rem))' }}
+      >
         <AnimatePresence mode="wait">
           {showExpandedDock ? (
             <motion.div

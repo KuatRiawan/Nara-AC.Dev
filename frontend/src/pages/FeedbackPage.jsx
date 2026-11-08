@@ -6,6 +6,8 @@ import api from '../api';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import CompanyLogo from '../components/CompanyLogo';
+import PageHeader from '../components/layout/PageHeader';
+import Footer from '../components/layout/Footer';
 import { cn } from '../lib/utils';
 import { useToast } from '../components/ui/toast';
 import { Star, MessageSquare, CheckCircle2, ArrowLeft, Loader2, ShieldCheck, User, Wrench, HeartHandshake, Check, AlertCircle, FileText, Clock, Award } from 'lucide-react';
@@ -137,37 +139,21 @@ export default function FeedbackPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50/60 via-slate-50 to-white font-sans flex flex-col text-slate-800">
       
-      <header className="bg-white/90 backdrop-blur-md border-b border-sky-100/80 sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-18 flex justify-between items-center">
-          <Link to="/" className="flex items-center hover:opacity-90 transition-opacity">
-            <CompanyLogo iconSize="h-8" />
+      <PageHeader onBack={handleBack} backLabel="Kembali">
+        {kode && (
+          <Link to={`/status/${kode}`} className="shrink-0">
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="rounded-xl border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer h-8.5 sm:h-9 px-2.5 sm:px-3"
+            >
+              <FileText className="w-3.5 h-3.5 text-blue-600" />
+              <span className="hidden xs:inline">Status Tiket</span>
+              <span className="xs:hidden">Status</span>
+            </Button>
           </Link>
-
-          <div className="flex items-center gap-2.5">
-            {kode && (
-              <Link to={`/status/${kode}`}>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="rounded-xl border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer"
-                >
-                  <FileText className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Status Tiket</span>
-                </Button>
-              </Link>
-            )}
-
-            <Button onClick={handleBack} 
-                variant="outline" 
-                size="sm"
-                className="rounded-xl border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Kembali</span>
-              </Button>
-          </div>
-        </div>
-      </header>
+        )}
+      </PageHeader>
 
       <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-12 flex flex-col justify-center">
 
@@ -527,20 +513,7 @@ export default function FeedbackPage() {
 
       </main>
 
-      <footer className="bg-white border-t border-slate-200/80 py-6 text-xs text-slate-500 mt-auto">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          <p>© 2026 CV. Nara Teknindotama. Seluruh hak cipta dilindungi.</p>
-          <div className="flex items-center gap-3 font-medium">
-            <Link to="/terms" className="hover:text-blue-600 transition-colors">
-              Syarat &amp; Ketentuan
-            </Link>
-            <span className="text-slate-300">&bull;</span>
-            <Link to="/privacy" className="hover:text-blue-600 transition-colors">
-              Kebijakan Privasi
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <Footer />
 
     </div>
   );

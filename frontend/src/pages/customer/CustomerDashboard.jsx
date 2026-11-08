@@ -327,23 +327,23 @@ export default function CustomerDashboard({ onOpenNotif }) {
             )}
           </div>
 
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             {activeBooking ? (
-              <div className="space-y-5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-sky-50/80 to-blue-50/40 border border-sky-100">
+              <div className="space-y-4 sm:space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-sky-50/80 to-blue-50/40 border border-sky-100">
                   <div>
-                    <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Layanan Terpilih</span>
-                    <h3 className="font-black text-lg sm:text-xl text-slate-900">
+                    <span className="text-[11px] sm:text-xs font-semibold text-blue-600 uppercase tracking-wider">Layanan Terpilih</span>
+                    <h3 className="font-black text-base sm:text-xl text-slate-900">
                       {activeBooking.nama_layanan || activeBooking.layanan?.nama_layanan || 'Service AC'}
                     </h3>
                   </div>
                   <div>{getStatusBadge(activeBooking.status)}</div>
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
-                  <div className="flex items-center gap-2 truncate">
+                <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
+                  <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                     <span className="font-bold text-slate-500 shrink-0">Kode Booking:</span>
-                    <code className="font-mono font-bold text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200 truncate max-w-[200px] sm:max-w-xs">
+                    <code className="font-mono font-bold text-slate-800 bg-white px-1.5 sm:px-2 py-0.5 rounded border border-slate-200 truncate max-w-[120px] xs:max-w-[150px] sm:max-w-xs">
                       {activeBooking.kode_booking}
                     </code>
                   </div>
@@ -352,7 +352,7 @@ export default function CustomerDashboard({ onOpenNotif }) {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleCopyCode(activeBooking.kode_booking)}
-                    className="h-8 px-2.5 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg shrink-0 flex items-center gap-1.5 cursor-pointer"
+                    className="h-8 px-2 sm:px-2.5 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg shrink-0 flex items-center gap-1.5 cursor-pointer ml-auto sm:ml-0"
                   >
                     {copiedCode ? (
                       <>
@@ -368,21 +368,21 @@ export default function CustomerDashboard({ onOpenNotif }) {
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/50">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="p-3 sm:p-3.5 rounded-xl border border-slate-100 bg-slate-50/50">
                     <div className="flex items-center gap-2 text-slate-500 mb-1">
                       <Clock className="w-4 h-4 text-blue-600" />
-                      <span className="text-xs font-bold uppercase tracking-wider">Jadwal Servis</span>
+                      <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider">Jadwal Servis</span>
                     </div>
                     <p className="font-bold text-slate-800 text-xs sm:text-sm mt-0.5">
                       {formatIndonesianDate(activeBooking.jadwal_mulai)}
                     </p>
                   </div>
 
-                  <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/50">
+                  <div className="p-3 sm:p-3.5 rounded-xl border border-slate-100 bg-slate-50/50">
                     <div className="flex items-center gap-2 text-slate-500 mb-1">
                       <UserCheck className="w-4 h-4 text-blue-600" />
-                      <span className="text-xs font-bold uppercase tracking-wider">Teknisi Bertugas</span>
+                      <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider">Teknisi Bertugas</span>
                     </div>
                     {activeBooking.teknisi_nama ? (
                       <div className="flex items-center gap-2 mt-0.5">
@@ -403,22 +403,22 @@ export default function CustomerDashboard({ onOpenNotif }) {
                   </div>
 
                   {activeBooking.alamat && (
-                    <div className="col-span-1 sm:col-span-2 p-3.5 rounded-xl border border-slate-100 bg-slate-50/50">
+                    <div className="col-span-1 sm:col-span-2 p-3 sm:p-3.5 rounded-xl border border-slate-100 bg-slate-50/50">
                       <div className="flex items-center gap-2 text-slate-500 mb-1">
                         <MapPin className="w-4 h-4 text-blue-600" />
-                        <span className="text-xs font-bold uppercase tracking-wider">Lokasi Pengerjaan</span>
+                        <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider">Lokasi Pengerjaan</span>
                       </div>
                       <p className="text-xs text-slate-700 line-clamp-2">{activeBooking.alamat}</p>
                     </div>
                   )}
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => navigate(`/status/${activeBooking.kode_booking}`)}
-                    className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold cursor-pointer"
+                    className="w-full sm:w-auto rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold cursor-pointer h-10 sm:h-9"
                   >
                     <FileText className="w-3.5 h-3.5 mr-1.5 text-blue-600" />
                     <span>Lihat E-Invoice</span>
@@ -427,7 +427,7 @@ export default function CustomerDashboard({ onOpenNotif }) {
                   <Button
                     size="sm"
                     onClick={() => navigate(`/status/${activeBooking.kode_booking}`)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer flex items-center gap-1.5 px-4"
+                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer flex items-center justify-center gap-1.5 px-4 h-10 sm:h-9"
                   >
                     <span>Lacak Status Real-Time</span>
                     <ChevronRight className="w-3.5 h-3.5" />

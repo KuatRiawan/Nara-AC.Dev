@@ -537,55 +537,55 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         
         <div 
           onClick={() => navigate('/admin/schedule')}
-          className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+          className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
         >
-          <div className="flex justify-between items-start mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Booking Hari Ini</span>
-            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold group-hover:bg-blue-600 group-hover:text-white transition-colors">
-              <CalendarIcon className="w-4 h-4" />
+          <div className="flex justify-between items-start mb-2 sm:mb-3">
+            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Booking Hari Ini</span>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
+              <CalendarIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
           <div>
-            <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              {bookingStats.todayBookings} <span className="text-xs font-semibold text-slate-500">Tiket</span>
+            <p className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              {bookingStats.todayBookings} <span className="text-[11px] sm:text-xs font-semibold text-slate-500">Tiket</span>
             </p>
           </div>
         </div>
 
         <div 
           onClick={() => navigate('/admin/bookings')}
-          className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+          className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
         >
-          <div className="flex justify-between items-start mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-sky-600">On Process</span>
-            <div className="w-10 h-10 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold group-hover:bg-sky-600 group-hover:text-white transition-colors">
-              <Clock className="w-4 h-4" />
+          <div className="flex justify-between items-start mb-2 sm:mb-3">
+            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-sky-600">On Process</span>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold group-hover:bg-sky-600 group-hover:text-white transition-colors shrink-0">
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
           <div>
-            <p className="text-2xl sm:text-3xl font-black text-sky-600 tracking-tight">
-              {bookingStats.onProcess} <span className="text-xs font-semibold text-slate-500">Tiket</span>
+            <p className="text-xl sm:text-3xl font-black text-sky-600 tracking-tight">
+              {bookingStats.onProcess} <span className="text-[11px] sm:text-xs font-semibold text-slate-500">Tiket</span>
             </p>
           </div>
         </div>
 
         <div 
           onClick={() => navigate('/admin/bookings')}
-          className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+          className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
         >
-          <div className="flex justify-between items-start mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Selesai Hari Ini</span>
-            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-              <CheckCircle className="w-4 h-4" />
+          <div className="flex justify-between items-start mb-2 sm:mb-3">
+            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-emerald-600">Selesai Hari Ini</span>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold group-hover:bg-emerald-600 group-hover:text-white transition-colors shrink-0">
+              <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
           <div>
-            <p className="text-2xl sm:text-3xl font-black text-emerald-600 tracking-tight">
-              {bookingStats.doneToday} <span className="text-xs font-semibold text-slate-500">Tiket</span>
+            <p className="text-xl sm:text-3xl font-black text-emerald-600 tracking-tight">
+              {bookingStats.doneToday} <span className="text-[11px] sm:text-xs font-semibold text-slate-500">Tiket</span>
             </p>
           </div>
         </div>
@@ -606,7 +606,7 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
             }
           }}
           className={cn(
-            "p-5 rounded-3xl border shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between bg-white",
+            "p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between bg-white",
             bookingStats.pendingAssign > 0 
               ? "border-rose-300 ring-1 ring-rose-200" 
               : (upcomingPending.length > 0 
@@ -614,9 +614,9 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
                   : "border-slate-200/80")
           )}
         >
-          <div className="flex justify-between items-start mb-3">
+          <div className="flex justify-between items-start mb-2 sm:mb-3">
             <span className={cn(
-              "text-xs font-bold uppercase tracking-wider",
+              "text-[11px] sm:text-xs font-bold uppercase tracking-wider",
               bookingStats.pendingAssign > 0 
                 ? "text-rose-600" 
                 : (upcomingPending.length > 0 ? "text-amber-600" : "text-slate-500")
@@ -624,24 +624,24 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
               Belum Ditugaskan
             </span>
             <div className={cn(
-              "w-10 h-10 rounded-2xl flex items-center justify-center font-bold transition-colors",
+              "w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center font-bold transition-colors shrink-0",
               bookingStats.pendingAssign > 0 
                 ? "bg-rose-100 text-rose-600" 
                 : (upcomingPending.length > 0 ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500")
             )}>
-              <AlertTriangle className="w-4 h-4" />
+              <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
           <div>
             <p className={cn(
-              "text-2xl sm:text-3xl font-black tracking-tight",
+              "text-xl sm:text-3xl font-black tracking-tight",
               bookingStats.pendingAssign > 0 
                 ? "text-rose-600" 
                 : (upcomingPending.length > 0 ? "text-amber-700" : "text-slate-900")
             )}>
-              {bookingStats.pendingAssign + upcomingPending.length} <span className="text-xs font-semibold text-slate-500">Tiket</span>
+              {bookingStats.pendingAssign + upcomingPending.length} <span className="text-[11px] sm:text-xs font-semibold text-slate-500">Tiket</span>
             </p>
-            <p className="text-xs text-slate-500 font-medium mt-1">
+            <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-1">
               {bookingStats.pendingAssign > 0 
                 ? `${bookingStats.pendingAssign} tiket hari ini perlu teknisi!` 
                 : (upcomingPending.length > 0 
@@ -653,16 +653,16 @@ export default function AdminHome({ bookings = [], technicians = [], loading = f
 
         <div 
           onClick={() => navigate('/admin/invoices')}
-          className="col-span-2 sm:col-span-1 lg:col-span-1 bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+          className="col-span-2 sm:col-span-1 lg:col-span-1 bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
         >
-          <div className="flex justify-between items-start mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">Estimasi Nilai Servis</span>
-            <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-              <CreditCard className="w-4 h-4" />
+          <div className="flex justify-between items-start mb-2 sm:mb-3">
+            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-indigo-600">Estimasi Nilai Servis</span>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold group-hover:bg-indigo-600 group-hover:text-white transition-colors shrink-0">
+              <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
           <div>
-            <p className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-mono">
+            <p className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight font-mono">
               Rp {bookingStats.todayOmzet.toLocaleString('id-ID')}
             </p>
           </div>

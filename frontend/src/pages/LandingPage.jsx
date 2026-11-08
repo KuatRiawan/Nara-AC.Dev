@@ -19,6 +19,7 @@ import TrackerCard from '../components/landing/TrackerCard';
 import HeroInteractiveCard from '../components/landing/HeroInteractiveCard';
 import StickyBottomBooking from '../components/landing/StickyBottomBooking';
 import ScrollToTopButton from '../components/ui/ScrollToTopButton';
+import Footer from '../components/layout/Footer';
 
 const easeOutCubic = [0.16, 1, 0.3, 1];
 
@@ -1024,8 +1025,8 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <footer className="bg-sky-50/60 text-slate-600 pt-16 pb-28 sm:pb-36 px-4 sm:px-6 lg:px-8 border-t border-sky-100">
-          <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8 pb-12 border-b border-sky-200/70">
+        <section className="bg-sky-50/60 text-slate-600 pt-12 pb-8 sm:pt-16 sm:pb-10 px-4 sm:px-6 lg:px-8 border-t border-sky-100">
+          <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-8">
 
             <div className="lg:col-span-4 space-y-4">
               <Link to="/" className="inline-block">
@@ -1130,23 +1131,9 @@ export default function LandingPage() {
             </div>
 
           </div>
+        </section>
 
-          <div className="max-w-7xl mx-auto pt-8 flex flex-col md:flex-row items-center md:items-start justify-between gap-4 text-xs text-slate-500">
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-6 text-center sm:text-left">
-              <p>© 2026 CV. Nara Teknindotama. Seluruh hak cipta dilindungi.</p>
-              <div className="flex items-center gap-3 font-medium">
-                <Link to="/terms" className="hover:text-blue-600 transition-colors">
-                  Syarat &amp; Ketentuan
-                </Link>
-                <span className="text-slate-300">&bull;</span>
-                <Link to="/privacy" className="hover:text-blue-600 transition-colors">
-                  Kebijakan Privasi
-                </Link>
-              </div>
-            </div>
-            <div className="hidden lg:block w-72 shrink-0 pointer-events-none" aria-hidden="true" />
-          </div>
-        </footer>
+        <Footer variant="landing" />
 
         <StickyBottomBooking />
 

@@ -4,6 +4,7 @@ import { cn } from '../../lib/utils';
 import { Menu, Bell, LogOut, Settings, History, ChevronLeft, Globe, ExternalLink } from 'lucide-react';
 import { AuthContext } from '../../AuthContext';
 import CompanyLogo from '../CompanyLogo';
+import Footer from './Footer';
 import BottomNavigation from './BottomNavigation';
 import LogoutConfirmationDialog from '../ui/LogoutConfirmation';
 import ScrollToTopButton from '../ui/ScrollToTopButton';
@@ -298,12 +299,12 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
             </div>
           </header>
 
-          <header className="flex md:hidden shrink-0 z-20 h-16 bg-white/95 backdrop-blur-md px-4 justify-between items-center border-b border-slate-100 shadow-xs relative">
-            <div className="flex items-center gap-2.5">
-              <CompanyLogo dark={false} iconSize="h-7" />
-              <div className="flex flex-col">
-                <span className="text-xs font-black text-slate-900 leading-tight">NARA AC</span>
-                <span className="text-xs font-semibold text-slate-500">
+          <header className="flex md:hidden shrink-0 z-20 h-16 bg-white/95 backdrop-blur-md px-3.5 sm:px-4 justify-between items-center border-b border-slate-100 shadow-xs relative">
+            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+              <CompanyLogo dark={false} iconSize="h-7 sm:h-8" iconOnly={true} />
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-black text-slate-900 leading-tight truncate">NARA AC</span>
+                <span className="text-[11px] sm:text-xs font-semibold text-slate-500 truncate">
                   {currentRole === 'admin' ? 'Sistem Manajemen' : currentRole === 'customer' ? 'Portal Pelanggan' : 'Aplikasi Teknisi'}
                 </span>
               </div>
@@ -361,14 +362,7 @@ export default function DashboardLayout({ children, role, title, onOpenNotif, un
               style={{ paddingBottom: 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' }}
             >
               <div>{children}</div>
-              <footer className="mt-8 pt-4 px-6 border-t border-slate-200/70 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
-                <p>© 2026 CV. Nara Teknindotama. Seluruh hak cipta dilindungi.</p>
-                <div className="flex items-center gap-3 font-medium">
-                  <Link to="/terms" className="hover:text-blue-600 transition-colors">Syarat &amp; Ketentuan</Link>
-                  <span className="text-slate-300">&bull;</span>
-                  <Link to="/privacy" className="hover:text-blue-600 transition-colors">Kebijakan Privasi</Link>
-                </div>
-              </footer>
+              <Footer variant="dashboard" />
             </div>
           </main>
 

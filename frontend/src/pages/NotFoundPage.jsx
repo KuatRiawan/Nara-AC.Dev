@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useContextualBack } from '../hooks/useContextualBack';
 import { Home, Calendar, Search, ArrowLeft } from 'lucide-react';
 import CompanyLogo from '../components/CompanyLogo';
+import PageHeader from '../components/layout/PageHeader';
+import Footer from '../components/layout/Footer';
 import { Button } from '../components/ui/button';
 
 export default function NotFoundPage() {
@@ -13,17 +15,7 @@ export default function NotFoundPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between text-slate-800">
-      <header className="bg-white border-b border-slate-200 py-4 px-6 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <CompanyLogo className="h-8 w-auto" />
-          </Link>
-          <Button onClick={handleBack} variant="ghost" size="sm" className="gap-2 text-slate-600 hover:text-blue-600">
-              <ArrowLeft className="w-4 h-4" />
-              Kembali
-            </Button>
-        </div>
-      </header>
+      <PageHeader onBack={handleBack} backLabel="Kembali" />
 
       <main className="flex-1 flex items-center justify-center p-6">
         <div className="max-w-md w-full text-center py-12 px-6 bg-white rounded-2xl shadow-sm border border-slate-200">
@@ -60,20 +52,7 @@ export default function NotFoundPage() {
         </div>
       </main>
 
-      <footer className="py-6 text-xs text-slate-500 border-t border-slate-200 bg-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          <p>© 2026 CV. Nara Teknindotama. Seluruh hak cipta dilindungi.</p>
-          <div className="flex items-center gap-3 font-medium">
-            <Link to="/terms" className="hover:text-blue-600 transition-colors">
-              Syarat &amp; Ketentuan
-            </Link>
-            <span className="text-slate-300">&bull;</span>
-            <Link to="/privacy" className="hover:text-blue-600 transition-colors">
-              Kebijakan Privasi
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

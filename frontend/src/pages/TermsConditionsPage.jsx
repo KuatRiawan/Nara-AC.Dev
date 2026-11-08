@@ -2,19 +2,14 @@ import { Link } from 'react-router-dom';
 import { useContextualBack } from '../hooks/useContextualBack';
 import { ArrowLeft, FileText, ShieldCheck, Phone, Building2, AlertCircle, Bot, CreditCard, Wrench } from 'lucide-react';
 import CompanyLogo from '../components/CompanyLogo';
+import PageHeader from '../components/layout/PageHeader';
+import Footer from '../components/layout/Footer';
 
 export default function TermsConditionsPage() {
   const handleBack = useContextualBack('/');
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
-      <header className="bg-white/90 backdrop-blur-md sticky top-0 z-40 border-b border-slate-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center hover:opacity-90 transition-opacity">
-            <CompanyLogo dark={false} iconSize="h-9 sm:h-10" />
-          </Link>
-          <button type="button" onClick={handleBack} className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3.5 py-1.5 rounded-full transition-colors cursor-pointer"><ArrowLeft className="w-4 h-4" /><span>Kembali</span></button>
-        </div>
-      </header>
+      <PageHeader onBack={handleBack} backLabel="Kembali" />
 
       <section className="bg-gradient-to-b from-blue-700 via-blue-600 to-sky-600 text-white py-14 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto text-center space-y-3">
@@ -272,20 +267,7 @@ export default function TermsConditionsPage() {
         </div>
       </main>
 
-      <footer className="bg-white border-t border-slate-200 py-6 text-xs text-slate-500">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          <p>© 2026 CV. Nara Teknindotama. Seluruh hak cipta dilindungi.</p>
-          <div className="flex items-center gap-3 font-medium">
-            <Link to="/terms" className="hover:text-blue-600 transition-colors">
-              Syarat &amp; Ketentuan
-            </Link>
-            <span className="text-slate-300">&bull;</span>
-            <Link to="/privacy" className="hover:text-blue-600 transition-colors">
-              Kebijakan Privasi
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

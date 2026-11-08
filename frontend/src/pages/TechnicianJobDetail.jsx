@@ -539,6 +539,7 @@ export default function TechnicianJobDetail() {
     {
       id: 1,
       name: 'Persiapan',
+      shortName: 'Persiapan',
       subtitle: job.status === 'scheduled' ? 'Menunggu Jam' : 'Jadwal Siap',
       isCompleted: job.status !== 'scheduled',
       isCurrent: job.status === 'scheduled' || job.status === 'rescheduled' || job.status === 'delayed',
@@ -546,6 +547,7 @@ export default function TechnicianJobDetail() {
     {
       id: 2,
       name: 'Foto Sebelum',
+      shortName: 'Foto Awal',
       subtitle: hasBefore ? 'Terverifikasi' : 'Wajib 1 Foto',
       isCompleted: hasBefore,
       isCurrent: job.status === 'on process' && workStep === 'before_photo',
@@ -553,6 +555,7 @@ export default function TechnicianJobDetail() {
     {
       id: 3,
       name: 'Pengerjaan & SOP',
+      shortName: 'SOP',
       subtitle: totalChecklistCount > 0 ? `${completedChecklistCount}/${totalChecklistCount} Selesai` : 'Checklist SOP',
       isCompleted: hasBefore && (workStep === 'after_photo' || hasAfter),
       isCurrent: job.status === 'on process' && workStep === 'checklist',
@@ -560,6 +563,7 @@ export default function TechnicianJobDetail() {
     {
       id: 4,
       name: 'Foto Sesudah',
+      shortName: 'Foto Akhir',
       subtitle: hasAfter ? 'Terverifikasi' : 'Wajib 1 Foto',
       isCompleted: hasAfter,
       isCurrent: job.status === 'on process' && workStep === 'after_photo' && !hasAfter,
@@ -567,6 +571,7 @@ export default function TechnicianJobDetail() {
     {
       id: 5,
       name: 'Selesai',
+      shortName: 'Selesai',
       subtitle: job.status === 'done' ? 'Telah Selesai' : 'Finalisasi Order',
       isCompleted: job.status === 'done',
       isCurrent: job.status === 'on process' && hasBefore && hasAfter && pendingWajibCount === 0,
@@ -684,7 +689,8 @@ export default function TechnicianJobDetail() {
                   <span className={`text-[10px] sm:text-xs font-bold mt-2 leading-tight ${
                     isCurrent ? 'text-blue-700 font-black' : isPast ? 'text-emerald-700 font-semibold' : 'text-slate-500'
                   }`}>
-                    {st.name}
+                    <span className="sm:hidden">{st.shortName}</span>
+                    <span className="hidden sm:inline">{st.name}</span>
                   </span>
                 </div>
               );
@@ -1515,7 +1521,10 @@ export default function TechnicianJobDetail() {
 
       {/* Floating Bottom Action Bar */}
       {job.status !== 'done' && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 p-4 shadow-lg z-20">
+        <div 
+          className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 sm:p-4 shadow-lg z-20"
+          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0.75rem))' }}
+        >
           <div className="max-w-3xl mx-auto flex justify-end">
             {['scheduled', 'rescheduled', 'delayed'].includes(job.status) && (
               <button 
@@ -1539,7 +1548,8 @@ export default function TechnicianJobDetail() {
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl flex justify-center items-center gap-2 shadow-lg shadow-blue-500/20 transition-all disabled:opacity-40 disabled:bg-slate-300 disabled:text-slate-500 cursor-pointer disabled:cursor-not-allowed text-sm"
                     title={!hasBefore ? 'Harap unggah minimal 1 foto kondisi awal terlebih dahulu' : undefined}
                   >
-                    <span>Lanjut ke Checklist Pengerjaan</span>
+                    <span className="hidden sm:inline">Lanjut ke Checklist Pengerjaan</span>
+                    <span className="sm:hidden">Lanjut ke SOP</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 )}
@@ -1560,7 +1570,8 @@ export default function TechnicianJobDetail() {
                       onClick={() => setWorkStep('after_photo')} 
                       className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl flex justify-center items-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer text-sm"
                     >
-                      <span>Lanjut ke Foto Sesudah</span>
+                      <span className="hidden sm:inline">Lanjut ke Foto Sesudah</span>
+                      <span className="sm:hidden">Foto Sesudah</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
@@ -1590,8 +1601,9 @@ export default function TechnicianJobDetail() {
                         disabled={updating || !hasAfter || pendingWajibCount > 0}
                         className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-6 rounded-2xl flex justify-center items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-40 disabled:bg-slate-300 disabled:text-slate-500 cursor-pointer disabled:cursor-not-allowed text-sm"
                       >
-                        {updating ? <RefreshCw className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
-                        <span>Selesaikan Pekerjaan (Order Selesai)</span>
+                        {updating ? <RefreshCw className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5 shrink-0" />}
+                        <span className="hidden sm:inline">Selesaikan Pekerjaan (Order Selesai)</span>
+                        <span className="sm:hidden">Selesaikan Order</span>
                       </button>
                     </div>
                   </div>

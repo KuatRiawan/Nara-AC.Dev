@@ -5,6 +5,8 @@ import { AuthContext } from '../AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import CompanyLogo from '../components/CompanyLogo';
+import PageHeader from '../components/layout/PageHeader';
+import Footer from '../components/layout/Footer';
 import { useBusinessProfile, buildWhatsAppUrl, COPYRIGHT_TEXT } from '../hooks/useBusinessProfile';
 import { useContextualBack } from '../hooks/useContextualBack';
 import api from '../api';
@@ -227,35 +229,20 @@ export default function LoginPage() {
         <div className="absolute -top-12 right-1/4 w-80 h-80 bg-sky-100/40 rounded-full blur-3xl" />
       </div>
 
-      <header className="bg-white/90 backdrop-blur-md border-b border-sky-100/80 sticky top-0 z-40 transition-all">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex justify-between items-center">
-          <Link to="/" className="flex items-center hover:opacity-90 transition-opacity">
-            <CompanyLogo iconSize="h-8 sm:h-9" />
-          </Link>
+      <PageHeader
+        onBack={handleBack}
+        backLabel="Kembali"
+        badge={
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200/80">
+            <ShieldCheck className="w-3.5 h-3.5 text-blue-600" /> Portal Pelanggan &amp; Member
+          </span>
+        }
+      />
 
-          <div className="flex items-center gap-3">
-            <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200/80">
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-600" /> Portal Pelanggan &amp; Member
-            </span>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleBack}
-              className="rounded-xl border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-2xs"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Kembali</span>
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex items-center">
+      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 flex items-center">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 w-full items-center">
 
-          <div className="lg:col-span-7 space-y-6">
+          <div className="lg:col-span-7 space-y-6 order-2 lg:order-1">
 
             <div className="space-y-3">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">
@@ -320,7 +307,7 @@ export default function LoginPage() {
 
           </div>
 
-          <div className="lg:col-span-5">
+          <div className="lg:col-span-5 order-1 lg:order-2">
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
@@ -795,20 +782,7 @@ export default function LoginPage() {
         )}
       </AnimatePresence>
 
-      <footer className="bg-white border-t border-slate-200/80 py-6 text-xs text-slate-500 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          <p className="font-medium text-slate-600">{COPYRIGHT_TEXT}</p>
-          <div className="flex items-center gap-3 font-medium">
-            <Link to="/terms" className="hover:text-blue-600 transition-colors">
-              Syarat &amp; Ketentuan
-            </Link>
-            <span className="text-slate-300">&bull;</span>
-            <Link to="/privacy" className="hover:text-blue-600 transition-colors">
-              Kebijakan Privasi
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
