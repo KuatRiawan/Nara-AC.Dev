@@ -93,7 +93,7 @@ services:
       - nara-network
 
   # -----------------------------------------------------------------------
-  # 4. Frontend Web Client (React 19 Vite + Nginx Reverse Proxy)
+  # 4. Frontend Web Client (React 19 Vite + Nginx Reverse Proxy with TLS/SSL)
   # -----------------------------------------------------------------------
   frontend:
     build:
@@ -103,6 +103,9 @@ services:
     restart: always
     ports:
       - "${PORT_HTTP:-80}:80"
+      - "${PORT_HTTPS:-443}:443"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       backend:
         condition: service_healthy
